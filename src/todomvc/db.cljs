@@ -25,13 +25,13 @@
 (s/def ::todo (s/keys :req-un [::id ::title ::done]))
 (s/def ::todos (s/and                                       ;; should use the :kind kw to s/map-of (not supported yet)
                  (s/map-of ::id ::todo)                     ;; in this map, each todo is keyed by its :id
-                 #(instance? PersistentTreeMap %)           ;; is a sorted-map (not just a map)
-                 ))
+                 #(instance? PersistentTreeMap %)))           ;; is a sorted-map (not just a map)
+
 (s/def ::showing                                            ;; what todos are shown to the user?
   #{:all                                                    ;; all todos are shown
     :active                                                 ;; only todos whose :done is false
-    :done                                                   ;; only todos whose :done is true
-    })
+    :done})                                                   ;; only todos whose :done is true
+
 (s/def ::db (s/keys :req-un [::todos ::showing]))
 
 ;; -- Default app-db Value  ---------------------------------------------------
@@ -70,5 +70,5 @@
       (assoc cofx :local-store-todos
              (into (sorted-map)
                    (some->> (.getItem js/localStorage ls-key)
-                            (cljs.reader/read-string)       ;; stored as an EDN map.
-                            )))))
+                            (cljs.reader/read-string))))))       ;; stored as an EDN map.
+
