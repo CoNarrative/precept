@@ -2,3 +2,4 @@ resources/public/js
 /.idea/
 /todomvc-re-frame.iml
 /target/
+/figwheel_server.log
