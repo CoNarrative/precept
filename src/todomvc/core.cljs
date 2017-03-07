@@ -7,7 +7,10 @@
             [todomvc.events]
             [todomvc.subs]
             [todomvc.views]
-            [devtools.core :as devtools])
+            [devtools.core :as devtools]
+            [todomvc.rules :refer [todos
+                                   ->Showing Showing]]
+            [clara.rules :refer [insert fire-rules]])
   (:import [goog History]
            [goog.history EventType]))
 
@@ -46,7 +49,11 @@
   ;; The event handler for `:initialise-db` can be found in `events.cljs`
   ;; Using the sync version of dispatch means that value is in
   ;; place before we go onto the next step.
-  (dispatch-sync [:initialise-db])
+  (dispatch-sync [:initialise-db
+                  (-> todos
+                    (insert (->Showing :all))
+                    (fire-rules))])
+
 
   ;; Render the UI into the HTML's <div id="app" /> element
   ;; The view function `todomvc.views/todo-app` is the

@@ -3,6 +3,9 @@
     [todomvc.db    :refer [default-value todos->local-store]]
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v
                            after debug]]
+    [todomvc.rules :refer [find-showing
+                           ->Showing Showing]]
+    [clara.rules :refer [query insert retract fire-rules]]
     [cljs.spec     :as s]))
 
 
@@ -51,18 +54,22 @@
 ;; usage:  (dispatch [:initialise-db])
 (reg-event-fx                     ;; on app startup, create initial state
   :initialise-db                  ;; event id being handled
-  [(inject-cofx :local-store-todos)  ;; obtain todos from localstore
-   check-spec-interceptor]                                  ;; after the event handler runs, check that app-db matches the spec
-  (fn [{:keys [db local-store-todos]} _]                    ;; the handler being registered
-    {:db (assoc default-value :todos local-store-todos)}))  ;; all hail the new state
+ ; [(inject-cofx :local-store-todos)  ;; obtain todos from localstore
+ ;  check-spec-interceptor                                  ;; after the event handler runs,
+ ; check that app-db matches the spec
+  (fn [{:keys [db]} [_ session]]                    ;; the handler being registered
+    (prn "Session initializing" session)
+    {:db (assoc db :state session)}))  ;; all hail the new state
 
 
+(defn old-showing [session]
+  (:?showing (first (query session find-showing))))
 ;; usage:  (dispatch [:set-showing  :active])
 (reg-event-db                     ;; this handler changes the todo filter
   :set-showing                    ;; event-id
 
   ;; this chain of two interceptors wrap the handler
-  [check-spec-interceptor (path :showing) trim-v]
+  ;[check-spec-interceptor (path :showing) trim-v]
 
   ;; The event handler
   ;; Because of the path interceptor above, the 1st parameter to
@@ -70,8 +77,15 @@
   ;; be the value at a certain path within db, namely :showing.
   ;; Also, the use of the 'trim-v' interceptor means we can omit
   ;; the leading underscore from the 2nd parameter (event vector).
-  (fn [old-keyword [new-filter-kw]]  ;; handler
-    new-filter-kw))                  ;; return new state for the path
+  ;(fn [old-keyword [new-filter-kw]]  ;; handler
+  ;  new-filter-kw]                  ;; return new state for the path
+  (fn [session [_ new-filter-kw]]  ;; handler
+    (prn "Session in set showing" session)
+    (prn "New filter keyword is" new-filter-kw)
+    (when-let [old (old-showing (:state session))]
+      (-> (retract (:state session) old)
+          (insert (->Showing new-filter-kw))
+          (fire-rules)))))
 
 
 ;; usage:  (dispatch [:add-todo  "Finish comments"])
