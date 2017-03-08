@@ -7,6 +7,7 @@
                            find-todo
                            find-todos
                            find-max-id
+                           find-all-done
                            ->Todo Todo
                            ->Showing Showing]]
     [clara.rules :refer [query insert retract fire-rules]]
@@ -183,15 +184,26 @@
 ;  (fn [todos [id]]
 ;    (dissoc todos id)))
 
-
+(defn get-all-done [db]
+  (:?todos(first (query (:state db) find-all-done))))
 (reg-event-db
   :clear-completed
-  todo-interceptors
-  (fn [todos _]
-    (->> (vals todos)                ;; find the ids of all todos where :done is true
-         (filter :done)
-         (map :id)
-         (reduce dissoc todos))))    ;; now delete these ids
+  (fn [db _]
+    (let [session (:state db)
+          all-done (get-all-done db)
+          removed (apply retract session all-done)]
+      (prn ":clear completed all-done" all-done)
+      (prn ":clear completed removed" removed)
+      {:state (fire-rules removed)})))
+
+;(reg-event-db
+;  :clear-completed
+;  todo-interceptors
+;  (fn [todos _]
+;    (->> (vals todos)                ;; find the ids of all todos where :done is true
+;         (filter :done)
+;         (map :id)
+;         (reduce dissoc todos)})))    ;; now delete these ids
 
 
 (reg-event-db

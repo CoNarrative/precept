@@ -52,4 +52,8 @@
   []
   [?id <- (acc/max :id) :from [Todo]])
 
+(defquery find-all-done
+  []
+  [?todos <- (acc/all) :from [Todo (= done true)]])
+
 (defsession todos 'todomvc.rules)
