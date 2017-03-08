@@ -1,0 +1,4 @@
+# Implementation is query-heavy
+  E.g. for complete all, could insert a record and retract all todos
+  within RHS instead of doing query/retract/fire-rules outside of session
+

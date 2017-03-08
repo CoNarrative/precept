@@ -9,7 +9,8 @@
                            find-max-id
                            find-all-done
                            ->Todo Todo
-                           ->Showing Showing]]
+                           ->Showing Showing
+                           ->ToggleComplete ToggleComplete]]
     [clara.rules :refer [query insert retract fire-rules]]
     [cljs.spec     :as s]))
 
@@ -185,7 +186,7 @@
 ;    (dissoc todos id)))
 
 (defn get-all-done [db]
-  (:?todos(first (query (:state db) find-all-done))))
+  (:?todos (first (query (:state db) find-all-done))))
 (reg-event-db
   :clear-completed
   (fn [db _]
@@ -205,12 +206,19 @@
 ;         (map :id)
 ;         (reduce dissoc todos)})))    ;; now delete these ids
 
-
 (reg-event-db
   :complete-all-toggle
-  todo-interceptors
-  (fn [todos _]
-    (let [new-done (not-every? :done (vals todos))]   ;; work out: toggle true or false?
-      (reduce #(assoc-in %1 [%2 :done] new-done)
-              todos
-              (keys todos)))))
+  (fn [db _]
+    (let [session (:state db)]
+      {:state (-> session
+                (insert (->ToggleComplete))
+                (fire-rules))})))
+
+;(reg-event-db
+;  :complete-all-toggle
+;  todo-interceptors
+;  (fn [todos _]
+;    (let [new-done (not-every? :done (vals todos))]   ;; work out: toggle true or false?
+;      (reduce #(assoc-in %1 [%2 :done] new-done)
+;              todos
+;              (keys todos))))))

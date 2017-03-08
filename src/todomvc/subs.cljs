@@ -1,7 +1,9 @@
 (ns todomvc.subs
   (:require [re-frame.core :refer [reg-sub subscribe]]
             [clara.rules :refer [query]]
-            [todomvc.rules :refer [find-showing find-visible-todos]]
+            [todomvc.rules :refer [find-showing
+                                   find-visible-todos
+                                   find-done-count]]
             [todomvc.events :refer [get-todos]]))
 
 ;; -------------------------------------------------------------------------------------
@@ -9,15 +11,15 @@
 ;;
 (defn get-showing [db]
   (let [showing (:key (:?showing (first (query (:state db) find-showing))))]
-       (prn "showing" showing)
-       showing))
-(reg-sub :showing get-showing)        ;; db is the (map) value in app-db
-                       ;; I repeat:  db is a value. Not a
-    ;; ratom.  And this
-    ;; fn does
-    ;; not
-    ;; return a
-    ;; reaction, just a value.
+    (prn "showing" showing)
+    showing))
+(reg-sub :showing get-showing)                              ;; db is the (map) value in app-db
+;; I repeat:  db is a value. Not a
+;; ratom.  And this
+;; fn does
+;; not
+;; return a
+;; reaction, just a value.
 
 ;; that `fn` is a pure function
 
@@ -134,15 +136,15 @@
 ;; vector of input signals. The 1st function is not needed.
 ;; Here is the example above rewritten using the sugar.
 #_(reg-sub
-   :visible-todos
-   :<- [:todos]
-   :<- [:showing]
-   (fn [[todos showing] _]
-     (let [filter-fn (case showing
-                       :active (complement :done)
-                       :done   :done
-                       :all    identity)]
-       (filter filter-fn todos))))
+    :visible-todos
+    :<- [:todos]
+    :<- [:showing]
+    (fn [[todos showing] _]
+      (let [filter-fn (case showing
+                        :active (complement :done)
+                        :done :done
+                        :all identity)]
+        (filter filter-fn todos))))
 
 
 (reg-sub
@@ -151,11 +153,15 @@
   (fn [todos _]
     (seq todos)))
 
-(reg-sub
-  :completed-count
-  :<- [:todos]
-  (fn [todos _]
-    (count (filter :done todos))))
+(defn get-done-count [db]
+  (or (:?count (first (query (:state db) find-done-count)))
+    0))
+(reg-sub :completed-count get-done-count)
+;(reg-sub
+;  :completed-count
+;  :<- [:todos]
+;  (fn [todos _]
+;    (count (filter :done todos))))
 
 (reg-sub
   :footer-counts

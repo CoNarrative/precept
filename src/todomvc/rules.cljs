@@ -1,6 +1,6 @@
 (ns todomvc.rules
   (:require-macros [clara.macros :refer [defrule defquery defsession]])
-  (:require [clara.rules :refer [insert insert! query fire-rules]]
+  (:require [clara.rules :refer [insert insert! insert-all! retract! query fire-rules]]
             [clara.rules.accumulators :as acc]))
 
 
@@ -10,6 +10,8 @@
 (defrecord Showing [key])
 
 (defrecord VisibleTodos [todos])
+
+(defrecord ToggleComplete [])
 
 (defrule show-all
   [Showing (= key :all)]
@@ -31,6 +33,16 @@
   =>
   (prn "show-active rule fired")
   (insert! (->VisibleTodos ?todos)))
+
+(defrule toggle-all-complete
+  [?toggle <- ToggleComplete]
+  [?todos <- (acc/all) :from [Todo]]
+  =>
+  (prn "toggle-all-complete rule fired")
+  (prn "inserting" (map #(update % :done not) ?todos))
+  (retract! ?toggle)
+  (apply retract! ?todos)
+  (insert-all! (map #(update % :done not) ?todos)))
 
 (defquery find-showing
   []
@@ -55,5 +67,9 @@
 (defquery find-all-done
   []
   [?todos <- (acc/all) :from [Todo (= done true)]])
+
+(defquery find-done-count
+  []
+  [?count <- (acc/count) :from [Todo (= done true)]])
 
 (defsession todos 'todomvc.rules)
