@@ -6,6 +6,7 @@
     [todomvc.rules :refer [find-showing
                            find-todo
                            find-todos
+                           find-max-id
                            ->Todo Todo
                            ->Showing Showing]]
     [clara.rules :refer [query insert retract fire-rules]]
@@ -48,9 +49,16 @@
   "Returns the next todo id.
   Assumes todos are sorted.
   Returns one more than the current largest id."
-  [todos]
-  ((fnil inc 0) (last (keys todos))))
+  [db]
+  ((fnil inc 0) (:?id (first (query (:state db) find-max-id)))))
 
+
+;(defn allocate-next-id
+;  "Returns the next todo id.
+;  Assumes todos are sorted.
+;  Returns one more than the current largest id."
+;  [todos]
+;  ((fnil inc 0) (last (keys todos))))
 
 ;; -- Event Handlers ----------------------------------------------------------
 
@@ -103,7 +111,7 @@
   (fn [db [_ text]]
     (let [session (:state db)
           todos (get-todos db)
-          id (allocate-next-id todos)
+          id (allocate-next-id db)
           todo (->Todo id text false)]
       (prn "todos" todos)
       {:state (fire-rules (insert session todo))})))

@@ -48,4 +48,8 @@
   [:?id]
   [?todo <- Todo (= id ?id)])
 
+(defquery find-max-id
+  []
+  [?id <- (acc/max :id) :from [Todo]])
+
 (defsession todos 'todomvc.rules)
