@@ -144,15 +144,18 @@
 (reg-event-db
   :save
   (fn [db [_ id title]]
-    (prn ":save action")
+    (prn ":save action id" id)
+    (prn ":save action title" title)
     (let [session (:state db)
           todo (get-todo db id)
-          update (update-in todo [:title] title)]
+          updated-todo (assoc todo :title title)]
       (prn ":save session" session)
       (prn ":save todo" todo)
-      (prn ":save update" update)
-      (fire-rules (insert session update)))))
-
+      (prn ":save updated-todo" updated-todo)
+      {:state (-> session
+                (retract todo)
+                (insert updated-todo)
+                (fire-rules))})))
 
 (reg-event-db
   :delete-todo
