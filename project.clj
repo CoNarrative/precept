@@ -18,26 +18,27 @@
   {:dev
    {:dependencies [[binaryage/devtools "0.8.2"]
                    [figwheel-sidecar "0.5.9"]]
-                  :plugins [[lein-figwheel "0.5.9"]]
-                  :source-paths ["src"]}}
+    :plugins      [[lein-figwheel "0.5.9"]]
+    :source-paths ["src"]}}
 
   :cljsbuild
-   {:builds
-    [{:id       "dev"
-      :source-paths ["src" "dev"]
-      :figwheel {:on-jsload "todomvc.core/main"}
-      :compiler {:asset-path           "js"
-                 :optimizations        :none
-                 :source-map           true
-                 :source-map-timestamp true
-                 :output-dir           "resources/public/js"
-                 :output-to            "resources/public/js/client.js"
-                 :main                 todomvc.core}}
+  {:builds
+   [{:id           "dev"
+     :source-paths ["src" "dev"]
+     :figwheel     {:on-jsload "todomvc.core/main"}
+     :compiler     {:asset-path           "js"
+                    :optimizations        :none
+                    :cache-analysis       false
+                    :source-map           true
+                    :source-map-timestamp true
+                    :output-dir           "resources/public/js"
+                    :output-to            "resources/public/js/client.js"
+                    :main                 todomvc.core}}
 
-     {:id       "prod"
-      :source-paths ["src"]
-      :compiler {:optimizations :advanced
-                 :elide-asserts true
-                 :output-dir    "resources/public/js/min"
-                 :output-to     "resources/public/js/min/client.js"
-                 :pretty-print  false}}]})
+    {:id           "prod"
+     :source-paths ["src"]
+     :compiler     {:optimizations :advanced
+                    :elide-asserts true
+                    :output-dir    "resources/public/js/min"
+                    :output-to     "resources/public/js/min/client.js"
+                    :pretty-print  false}}]})

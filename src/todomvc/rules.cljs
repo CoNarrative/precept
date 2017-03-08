@@ -1,6 +1,6 @@
 (ns todomvc.rules
   (:require-macros [clara.macros :refer [defrule defquery defsession]])
-  (:require [clara.rules :refer [insert! fire-rules]]))
+  (:require [clara.rules :refer [insert insert! query fire-rules]]))
 
 
 (defsession todos 'todomvc.rules)
@@ -34,4 +34,4 @@
 
 (defquery find-showing
   []
-  [?showing <- Showing])
+  [?showing <- Todo])

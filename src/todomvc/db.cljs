@@ -67,6 +67,7 @@
   :local-store-todos
   (fn [cofx _]
       "Read in todos from localstore, and process into a map we can merge into app-db."
+      (prn "cofx" cofx)
       (assoc cofx :local-store-todos
              (into (sorted-map)
                    (some->> (.getItem js/localStorage ls-key)

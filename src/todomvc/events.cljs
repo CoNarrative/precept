@@ -54,7 +54,8 @@
 ;; usage:  (dispatch [:initialise-db])
 (reg-event-fx                     ;; on app startup, create initial state
   :initialise-db                  ;; event id being handled
- ; [(inject-cofx :local-store-todos)  ;; obtain todos from localstore
+  ;[(inject-cofx :local-store-todos)]
+     ;; obtain todos from localstore
  ;  check-spec-interceptor                                  ;; after the event handler runs,
  ; check that app-db matches the spec
   (fn [{:keys [db]} [_ session]]                    ;; the handler being registered
@@ -63,7 +64,7 @@
 
 
 (defn old-showing [session]
-  (:?showing (first (query session find-showing))))
+  (query session find-showing))
 ;; usage:  (dispatch [:set-showing  :active])
 (reg-event-db                     ;; this handler changes the todo filter
   :set-showing                    ;; event-id
@@ -82,13 +83,17 @@
   (fn [session [_ new-filter-kw]]  ;; handler
     (prn "Session in set showing" session)
     (prn "New filter keyword is" new-filter-kw)
-    (when-let [old (old-showing (:state session))]
-      (-> (retract (:state session) old)
-          (insert (->Showing new-filter-kw))
-          (fire-rules)))))
+    (let [old (old-showing (:state session))
+          removed (retract (:state session) old)
+          with-new (insert removed (->Showing new-filter-kw))
+          new-session (fire-rules with-new)]
+        (prn "old " old)
+        (prn "removed " removed)
+        (prn "with-new " with-new)
+        (prn "new session " new-session)
+      {:state new-session})))
 
-
-;; usage:  (dispatch [:add-todo  "Finish comments"])
+  ;; usage:  (dispatch [:add-todo  "Finish comments"])
 (reg-event-db                     ;; given the text, create a new todo
   :add-todo
 
