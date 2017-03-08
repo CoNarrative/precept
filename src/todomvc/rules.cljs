@@ -1,6 +1,7 @@
 (ns todomvc.rules
   (:require-macros [clara.macros :refer [defrule defquery defsession]])
-  (:require [clara.rules :refer [insert insert! insert-all! retract! query fire-rules]]
+  (:require [clara.rules :refer [insert insert! insert-all! insert-all-unconditional!
+                                 retract! query fire-rules]]
             [clara.rules.accumulators :as acc]))
 
 
@@ -42,7 +43,7 @@
   (prn "inserting" (map #(update % :done not) ?todos))
   (retract! ?toggle)
   (apply retract! ?todos)
-  (insert-all! (map #(update % :done not) ?todos)))
+  (insert-all-unconditional! (map #(update % :done not) ?todos)))
 
 (defquery find-showing
   []
