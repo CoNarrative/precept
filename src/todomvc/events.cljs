@@ -159,9 +159,18 @@
 
 (reg-event-db
   :delete-todo
-  todo-interceptors
-  (fn [todos [id]]
-    (dissoc todos id)))
+  (fn [db [_ id]]
+    (let [session (:state db)
+          todo (get-todo db id)]
+      {:state (-> session
+                (retract todo)
+                (fire-rules))})))
+
+;(reg-event-db
+;  :delete-todo
+;  todo-interceptors
+;  (fn [todos [id]]
+;    (dissoc todos id)))
 
 
 (reg-event-db
