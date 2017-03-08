@@ -3,7 +3,6 @@
   (:require [clara.rules :refer [insert insert! query fire-rules]]))
 
 
-(defsession todos 'todomvc.rules)
 
 (defrecord Todo [id title done])
 
@@ -34,4 +33,6 @@
 
 (defquery find-showing
   []
-  [?showing <- Todo])
+  [?showing <- Showing])
+
+(defsession todos 'todomvc.rules)

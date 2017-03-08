@@ -64,7 +64,7 @@
 
 
 (defn old-showing [session]
-  (query session find-showing))
+  (:?showing (first (query session find-showing))))
 ;; usage:  (dispatch [:set-showing  :active])
 (reg-event-db                     ;; this handler changes the todo filter
   :set-showing                    ;; event-id
