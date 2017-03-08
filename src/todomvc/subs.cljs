@@ -1,13 +1,22 @@
 (ns todomvc.subs
-  (:require [re-frame.core :refer [reg-sub subscribe]]))
+  (:require [re-frame.core :refer [reg-sub subscribe]]
+            [clara.rules :refer [query]]
+            [todomvc.rules :refer [find-showing]]))
 
 ;; -------------------------------------------------------------------------------------
 ;; Layer 2  (see the Subscriptions Infographic for meaning)
 ;;
-(reg-sub
-  :showing
-  (fn [db _]        ;; db is the (map) value in app-db
-    (:showing db))) ;; I repeat:  db is a value. Not a ratom.  And this fn does not return a reaction, just a value.
+(defn get-showing [db]
+  (let [showing (:key (:?showing (first (query (:state db) find-showing))))]
+       (prn showing)
+       showing))
+(reg-sub :showing get-showing)        ;; db is the (map) value in app-db
+                       ;; I repeat:  db is a value. Not a
+    ;; ratom.  And this
+    ;; fn does
+    ;; not
+    ;; return a
+    ;; reaction, just a value.
 
 ;; that `fn` is a pure function
 
@@ -118,15 +127,15 @@
 ;; vector of input signals. The 1st function is not needed.
 ;; Here is the example above rewritten using the sugar.
 #_(reg-sub
-  :visible-todos
-  :<- [:todos]
-  :<- [:showing]
-  (fn [[todos showing] _]
-    (let [filter-fn (case showing
-                      :active (complement :done)
-                      :done   :done
-                      :all    identity)]
-      (filter filter-fn todos))))
+   :visible-todos
+   :<- [:todos]
+   :<- [:showing]
+   (fn [[todos showing] _]
+     (let [filter-fn (case showing
+                       :active (complement :done)
+                       :done   :done
+                       :all    identity)]
+       (filter filter-fn todos))))
 
 
 (reg-sub
