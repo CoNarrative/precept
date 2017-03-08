@@ -1,9 +1,10 @@
 (ns todomvc.events
   (:require
-    [todomvc.db    :refer [default-value todos->local-store]]
+    [todomvc.db :refer [default-value todos->local-store]]
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v
                            after debug]]
-    [todomvc.rules :refer [find-showing
+    [todomvc.rules :refer [q
+                           find-showing
                            find-todo
                            find-todos
                            find-max-id
@@ -12,7 +13,7 @@
                            ->Showing Showing
                            ->ToggleComplete ToggleComplete]]
     [clara.rules :refer [query insert retract fire-rules]]
-    [cljs.spec     :as s]))
+    [cljs.spec :as s]))
 
 
 ;; -- Interceptors --------------------------------------------------------------
@@ -38,11 +39,11 @@
 ;; But we use the same set of interceptors for all event habdlers related
 ;; to manipulating todos.
 ;; A chain of interceptors is a vector.
-(def todo-interceptors [check-spec-interceptor               ;; ensure the spec is still valid
-                        (path :todos)                        ;; 1st param to handler will be the value from this path
-                        ->local-store                        ;; write todos to localstore
-                        (when ^boolean js/goog.DEBUG debug)  ;; look in your browser console for debug logs
-                        trim-v])                             ;; removes first (event id) element from the event vec
+(def todo-interceptors [check-spec-interceptor              ;; ensure the spec is still valid
+                        (path :todos)                       ;; 1st param to handler will be the value from this path
+                        ->local-store                       ;; write todos to localstore
+                        (when ^boolean js/goog.DEBUG debug) ;; look in your browser console for debug logs
+                        trim-v])                            ;; removes first (event id) element from the event vec
 
 
 ;; -- Helpers -----------------------------------------------------------------
@@ -51,8 +52,8 @@
   "Returns the next todo id.
   Assumes todos are sorted.
   Returns one more than the current largest id."
-  [db]
-  ((fnil inc 0) (:?id (first (query (:state db) find-max-id)))))
+  [session]
+  ((fnil inc 0) (:?id (first (query session find-max-id)))))
 
 
 ;(defn allocate-next-id
@@ -65,22 +66,23 @@
 ;; -- Event Handlers ----------------------------------------------------------
 
 ;; usage:  (dispatch [:initialise-db])
-(reg-event-fx                     ;; on app startup, create initial state
-  :initialise-db                  ;; event id being handled
+(reg-event-fx                                               ;; on app startup, create initial state
+  :initialise-db                                            ;; event id being handled
   ;[(inject-cofx :local-store-todos)]
-     ;; obtain todos from localstore
- ;  check-spec-interceptor                                  ;; after the event handler runs,
- ; check that app-db matches the spec
-  (fn [{:keys [db]} [_ session]]                    ;; the handler being registered
+  ;; obtain todos from localstore
+  ;  check-spec-interceptor                                  ;; after the event handler runs,
+  ; check that app-db matches the spec
+  (fn [{:keys [db]} [_ session]]                            ;; the handler being registered
     (prn "Session initializing" session)
-    {:db (assoc db :state session)}))  ;; all hail the new state
+    {:db session}))
+;{:db (assoc db :state session)}))  ;; all hail the new state
 
 
 (defn old-showing [session]
   (:?showing (first (query session find-showing))))
 ;; usage:  (dispatch [:set-showing  :active])
-(reg-event-db                     ;; this handler changes the todo filter
-  :set-showing                    ;; event-id
+(reg-event-db                                               ;; this handler changes the todo filter
+  :set-showing                                              ;; event-id
 
   ;; this chain of two interceptors wrap the handler
   ;[check-spec-interceptor (path :showing) trim-v]
@@ -93,30 +95,29 @@
   ;; the leading underscore from the 2nd parameter (event vector).
   ;(fn [old-keyword [new-filter-kw]]  ;; handler
   ;  new-filter-kw]                  ;; return new state for the path
-  (fn [session [_ new-filter-kw]]  ;; handler
+  (fn [session [_ new-filter-kw]]                           ;; handler
     (prn "Session in set showing" session)
     (prn "New filter keyword is" new-filter-kw)
-    (let [old (old-showing (:state session))
-          removed (retract (:state session) old)
-          with-new (insert removed (->Showing new-filter-kw))
+    (let [old         (old-showing session)
+          removed     (retract session old)
+          with-new    (insert removed (->Showing new-filter-kw))
           new-session (fire-rules with-new)]
-        (prn "old " old)
-        (prn "removed " removed)
-        (prn "with-new " with-new)
-        (prn "new session " new-session)
-      {:state new-session})))
+      (prn "old " old)
+      (prn "removed " removed)
+      (prn "with-new " with-new)
+      (prn "new session " new-session)
+      new-session)))
 
 (defn get-todos [db]
-  (:?todos (first (query (:state db) find-todos))))
+  (:?todos (first (query db find-todos))))
 (reg-event-db
   :add-todo
-  (fn [db [_ text]]
-    (let [session (:state db)
-          todos (get-todos db)
-          id (allocate-next-id db)
-          todo (->Todo id text false)]
+  (fn [session [_ text]]
+    (let [todos (get-todos session)
+          id    (allocate-next-id session)
+          todo  (->Todo id text false)]
       (prn "todos" todos)
-      {:state (fire-rules (insert session todo))})))
+      (fire-rules (insert session todo)))))
 
 ; usage:  (dispatch [:add-todo  "Finish comments"])
 ;(reg-event-db                     ;; given the text, create a new todo
@@ -133,19 +134,18 @@
 ;    (let [id (allocate-next-id todos)]
 ;      (assoc todos id {:id id :title text :done false}))))
 
-(defn get-todo [db id]
-  (:?todo (first (query (:state db) find-todo :?id id))))
+(defn get-todo [session id]
+  (:?todo (first (query session find-todo :?id id))))
 
 (reg-event-db
   :toggle-done
-  (fn [db [_ id]]
-    (let [session (:state db)
-          todo (get-todo db id)
+  (fn [session [_ id]]
+    (let [todo         (get-todo session id)
           updated-todo (update todo :done not)]
-      {:state (-> session
-                (retract todo)
-                (insert updated-todo)
-                (fire-rules))})))
+      (-> session
+        (retract todo)
+        (insert updated-todo)
+        (fire-rules)))))
 
 ;(reg-event-db
 ;  :toggle-done
@@ -156,28 +156,26 @@
 
 (reg-event-db
   :save
-  (fn [db [_ id title]]
+  (fn [session [_ id title]]
     (prn ":save action id" id)
     (prn ":save action title" title)
-    (let [session (:state db)
-          todo (get-todo db id)
+    (let [todo         (get-todo session id)
           updated-todo (assoc todo :title title)]
       (prn ":save session" session)
       (prn ":save todo" todo)
       (prn ":save updated-todo" updated-todo)
-      {:state (-> session
-                (retract todo)
-                (insert updated-todo)
-                (fire-rules))})))
+      (-> session
+        (retract todo)
+        (insert updated-todo)
+        (fire-rules)))))
 
 (reg-event-db
   :delete-todo
-  (fn [db [_ id]]
-    (let [session (:state db)
-          todo (get-todo db id)]
-      {:state (-> session
-                (retract todo)
-                (fire-rules))})))
+  (fn [session [_ id]]
+    (let [todo (get-todo session id)]
+      (-> session
+        (retract todo)
+        (fire-rules)))))
 
 ;(reg-event-db
 ;  :delete-todo
@@ -185,17 +183,16 @@
 ;  (fn [todos [id]]
 ;    (dissoc todos id)))
 
-(defn get-all-done [db]
-  (:?todos (first (query (:state db) find-all-done))))
+(defn get-all-done [session]
+  (:?todos (first (query session find-all-done))))
 (reg-event-db
   :clear-completed
-  (fn [db _]
-    (let [session (:state db)
-          all-done (get-all-done db)
-          removed (apply retract session all-done)]
+  (fn [session _]
+    (let [all-done (get-all-done session)
+          removed  (apply retract session all-done)]
       (prn ":clear completed all-done" all-done)
       (prn ":clear completed removed" removed)
-      {:state (fire-rules removed)})))
+      (fire-rules removed))))
 
 ;(reg-event-db
 ;  :clear-completed
@@ -208,11 +205,10 @@
 
 (reg-event-db
   :complete-all-toggle
-  (fn [db _]
-    (let [session (:state db)]
-      {:state (-> session
-                (insert (->ToggleComplete))
-                (fire-rules))})))
+  (fn [session _]
+    (-> session
+      (insert (->ToggleComplete))
+      (fire-rules))))
 
 ;(reg-event-db
 ;  :complete-all-toggle

@@ -10,7 +10,7 @@
 ;; Layer 2  (see the Subscriptions Infographic for meaning)
 ;;
 (defn get-showing [db]
-  (let [showing (:key (:?showing (first (query (:state db) find-showing))))]
+  (let [showing (:key (:?showing (first (query db find-showing))))]
     (prn "showing" showing)
     showing))
 (reg-sub :showing get-showing)                              ;; db is the (map) value in app-db
@@ -90,8 +90,8 @@
 ;; As a result note:
 ;;   - the first function (which returns the signals, returns a 2-vector)
 ;;   - the second function (which is the computation, destructures this 2-vector as its first parameter)
-(defn get-visible-todos [db]
-  (:todos (:?visible-todos (first (query (:state db) find-visible-todos)))))
+(defn get-visible-todos [session]
+  (:todos (:?visible-todos (first (query session find-visible-todos)))))
 (reg-sub :visible-todos get-visible-todos)
 ;(reg-sub :visible-todos (or get-visible-todos hash-map))
 
@@ -153,8 +153,8 @@
   (fn [todos _]
     (seq todos)))
 
-(defn get-done-count [db]
-  (or (:?count (first (query (:state db) find-done-count)))
+(defn get-done-count [session]
+  (or (:?count (first (query session find-done-count)))
     0))
 (reg-sub :completed-count get-done-count)
 ;(reg-sub
