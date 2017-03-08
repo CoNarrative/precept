@@ -1,14 +1,15 @@
 (ns todomvc.subs
   (:require [re-frame.core :refer [reg-sub subscribe]]
             [clara.rules :refer [query]]
-            [todomvc.rules :refer [find-showing]]))
+            [todomvc.rules :refer [find-showing find-visible-todos]]
+            [todomvc.events :refer [get-todos]]))
 
 ;; -------------------------------------------------------------------------------------
 ;; Layer 2  (see the Subscriptions Infographic for meaning)
 ;;
 (defn get-showing [db]
   (let [showing (:key (:?showing (first (query (:state db) find-showing))))]
-       (prn showing)
+       (prn "showing" showing)
        showing))
 (reg-sub :showing get-showing)        ;; db is the (map) value in app-db
                        ;; I repeat:  db is a value. Not a
@@ -23,10 +24,10 @@
 ;; Next, the registration of a similar handler is done in two steps.
 ;; First, we `defn` a pure handler function.  Then, we use `reg-sub` to register it.
 ;; Two steps. This is different to that first registration, above, which was done in one step.
-(defn sorted-todos
-  [db _]
-  (:todos db))
-(reg-sub :sorted-todos sorted-todos)
+;(defn sorted-todos
+;  [db _]
+;  (:todos db))
+;(reg-sub :sorted-todos get-todos)
 
 ;; -------------------------------------------------------------------------------------
 ;; Layer 3  (see the infographic for meaning)
@@ -56,52 +57,58 @@
 ;; In the two simple examples at the top, we only supplied the 2nd of these functions.
 ;; But now we are dealing with intermediate nodes, we'll need to provide both fns.
 ;;
-(reg-sub
-  :todos
-
-  ;; This function returns the input signals.
-  ;; In this case, it returns a single signal.
-  ;; Although not required in this example, it is called with two paramters
-  ;; being the two values supplied in the originating `(subscribe X Y)`.
-  ;; X will be the query vector and Y is an advanced feature and out of scope
-  ;; for this explanation.
-  (fn [query-v _]
-    (subscribe [:sorted-todos]))    ;; returns a single input signal
-
-  ;; This 2nd fn does the computation. Data values in, derived data out.
-  ;; It is the same as the two simple subscription handlers up at the top.
-  ;; Except they took the value in app-db as their first argument and, instead,
-  ;; this function takes the value delivered by another input signal, supplied by the
-  ;; function above: (subscribe [:sorted-todos])
-  ;;
-  ;; Subscription handlers can take 3 parameters:
-  ;;  - the input signals (a single item, a vector or a map)
-  ;;  - the query vector supplied to query-v  (the query vector argument
-  ;; to the "subscribe") and the 3rd one is for advanced cases, out of scope for this discussion.
-  (fn [sorted-todos query-v _]
-    (vals sorted-todos)))
+(reg-sub :todos get-todos)
+;(reg-sub
+;  :todos
+;
+;  ;; This function returns the input signals.
+;  ;; In this case, it returns a single signal.
+;  ;; Although not required in this example, it is called with two paramters
+;  ;; being the two values supplied in the originating `(subscribe X Y)`.
+;  ;; X will be the query vector and Y is an advanced feature and out of scope
+;  ;; for this explanation.
+;  (fn [query-v _]
+;    (subscribe [:sorted-todos]))    ;; returns a single input signal
+;
+;  ;; This 2nd fn does the computation. Data values in, derived data out.
+;  ;; It is the same as the two simple subscription handlers up at the top.
+;  ;; Except they took the value in app-db as their first argument and, instead,
+;  ;; this function takes the value delivered by another input signal, supplied by the
+;  ;; function above: (subscribe [:sorted-todos])
+;  ;;
+;  ;; Subscription handlers can take 3 parameters:
+;  ;;  - the input signals (a single item, a vector or a map)
+;  ;;  - the query vector supplied to query-v  (the query vector argument
+;  ;; to the "subscribe") and the 3rd one is for advanced cases, out of scope for this discussion.
+;  (fn [sorted-todos query-v _]
+;    (vals sorted-todos)))
 
 ;; So here we define the handler for another intermediate node.
 ;; This time the computation involves two input signals.
 ;; As a result note:
 ;;   - the first function (which returns the signals, returns a 2-vector)
 ;;   - the second function (which is the computation, destructures this 2-vector as its first parameter)
-(reg-sub
-  :visible-todos
+(defn get-visible-todos [db]
+  (:todos (:?visible-todos (first (query (:state db) find-visible-todos)))))
+(reg-sub :visible-todos get-visible-todos)
+;(reg-sub :visible-todos (or get-visible-todos hash-map))
 
-  ;; signal function
-  ;; returns a vector of two input signals
-  (fn [query-v _]
-    [(subscribe [:todos])
-     (subscribe [:showing])])
-
-  ;; computation function
-  (fn [[todos showing] _]   ;; that 1st parameter is a 2-vector of values
-    (let [filter-fn (case showing
-                      :active (complement :done)
-                      :done   :done
-                      :all    identity)]
-      (filter filter-fn todos))))
+;(reg-sub
+;  :visible-todos
+;
+;  ;; signal function
+;  ;; returns a vector of two input signals
+;  (fn [query-v _]
+;    [(subscribe [:todos])
+;     (subscribe [:showing])])
+;
+;  ;; computation function
+;  (fn [[todos showing] _]   ;; that 1st parameter is a 2-vector of values
+;    (let [filter-fn (case showing
+;                      :active (complement :done)
+;                      :done   :done
+;                      :all    identity)]
+;      (filter filter-fn todos))))
 
 ;; -------------------------------------------------------------------------------------
 ;; Hey, wait on!!

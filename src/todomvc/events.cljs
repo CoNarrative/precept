@@ -4,6 +4,9 @@
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v
                            after debug]]
     [todomvc.rules :refer [find-showing
+                           find-todo
+                           find-todos
+                           ->Todo Todo
                            ->Showing Showing]]
     [clara.rules :refer [query insert retract fire-rules]]
     [cljs.spec     :as s]))
@@ -93,20 +96,32 @@
         (prn "new session " new-session)
       {:state new-session})))
 
-  ;; usage:  (dispatch [:add-todo  "Finish comments"])
-(reg-event-db                     ;; given the text, create a new todo
+(defn get-todos [db]
+  (:?todos (first (query (:state db) find-todos))))
+(reg-event-db
   :add-todo
+  (fn [db [_ text]]
+    (let [session (:state db)
+          todos (get-todos db)
+          id (allocate-next-id todos)
+          todo (->Todo id text false)]
+      (prn "todos" todos)
+      {:state (fire-rules (insert session todo))})))
 
-  ;; The standard set of interceptors, defined above, which we
-  ;; apply to all todos-modifiing event handlers. Looks after
-  ;; writing todos to local store, etc.
-  todo-interceptors
-
-  ;; The event handler function.
-  ;; The "path" interceptor in `todo-interceptors` means 1st parameter is :todos
-  (fn [todos [text]]
-    (let [id (allocate-next-id todos)]
-      (assoc todos id {:id id :title text :done false}))))
+; usage:  (dispatch [:add-todo  "Finish comments"])
+;(reg-event-db                     ;; given the text, create a new todo
+;  :add-todo
+;
+;  ;; The standard set of interceptors, defined above, which we
+;  ;; apply to all todos-modifiing event handlers. Looks after
+;  ;; writing todos to local store, etc.
+;  todo-interceptors
+;
+;  ;; The event handler function.
+;  ;; The "path" interceptor in `todo-interceptors` means 1st parameter is :todos
+;  (fn [todos [text]]
+;    (let [id (allocate-next-id todos)]
+;      (assoc todos id {:id id :title text :done false}))))
 
 
 (reg-event-db
@@ -116,11 +131,19 @@
     (update-in todos [id :done] not)))
 
 
+(defn get-todo [db id]
+  (:?todo (first (query (:state db) find-todo :?id id))))
 (reg-event-db
   :save
-  todo-interceptors
-  (fn [todos [id title]]
-    (assoc-in todos [id :title] title)))
+  (fn [db [_ id title]]
+    (prn ":save action")
+    (let [session (:state db)
+          todo (get-todo db id)
+          update (update-in todo [:title] title)]
+      (prn ":save session" session)
+      (prn ":save todo" todo)
+      (prn ":save update" update)
+      (fire-rules (insert session update)))))
 
 
 (reg-event-db

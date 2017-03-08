@@ -51,6 +51,7 @@
   []
   (let [visible-todos @(subscribe [:visible-todos])
         all-complete? @(subscribe [:all-complete?])]
+       (prn "all visible in render" visible-todos)
       [:section#main
         [:input#toggle-all
           {:type "checkbox"
