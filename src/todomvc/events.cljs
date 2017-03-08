@@ -131,16 +131,27 @@
 ;    (let [id (allocate-next-id todos)]
 ;      (assoc todos id {:id id :title text :done false}))))
 
+(defn get-todo [db id]
+  (:?todo (first (query (:state db) find-todo :?id id))))
 
 (reg-event-db
   :toggle-done
-  todo-interceptors
-  (fn [todos [id]]
-    (update-in todos [id :done] not)))
+  (fn [db [_ id]]
+    (let [session (:state db)
+          todo (get-todo db id)
+          updated-todo (update todo :done not)]
+      {:state (-> session
+                (retract todo)
+                (insert updated-todo)
+                (fire-rules))})))
+
+;(reg-event-db
+;  :toggle-done
+;  todo-interceptors
+;  (fn [todos [id]]
+;    (update-in todos [id :done] not)))
 
 
-(defn get-todo [db id]
-  (:?todo (first (query (:state db) find-todo :?id id))))
 (reg-event-db
   :save
   (fn [db [_ id title]]
