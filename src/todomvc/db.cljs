@@ -34,18 +34,6 @@
 
 (s/def ::db (s/keys :req-un [::todos ::showing]))
 
-;; -- Default app-db Value  ---------------------------------------------------
-;;
-;; When the application first starts, this will be the value put in app-db
-;; Unless, of course, there are todos in the LocalStore (see further below)
-;; Look in `core.cljs` for  "(dispatch-sync [:initialise-db])"
-;;
-
-(def default-value                                          ;; what gets put into app-db by default.
-  {:todos   (sorted-map)                                    ;; an empty list of todos. Use the (int) :id as the key
-   :showing :all})                                          ;; show all todos
-
-
 ;; -- Local Storage  ----------------------------------------------------------
 ;;
 ;; Part of the todomvc challenge is to store todos in LocalStorage, and
