@@ -3,8 +3,7 @@
     [todomvc.db :refer [default-value todos->local-store]]
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v
                            after debug]]
-    [todomvc.rules :refer [q
-                           find-showing
+    [todomvc.rules :refer [find-showing
                            find-todo
                            find-todos
                            find-max-id
