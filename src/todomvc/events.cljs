@@ -1,6 +1,6 @@
 (ns todomvc.events
   (:require
-    [todomvc.db :refer [default-value todos->local-store]]
+    [todomvc.db :refer [todos->local-store]]
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v
                            after debug]]
     [todomvc.rules :refer [find-showing
