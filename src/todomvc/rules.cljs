@@ -22,10 +22,10 @@
 (defn todo-tx [id title done]
   (merge
     {:db/id        id
-     :todo/title   title
-     :todo/visible false}
+     :todo/title   title}
+
     (when-not (nil? done)
-      {:todo/status done})))
+      {:todo/done done})))
 
 ;(defrecord Showing [key])
 ;
@@ -48,16 +48,11 @@
 ;  (prn "show-all rule fired" ?todos)
 ;  (insert! (->VisibleTodos ?todos)))
 ;
-(defrule show-all
-  ; when visibility filter set to all
+(defrule todo-is-visible-when-filter-is-all
   [:ui/visibility-filter [[e a v]] (= v :all)]
-  ; and a todo is not visible
-  [?not-visible <- :todo/visible [[e a v]] (= v false) (= e ?e)]
+  [:todo/title [[e a v]] (= ?e e)]
   =>
-  (println "not visible" ?not-visible)
-  (retract! ?not-visible)
-  (println "inserting" [?e :todo/visible true])
-  (insert-unconditional! [?e :todo/visible true]))
+  (insert! [?e :todo/visible :tag]))
 
 ;(defrule show-done
 ;  [Showing (= key :done)]
@@ -66,16 +61,11 @@
 ;  (prn "show-done rule fired")
 ;  (insert! (->VisibleTodos ?todos)))
 ;
-(defrule show-done
-  ; when visibility filter set to "done"
+(defrule todo-is-visible-when-filter-is-done-and-todo-done
   [:ui/visibility-filter [[e a v]] (= v :done)]
-  ; and a todo is not visible
-  [?fact <- :todo/visible [[e a v]] (= v false) (= e ?e)]
-  ; and its status is "done"
-  [:todo/status [[e a v]] (= e ?e) (= v :done)]
+  [:todo/done [[e a v]] (= e ?e)]
   =>
-  (retract! ?fact)
-  (insert-unconditional! [?e :todo/visible true]))
+  (insert! [?e :todo/visible :tag]))
 
 ;(defrule show-active
 ;  [Showing (= key :active)]
@@ -84,16 +74,15 @@
 ;  (prn "show-active rule fired")
 ;  (insert! (->VisibleTodos ?todos)))
 ;
-(defrule show-active
+(defrule todo-is-visible-when-filter-active-and-todo-not-done
   ; when visibility filter set to "done"
   [:ui/visibility-filter [[e a v]] (= v :active)]
-  ; and a todo is not visible
-  [?fact <- :todo/visible [[e a v]] (= v false) (= e ?e)]
-  ; and it's not done (has no associated status)
-  [:not [:todo/status [[e a v]] (= e ?e)]]
+  ; and a todo
+  [:todo/title [[e a v]] (= ?e e)]
+  ; that isn't done (has no associated status)
+  [:not [:todo/done [[e a v]] (= e ?e)]]
   =>
-  (retract! ?fact)
-  (insert-unconditional! [?e :todo/visible true]))
+  (insert! [?e :todo/visible :tag]))
 
 ;(defrule toggle-all-complete
 ;  [?toggle <- ToggleComplete]
@@ -111,16 +100,16 @@
   ; and a todo
   [:todo/title [[e a v]] (= ?e e)]
   ; that isn't done
-  [:not [:todo/status [[e a v]] (= e ?e)]]
+  [:not [:todo/done [[e a v]] (= e ?e)]]
   =>
   (println "Mark done via toggle complete:" ?e)
-  (insert-unconditional! [?e :todo/status :done]))
+  (insert-unconditional! [?e :todo/done :done]))
 ; and todos/status :done count === num of todos
 
 (defrule remove-toggle
   [?toggle <- :ui/toggle-complete [[e a v]] (= v true)]
   [?total <- (acc/count) :from [:todo/title]]
-  [?total-done <- (acc/count) :from [:todo/status]]
+  [?total-done <- (acc/count) :from [:todo/done]]
   [:test (not (not (= ?total ?total-done)))]
   =>
   (println "Total todos " ?total)
@@ -215,7 +204,7 @@
 ;  [?count <- (acc/count) :from [Todo (= done true)]])
 ;
 (defquery find-done-count []
-  [?count <- (acc/count) :from [:todo/status [[e a v]] (= v :done)]])
+  [?count <- (acc/count) :from [:todo/done [[e a v]] (= v :done)]])
 
 
 (defsession todos 'todomvc.rules
@@ -234,15 +223,14 @@
 (def all-done (query session find-all-done))
 
 
-(cljs.pprint/pprint (clara-tups->maps all-done))
+;(cljs.pprint/pprint (clara-tups->maps all-done))
 
-(println "Done count: " (query session find-done-count))
+;(println "Done count: " (query session find-done-count))
 
-(println facts)
 
-(cljs.pprint/pprint (entity session (:db/id (first (clara-tups->maps all-done)))))
+;(cljs.pprint/pprint (entity session (:db/id (first (clara-tups->maps all-done)))))
 
-(cljs.pprint/pprint (find-by-attribute session :ui/visibility-filter))
+;(cljs.pprint/pprint (find-by-attribute session :ui/visibility-filter))
 
 (defn entities-where
   "Returns hydrated entities matching an attribute-only or an attribute-value query"
@@ -250,5 +238,5 @@
   ([session a v] (map #(entity session (:db/id %)) (qav session a v)))
   ([session a v e] (map #(entity session (:db/id %)) (qave session a v e))))
 
-(cljs.pprint/pprint (map #(entity session (:db/id %)) (qav session :todo/status :done)))
-(cljs.pprint/pprint (entities-where session :todo/visible true))
+;(cljs.pprint/pprint (map #(entity session (:db/id %)) (qav session :todo/done :done)))
+;(cljs.pprint/pprint (entities-where session :todo/visible :tag))

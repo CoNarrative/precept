@@ -24,7 +24,7 @@
      :db.type/boolean)
 
    ; optional -- trying AI approach (if it doesn't exist it's false)
-   (attribute :todo/status
+   (attribute :todo/done
      :db.type/keyword)
 
    ; UI

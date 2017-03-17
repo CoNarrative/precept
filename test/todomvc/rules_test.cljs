@@ -40,9 +40,7 @@
                           (vector (map->tuple (visibility-filter-tx (random-uuid) :all)))
                           (map map->tuple (repeatedly num-todos #(mk-todo :done))))
             session     (insert-fire! todos facts)
-            visible     (entities-where session :todo/visible true)
-            not-visible (entities-where session :todo/visible false)]
-        (is (= 0 (count not-visible)))
+            visible     (entities-where session :todo/visible)]
         (is (= num-todos (count visible))))))
 
   (testing "show-done"
@@ -52,9 +50,7 @@
                           (vector (map->tuple (mk-todo nil)))
                           (mapv map->tuple (repeatedly (dec num-todos) #(mk-todo :done))))
             session     (insert-fire! todos facts)
-            visible     (entities-where session :todo/visible true)
-            not-visible (entities-where session :todo/visible false)]
-        (is (= 1 (count not-visible)))
+            visible     (entities-where session :todo/visible)]
         (is (= (dec num-todos) (count visible)))))))
 
 
