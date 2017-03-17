@@ -7,6 +7,9 @@
             [clara.rules.accumulators :as acc]))
 
 
+(defn attr-ns [attr]
+  (subs (first (clojure.string/split attr "/")) 1))
+
 (defn map->tuple [m]
   (let [eid     (:db/id m)
         temp-id (random-uuid)]
@@ -26,7 +29,7 @@
 
 ;(defrecord Showing [key])
 ;
-(defn showing-tx [id kw]
+(defn visibility-filter-tx [id kw]
   {:db/id                id
    :ui/visibility-filter kw})
 
@@ -128,6 +131,36 @@
 ;  []
 ;  [?showing <- Showing])
 ;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Queries
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn clara-tups->maps
+  "Takes seq of ms with keys :?e :?a :?v, joins on :?e and returns
+  vec of ms (one m for each entity)"
+  [tups]
+  (->> (group-by :?e tups)
+    (mapv (fn [[id ent]]
+            (into {:db/id id}
+              (reduce (fn [m tup] (assoc m (:?a tup) (:?v tup)))
+                {} ent))))))
+
+(defn entity-tuples->entity-map
+  "Takes list of tuples for a *single* entity and returns single map"
+  [tups]
+  (reduce
+    (fn [acc [e a v]]
+      (merge acc {:db/id e
+                  a      v}))
+    {} tups))
+
+(defquery find-by-attribute-
+  [:?a]
+  [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
+
+(defn find-by-attribute [session kw]
+  (clara-tups->maps
+    (query session find-by-attribute- :?a kw)))
 ;(defquery find-visible-todos
 ;  []
 ;  [?visible-todos <- VisibleTodos])
@@ -140,15 +173,6 @@
 ;  [:?id])
 ;  [?todo <- Todo (= id ?id)])
 ;
-(defn entity-tuples->entity-map
-  "Takes list of tuples for a single entity and returns single map"
-  [tups]
-  (reduce
-    (fn [acc [e a v]]
-      (merge acc {:db/id e
-                  a      v}))
-    {} tups))
-
 (defquery entity- [:?eid]
   [?entity <- :all [[e a v]] (= e ?eid)])
 
@@ -185,7 +209,7 @@
 (def facts
   (apply concat
     (map->tuple (toggle-tx (random-uuid) true))
-    (map->tuple (showing-tx (random-uuid) :all))
+    (map->tuple (visibility-filter-tx (random-uuid) :all))
     (mapv map->tuple (repeatedly 5 #(todo-tx (random-uuid) "TODO" nil)))))
 
 
@@ -193,17 +217,7 @@
 
 (def all-done (query session find-all-done))
 
-(defn clara-tups->maps
-  [tups]
-  (->> (group-by :?e tups)
-    (mapv (fn [[id ent]]
-            (into {:db/id id}
-              (reduce (fn [m tup] (assoc m (:?a tup) (:?v tup)))
-                {} ent))))))
 
-
-(defn attr-ns [attr]
-  (subs (first (clojure.string/split attr "/")) 1))
 
 (cljs.pprint/pprint (clara-tups->maps all-done))
 
@@ -212,3 +226,5 @@
 (println facts)
 
 (cljs.pprint/pprint (entity session (:db/id (first (clara-tups->maps all-done)))))
+
+(cljs.pprint/pprint (find-by-attribute session :ui/visibility-filter))
