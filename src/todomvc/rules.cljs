@@ -140,9 +140,10 @@
 ;  [:?id])
 ;  [?todo <- Todo (= id ?id)])
 ;
-(defquery find-todo [:?eid]
-  [?todo <- :all [[e a v]] (= e ?eid)])
+(defquery entity- [:?eid]
+  [?entity <- :all [[e a v]] (= e ?eid)])
 
+(defn entity [session id] (mapv :?entity (query session entity- :?eid id)))
 ;; MVCtodo uses sequential ids. Since this is a horrible idea, I'm skipping it this pass.
 ;(defquery find-max-id
 ;  []
@@ -153,9 +154,9 @@
 ;  [?todos <- (acc/all) :from [Todo (= done true)]])
 ;
 (defquery find-all-done []
-  ;[:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)]
   [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)]
   [:test (= (attr-ns ?a) "todo")])
+
 
 ;(defquery find-done-count
 ;  []
@@ -178,7 +179,7 @@
 
 @(def session (fire-rules (insert-all todos facts)))
 
-@(def all-done (query session find-all-done))
+(def all-done (query session find-all-done))
 
 (defn clara-tups->maps
   [tups]
@@ -193,6 +194,8 @@
   (subs (first (clojure.string/split attr "/")) 1))
 
 (cljs.pprint/pprint (clara-tups->maps all-done))
+
+(cljs.pprint/pprint (entity session (:db/id (first (clara-tups->maps all-done)))))
 
 
 (println "Done count: " (query session find-done-count))
