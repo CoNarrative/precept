@@ -1,21 +1,21 @@
 (ns todomvc.subs
   (:require [re-frame.core :refer [reg-sub subscribe]]
             [clara.rules :refer [query]]
-            [todomvc.rules :refer [find-showing
-                                   find-visible-todos
+            [todomvc.rules :refer [entities-where
                                    find-done-count]]
             [todomvc.events :refer [get-todos]]))
 
-(defn get-showing [db]
-  (let [showing (:key (:?showing (first (query db find-showing))))]
-    (prn "showing" showing)
-    showing))
-(reg-sub :showing get-showing)
+(defn get-visibility-filter [db]
+  (:ui/visibility-filter
+    (first (entities-where db :ui/visibility-filter))))
 
-(reg-sub :todos get-todos)
+(reg-sub :showing get-visibility-filter)
+
+(reg-sub :todos
+  (fn [session] (entities-where session :todo/title)))
 
 (defn get-visible-todos [session]
-  (:todos (:?visible-todos (first (query session find-visible-todos)))))
+  (entities-where session :todo/visible true))
 (reg-sub :visible-todos get-visible-todos)
 
 (reg-sub

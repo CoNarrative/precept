@@ -4,3 +4,4 @@ resources/public/js
 /target/
 /figwheel_server.log
 /todomvc.iml
+/doo-index.html

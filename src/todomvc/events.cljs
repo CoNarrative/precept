@@ -3,15 +3,13 @@
     [todomvc.db :refer [todos->local-store]]
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v
                            after debug]]
-    [todomvc.rules :refer [find-showing
-                           find-todo
-                           find-todos
-                           find-max-id
-                           find-all-done
-                           ->Todo Todo
-                           ->Showing Showing
-                           ->ToggleComplete ToggleComplete]]
-    [clara.rules :refer [query insert retract fire-rules]]
+    [todomvc.rules :refer [todo-tx
+                           visibility-filter-tx
+                           toggle-tx
+                           map->tuple
+                           entity
+                           entities-where]]
+    [clara.rules :refer [insert retract fire-rules]]
     [cljs.spec :as s]))
 
 
@@ -45,15 +43,6 @@
                         trim-v])                            ;; removes first (event id) element from the event vec
 
 
-;; -- Helpers -----------------------------------------------------------------
-
-(defn allocate-next-id
-  "Returns the next todo id.
-  Assumes todos are sorted.
-  Returns one more than the current largest id."
-  [session]
-  ((fnil inc 0) (:?id (first (query session find-max-id)))))
-
 ;; -- Event Handlers ----------------------------------------------------------
 
 (reg-event-fx
@@ -63,15 +52,15 @@
     {:db session}))
 
 (defn old-showing [session]
-  (:?showing (first (query session find-showing))))
+  (first (entities-where session :ui/visibility-filter)))
 (reg-event-db
   :set-showing
   (fn [session [_ new-filter-kw]]
     (prn "Session in set showing" session)
     (prn "New filter keyword is" new-filter-kw)
     (let [old         (old-showing session)
-          removed     (retract session old)
-          with-new    (insert removed (->Showing new-filter-kw))
+          removed     (retract session (map->tuple old))
+          with-new    (insert removed (map->tuple (visibility-filter-tx (random-uuid) new-filter-kw)))
           new-session (fire-rules with-new)]
       (prn "old " old)
       (prn "removed " removed)
@@ -80,26 +69,22 @@
       new-session)))
 
 (defn get-todos [session]
-  (:?todos (first (query session find-todos))))
+  (entities-where session :todo/title))
 (reg-event-db
   :add-todo
   (fn [session [_ text]]
-    (let [todos (get-todos session)
-          id    (allocate-next-id session)
-          todo  (->Todo id text false)]
-      (prn "todos" todos)
-      (fire-rules (insert session todo)))))
+    (let [id    (random-uuid)
+          todo  (todo-tx id text nil)]
+      (fire-rules (insert session (map->tuple todo))))))
 
 (defn get-todo [session id]
-  (:?todo (first (query session find-todo :?id id))))
+  (entity session id))
 (reg-event-db
   :toggle-done
   (fn [session [_ id]]
-    (let [todo         (get-todo session id)
-          updated-todo (update todo :done not)]
+    (let [statuses (entities-where session id)]
       (-> session
-        (retract todo)
-        (insert updated-todo)
+        (retract (map map->tuple statuses))
         (fire-rules)))))
 
 (reg-event-db
@@ -108,12 +93,12 @@
     (prn ":save action id" id)
     (prn ":save action title" title)
     (let [todo         (get-todo session id)
-          updated-todo (assoc todo :title title)]
+          updated-todo (assoc todo :todo/title title)]
       (prn ":save session" session)
       (prn ":save todo" todo)
       (prn ":save updated-todo" updated-todo)
       (-> session
-        (retract todo)
+        (retract (map->tuple todo))
         (insert updated-todo)
         (fire-rules)))))
 
@@ -140,5 +125,5 @@
   :complete-all-toggle
   (fn [session _]
     (-> session
-      (insert (->ToggleComplete))
+      (insert (map->tuple (toggle-tx (random-uuid) true)))
       (fire-rules))))

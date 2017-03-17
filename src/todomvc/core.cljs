@@ -8,8 +8,7 @@
             [todomvc.subs]
             [todomvc.views]
             [devtools.core :as devtools]
-            [todomvc.rules :refer [todos
-                                   ->Showing Showing]]
+            [todomvc.rules :refer [todos visibility-filter-tx]]
             [clara.rules :refer [insert fire-rules]])
   (:import [goog History]
            [goog.history EventType]))
@@ -51,7 +50,7 @@
   ;; place before we go onto the next step.
   (dispatch-sync [:initialise-db
                   (-> todos
-                    (insert (->Showing :all))
+                    (insert (visibility-filter-tx (random-uuid) :all))
                     (fire-rules))])
 
 

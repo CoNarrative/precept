@@ -166,12 +166,21 @@
 ;  [?visible-todos <- VisibleTodos])
 ;
 (defquery qav-
-  "(Q)uery (A)ttribute (V)alue. Finds facts matching args attribute and value"
+  "(Q)uery (A)ttribute (V)alue.
+  Finds facts matching args attribute and value"
   [:?a :?v]
   [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
 (defn qav [session a v]
   (clara-tups->maps
     (query session qav- :?a a :?v v)))
+(defquery qave-
+  "(Q)uery (A)ttribute (V)alue (E)ntity.
+  Finds facts matching args attribute, value and eid"
+  [:?a :?v :?e]
+  [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
+(defn qave [session a v e]
+  (clara-tups->maps
+    (query session qav- :?a a :?v v :?e e)))
 ;(defquery find-todos
 ;  []
 ;  [?todos <- (acc/all) :from [Todo]])
@@ -224,6 +233,10 @@
 
 (def all-done (query session find-all-done))
 
+;; TODO once repl works...what is test for _? "exists?"?
+;(defn facts-where
+;  [session e]
+;  [session a])
 
 
 (cljs.pprint/pprint (clara-tups->maps all-done))
@@ -239,7 +252,8 @@
 (defn entities-where
   "Returns hydrated entities matching an attribute-only or an attribute-value query"
   ([session a] (map #(entity session (:db/id %)) (find-by-attribute session a)))
-  ([session a v] (map #(entity session (:db/id %)) (qav session a v))))
+  ([session a v] (map #(entity session (:db/id %)) (qav session a v)))
+  ([session a v e] (map #(entity session (:db/id %)) (qave session a v e))))
 
 (cljs.pprint/pprint (map #(entity session (:db/id %)) (qav session :todo/status :done)))
 (cljs.pprint/pprint (entities-where session :todo/status :done))

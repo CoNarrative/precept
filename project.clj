@@ -5,10 +5,12 @@
                  [reagent "0.6.0-rc"]
                  [re-frame "0.9.0"]
                  [binaryage/devtools "0.8.1"]
-                 [secretary "1.2.3"]]
+                 [secretary "1.2.3"]
+                 [lein-doo "0.1.7"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
-            [lein-figwheel "0.5.6"]]
+            [lein-figwheel "0.5.6"]
+            [lein-doo "0.1.7"]]
 
   :hooks [leiningen.cljsbuild]
 
@@ -34,6 +36,11 @@
                     :output-dir           "resources/public/js"
                     :output-to            "resources/public/js/client.js"
                     :main                 todomvc.core}}
+    ;{:id "test"
+    ;         :source-paths ["src/todomvc/rules.cljs" "test"]
+    ;         :compiler {:output-to "resources/public/js/testable.js"
+    ;                    :main todomvc.runner
+    ;                    :optimizations :none}}
 
     {:id           "prod"
      :source-paths ["src"]
@@ -42,3 +49,4 @@
                     :output-dir    "resources/public/js/min"
                     :output-to     "resources/public/js/min/client.js"
                     :pretty-print  false}}]})
+   ;:test-commands {"test" ["lein" "doo" "phantom" "test" "once"]}})
