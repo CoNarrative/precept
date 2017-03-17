@@ -140,10 +140,22 @@
 ;  [:?id])
 ;  [?todo <- Todo (= id ?id)])
 ;
+(defn entity-tuples->entity-map
+  "Takes list of tuples for a single entity and returns single map"
+  [tups]
+  (reduce
+    (fn [acc [e a v]]
+      (merge acc {:db/id e
+                  a      v}))
+    {} tups))
+
 (defquery entity- [:?eid]
   [?entity <- :all [[e a v]] (= e ?eid)])
 
-(defn entity [session id] (mapv :?entity (query session entity- :?eid id)))
+(defn entity [session id]
+  (entity-tuples->entity-map
+    (mapv :?entity (query session entity- :?eid id))))
+
 ;; MVCtodo uses sequential ids. Since this is a horrible idea, I'm skipping it this pass.
 ;(defquery find-max-id
 ;  []
@@ -185,9 +197,9 @@
   [tups]
   (->> (group-by :?e tups)
     (mapv (fn [[id ent]]
-           (into {:db/id id}
-             (reduce (fn [m tup] (assoc m  (:?a tup) (:?v tup)))
-               {} ent))))))
+            (into {:db/id id}
+              (reduce (fn [m tup] (assoc m (:?a tup) (:?v tup)))
+                {} ent))))))
 
 
 (defn attr-ns [attr]
@@ -195,11 +207,8 @@
 
 (cljs.pprint/pprint (clara-tups->maps all-done))
 
-(cljs.pprint/pprint (entity session (:db/id (first (clara-tups->maps all-done)))))
-
-
 (println "Done count: " (query session find-done-count))
 
 (println facts)
 
-(map->tuple (showing-tx (random-uuid) :all))
+(cljs.pprint/pprint (entity session (:db/id (first (clara-tups->maps all-done)))))
