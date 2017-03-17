@@ -165,6 +165,13 @@
 ;  []
 ;  [?visible-todos <- VisibleTodos])
 ;
+(defquery qav-
+  "(Q)uery (A)ttribute (V)alue. Finds facts matching args attribute and value"
+  [:?a :?v]
+  [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
+(defn qav [session a v]
+  (clara-tups->maps
+    (query session qav- :?a a :?v v)))
 ;(defquery find-todos
 ;  []
 ;  [?todos <- (acc/all) :from [Todo]])
@@ -228,3 +235,11 @@
 (cljs.pprint/pprint (entity session (:db/id (first (clara-tups->maps all-done)))))
 
 (cljs.pprint/pprint (find-by-attribute session :ui/visibility-filter))
+
+(defn entities-where
+  "Returns hydrated entities matching an attribute-only or an attribute-value query"
+  ([session a] (map #(entity session (:db/id %)) (find-by-attribute session a)))
+  ([session a v] (map #(entity session (:db/id %)) (qav session a v))))
+
+(cljs.pprint/pprint (map #(entity session (:db/id %)) (qav session :todo/status :done)))
+(cljs.pprint/pprint (entities-where session :todo/status :done))
