@@ -67,6 +67,13 @@
   =>
   (insert! [?e :todo/visible :tag]))
 
+(defrule todo-is-visible-when-a-friday
+  [:exists [:today/is-friday]]
+  [:todo/title [[e a v]] (= ?e e)]
+  =>
+  (println "BOOM")
+  (insert! [?e :todo/visible :tag]))
+
 ;(defrule show-active
 ;  [Showing (= key :active)]
 ;  [?todos <- (acc/all) :from [Todo (= done false)]]
@@ -213,6 +220,7 @@
 
 (def facts
   (apply concat
+    [[(random-uuid) :today/is-friday :tag]]
     (map->tuple (toggle-tx (random-uuid) true))
     (map->tuple (visibility-filter-tx (random-uuid) :all))
     (mapv map->tuple (repeatedly 5 #(todo-tx (random-uuid) "TODO" nil)))))
@@ -228,9 +236,10 @@
 ;(println "Done count: " (query session find-done-count))
 
 
-;(cljs.pprint/pprint (entity session (:db/id (first (clara-tups->maps all-done)))))
+(cljs.pprint/pprint (entity session (:db/id (first (clara-tups->maps all-done)))))
+(cljs.pprint/pprint  all-done)
 
-;(cljs.pprint/pprint (find-by-attribute session :ui/visibility-filter))
+(cljs.pprint/pprint (find-by-attribute session :ui/visibility-filter))
 
 (defn entities-where
   "Returns hydrated entities matching an attribute-only or an attribute-value query"
@@ -239,4 +248,4 @@
   ([session a v e] (map #(entity session (:db/id %)) (qave session a v e))))
 
 ;(cljs.pprint/pprint (map #(entity session (:db/id %)) (qav session :todo/done :done)))
-;(cljs.pprint/pprint (entities-where session :todo/visible :tag))
+(cljs.pprint/pprint (entities-where session :todo/visible :tag))
