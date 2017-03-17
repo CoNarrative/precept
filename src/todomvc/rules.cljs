@@ -57,7 +57,7 @@
   (println "not visible" ?not-visible)
   (retract! ?not-visible)
   (println "inserting" [?e :todo/visible true])
-  (insert! [?e :todo/visible true]))
+  (insert-unconditional! [?e :todo/visible true]))
 
 ;(defrule show-done
 ;  [Showing (= key :done)]
@@ -75,7 +75,7 @@
   [:todo/status [[e a v]] (= e ?e) (= v :done)]
   =>
   (retract! ?fact)
-  (insert! [?e :todo/visible true]))
+  (insert-unconditional! [?e :todo/visible true]))
 
 ;(defrule show-active
 ;  [Showing (= key :active)]
@@ -93,7 +93,7 @@
   [:not [:todo/status [[e a v]] (= e ?e)]]
   =>
   (retract! ?fact)
-  (insert! [?e :todo/visible true]))
+  (insert-unconditional! [?e :todo/visible true]))
 
 ;(defrule toggle-all-complete
 ;  [?toggle <- ToggleComplete]
@@ -251,4 +251,4 @@
   ([session a v e] (map #(entity session (:db/id %)) (qave session a v e))))
 
 (cljs.pprint/pprint (map #(entity session (:db/id %)) (qav session :todo/status :done)))
-(cljs.pprint/pprint (entities-where session :todo/status :done))
+(cljs.pprint/pprint (entities-where session :todo/visible true))

@@ -21,22 +21,42 @@
     (insert-tuples facts)
     (fire-rules)))
 
+(def num-todos 5)
+
 (deftest rules
   (testing "find-done-count"
     (testing "should return 0 if no todos done"
-      (let [facts   (map map->tuple (repeatedly 5 #(mk-todo nil)))
+      (let [facts   (map map->tuple (repeatedly num-todos #(mk-todo nil)))
             session (insert-fire! todos facts)]
-        (println "facts" facts)
         (is (= 0 (:?count (first (query session find-done-count)))))))
     (testing "should return 5 if 5 todos done"
-      (let [facts   (map map->tuple (repeatedly 5 #(mk-todo :done)))
+      (let [facts   (map map->tuple (repeatedly num-todos #(mk-todo :done)))
             session (insert-fire! todos facts)]
-        (is (= 5 (:?count (first (query session find-done-count))))))))
+        (is (= num-todos (:?count (first (query session find-done-count))))))))
 
   (testing "show-all"
-    (testing "datoms with :todo/visible should equal num of todos
-              Note: :todo/visible is false by default at insertion time"
-      (let [facts   (map map->tuple (repeatedly 5 #(mk-todo :done)))
-            session (insert-fire! todos facts)]
-        (is (= 0 (count (entities-where session :todo/visible true))))))))
+    (testing "All visible when :ui/visibility-filter :all"
+      (let [facts       (into
+                          (vector (map->tuple (visibility-filter-tx (random-uuid) :all)))
+                          (map map->tuple (repeatedly num-todos #(mk-todo :done))))
+            session     (insert-fire! todos facts)
+            visible     (entities-where session :todo/visible true)
+            not-visible (entities-where session :todo/visible false)]
+        (is (= 0 (count not-visible)))
+        (is (= num-todos (count visible))))))
+
+  (testing "show-done"
+    (testing "Todos with status :done only when :ui/visibility-filter :done"
+      (let [facts       (concat
+                          (vector (map->tuple (visibility-filter-tx (random-uuid) :done)))
+                          (vector (map->tuple (mk-todo nil)))
+                          (mapv map->tuple (repeatedly (dec num-todos) #(mk-todo :done))))
+            session     (insert-fire! todos facts)
+            visible     (entities-where session :todo/visible true)
+            not-visible (entities-where session :todo/visible false)]
+        (is (= 1 (count not-visible)))
+        (is (= (dec num-todos) (count visible)))))))
+
+
+
 (run-tests)
