@@ -12,14 +12,14 @@
         temp-id (random-uuid)]
     (conj
       (mapv (fn [[a v]] [eid a v]) (dissoc m :db/id)))))
-      ;[temp-id :db/id eid])))
+;[temp-id :db/id eid])))
 
 ;(defrecord Todo [id title done])
 ;
 (defn todo-tx [id title done]
   (merge
-    {:db/id      id
-     :todo/title title
+    {:db/id        id
+     :todo/title   title
      :todo/visible false}
     (when-not (nil? done)
       {:todo/status done})))
@@ -27,7 +27,7 @@
 ;(defrecord Showing [key])
 ;
 (defn showing-tx [id kw]
-  {:db/id              id
+  {:db/id                id
    :ui/visibility-filter kw})
 
 ;(defrecord VisibleTodos [todos])
@@ -35,7 +35,7 @@
 ;(defrecord ToggleComplete [])
 ;
 (defn toggle-tx [id bool]
-  {:db/id id
+  {:db/id              id
    :ui/toggle-complete bool})
 
 ;(defrule show-all
@@ -112,7 +112,7 @@
   =>
   (println "Mark done via toggle complete:" ?e)
   (insert-unconditional! [?e :todo/status :done]))
- ; and todos/status :done count === num of todos
+; and todos/status :done count === num of todos
 
 (defrule remove-toggle
   [?toggle <- :ui/toggle-complete [[e a v]] (= v true)]
@@ -153,13 +153,16 @@
 ;  [?todos <- (acc/all) :from [Todo (= done true)]])
 ;
 (defquery find-all-done []
-  [?todos <- (acc/all) :from [:todo/status [[e a v]] (= v :done)]])
+  ;[:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)]
+  [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)]
+  [:test (= (attr-ns ?a) "todo")])
+
 ;(defquery find-done-count
 ;  []
 ;  [?count <- (acc/count) :from [Todo (= done true)]])
 ;
 (defquery find-done-count []
-  [?count <- (acc/count) from [:todo/status [[e a v]] (= v :done)]])
+  [?count <- (acc/count) :from [:todo/status [[e a v]] (= v :done)]])
 
 
 (defsession todos 'todomvc.rules
@@ -175,8 +178,24 @@
 
 @(def session (fire-rules (insert-all todos facts)))
 
+@(def all-done (query session find-all-done))
 
-(println "Done count: "(query session find-done-count))
+(defn clara-tups->maps
+  [tups]
+  (->> (group-by :?e tups)
+    (mapv (fn [[id ent]]
+           (into {:db/id id}
+             (reduce (fn [m tup] (assoc m  (:?a tup) (:?v tup)))
+               {} ent))))))
+
+
+(defn attr-ns [attr]
+  (subs (first (clojure.string/split attr "/")) 1))
+
+(cljs.pprint/pprint (clara-tups->maps all-done))
+
+
+(println "Done count: " (query session find-done-count))
 
 (println facts)
 
