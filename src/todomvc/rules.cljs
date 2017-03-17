@@ -229,14 +229,9 @@
     (mapv map->tuple (repeatedly 5 #(todo-tx (random-uuid) "TODO" nil)))))
 
 
-@(def session (fire-rules (insert-all todos facts)))
+(def session (fire-rules (insert-all todos facts)))
 
 (def all-done (query session find-all-done))
-
-;; TODO once repl works...what is test for _? "exists?"?
-;(defn facts-where
-;  [session e]
-;  [session a])
 
 
 (cljs.pprint/pprint (clara-tups->maps all-done))
