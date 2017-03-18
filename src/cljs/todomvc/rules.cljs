@@ -6,9 +6,13 @@
                                  retract! query fire-rules]]
             [todomvc.util :refer [map->tuple
                                   attr-ns
+                                  entities-where
+                                  entity
+                                  find-by-attribute
                                   clara-tups->maps]]
             [clara.rules.accumulators :as acc]
-            [todomvc.macros :refer [defn-tuple-session]]))
+            [todomvc.macros :refer-macros [defn-tuple-session]]))
+
 
 
 (defn todo-tx [id title done]
@@ -47,24 +51,23 @@
   (insert! [?e :todo/visible :tag]))
 
 (defrule toggle-all-complete
-  ; when toggle complete is true
-  [:ui/toggle-complete [[e a v]] (= v true)]
-  ; and a todo
+  ; when toggle complete action exists
+  [:exists [:ui/toggle-complete]]
+  ; and there's a todo that isn't marked "done"
   [:todo/title [[e a v]] (= ?e e)]
-  ; that isn't done
-  [:not [:todo/done [[e a v]] (= e ?e)]]
+  [:not [:todo/done [[e a v]] (= ?e e)]]
   =>
-  (println "Mark done via toggle complete:" ?e)
+  (println "Marked done via toggle complete:" ?e)
   (insert-unconditional! [?e :todo/done :done]))
 
-(defrule remove-toggle
+(defrule remove-toggle-complete-when-all-todos-done
   [?toggle <- :ui/toggle-complete [[e a v]] (= v true)]
   [?total <- (acc/count) :from [:todo/title]]
   [?total-done <- (acc/count) :from [:todo/done]]
   [:test (not (not (= ?total ?total-done)))]
   =>
-  (println "Total todos " ?total)
-  (println "Total done " ?total-done)
+  (println "Total todos: " ?total)
+  (println "Total done: " ?total-done)
   (println "Retracting toggle: " ?toggle)
   (retract! ?toggle))
 
@@ -85,20 +88,6 @@
 ;; Queries
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defquery find-by-attribute-
-  [:?a]
-  [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
-
-(defn find-by-attribute [session kw]
-  (clara-tups->maps
-    (query session find-by-attribute- :?a kw)))
-
-(defn entities-where
-  "Returns hydrated entities matching an attribute-only or an attribute-value query"
-  ([session a] (map #(entity session (:db/id %)) (find-by-attribute session a)))
-  ([session a v] (map #(entity session (:db/id %)) (qav session a v)))
-  ([session a v e] (map #(entity session (:db/id %)) (qave session a v e))))
-
 (defquery find-all-done []
   [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)]
   [:test (= (attr-ns ?a) "todo")])
@@ -118,17 +107,17 @@
     (mapv map->tuple (repeatedly 5 #(todo-tx (random-uuid) "TODO" nil)))))
 
 
-(def session (fire-rules (insert-all todos facts)))
+;(def session (fire-rules (insert-all todos facts)))
 
-(def all-done (query session find-all-done))
+;(def all-done (query session find-all-done))
 
 
-(cljs.pprint/pprint (entity session (:db/id (first (clara-tups->maps all-done)))))
+;(cljs.pprint/pprint (entity session (:db/id (first (clara-tups->maps all-done)))))
 
-(cljs.pprint/pprint  all-done)
+;(cljs.pprint/pprint  all-done)
 
-(cljs.pprint/pprint (find-by-attribute session :ui/visibility-filter))
+;(cljs.pprint/pprint (find-by-attribute session :ui/visibility-filter))
 
 ;(cljs.pprint/pprint (map #(entity session (:db/id %)) (qav session :todo/done :done)))
-(cljs.pprint/pprint (entities-where session :todo/visible))
+;(cljs.pprint/pprint (entities-where session :todo/visible))
 

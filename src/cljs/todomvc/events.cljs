@@ -6,10 +6,9 @@
     [todomvc.rules :refer [todo-tx
                            visibility-filter-tx
                            toggle-tx
-                           map->tuple
-                           entity
-                           entities-where]]
-    [clara.rules :refer [insert retract fire-rules]]
+                           find-all-done]]
+    [todomvc.util :refer [entity entities-where map->tuple]]
+    [clara.rules :refer [insert retract fire-rules query]]
     [cljs.spec :as s]))
 
 

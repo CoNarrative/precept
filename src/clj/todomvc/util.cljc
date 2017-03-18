@@ -1,15 +1,14 @@
 (ns todomvc.util
-    ;(:require-macros [clara.macros :refer [defrule defquery defsession]])
-    (:require [clara.rules :refer [query insert-all fire-rules]]
-              [todomvc.macros :as m]))
+    #?(:cljs
+       (:require [clara.rules
+                  :refer [query insert-all fire-rules]
+                  :refer-macros [defquery]]))
+    #?(:clj
+       (:require [clara.rules :refer [query defquery insert-all fire-rules]])))
 
 
 (defn attr-ns [attr]
   (subs (first (clojure.string/split attr "/")) 1))
-
-(defn- uuid []
-  ?# (:cljs (random-uuid)
-       :clj (java.util.UUID/randomUUID)))
 
 (defn map->tuple [m]
   (mapv (fn [[a v]] [(:db/id m) a v]) (dissoc m :db/id)))
@@ -73,4 +72,17 @@
   (entity-tuples->entity-map
     (mapv :?entity (query session entity- :?eid id))))
 
+(defquery find-by-attribute-
+  [:?a]
+  [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
+
+(defn find-by-attribute [session kw]
+  (clara-tups->maps
+    (query session find-by-attribute- :?a kw)))
+
+(defn entities-where
+  "Returns hydrated entities matching an attribute-only or an attribute-value query"
+  ([session a] (map #(entity session (:db/id %)) (find-by-attribute session a)))
+  ([session a v] (map #(entity session (:db/id %)) (qav session a v)))
+  ([session a v e] (map #(entity session (:db/id %)) (qave session a v e))))
 

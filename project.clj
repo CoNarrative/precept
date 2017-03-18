@@ -21,12 +21,12 @@
    {:dependencies [[binaryage/devtools "0.8.2"]
                    [figwheel-sidecar "0.5.9"]]
     :plugins      [[lein-figwheel "0.5.9"]]
-    :source-paths ["src"]}}
+    :source-paths ["src/clj" "src/cljs" "dev"]}}
 
   :cljsbuild
   {:builds
    [{:id           "dev"
-     :source-paths ["src" "dev"]
+     :source-paths ["src/clj" "src/cljs" "dev"]
      :figwheel     {:on-jsload "todomvc.core/main"}
      :compiler     {:asset-path           "js"
                     :optimizations        :none
@@ -43,10 +43,11 @@
     ;                    :optimizations :none}}
 
     {:id           "prod"
-     :source-paths ["src"]
+     :source-paths ["src/clj" "src/cljs"]
      :compiler     {:optimizations :advanced
                     :elide-asserts true
                     :output-dir    "resources/public/js/min"
                     :output-to     "resources/public/js/min/client.js"
                     :pretty-print  false}}]})
+
    ;:test-commands {"test" ["lein" "doo" "phantom" "test" "once"]}})

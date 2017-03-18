@@ -1,8 +1,8 @@
 (ns todomvc.subs
   (:require [re-frame.core :refer [reg-sub subscribe]]
             [clara.rules :refer [query]]
-            [todomvc.rules :refer [entities-where
-                                   find-done-count]]
+            [todomvc.util :refer [entities-where]]
+            [todomvc.rules :refer [find-done-count]]
             [todomvc.events :refer [get-todos]]))
 
 (defn get-visibility-filter [db]
