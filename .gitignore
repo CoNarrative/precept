@@ -5,3 +5,5 @@ resources/public/js
 /figwheel_server.log
 /todomvc.iml
 /doo-index.html
+/.lein-repl-history
+/.nrepl-port

@@ -5,7 +5,6 @@
   (merge {:db/id        (random-uuid)
           :db/ident     ident
           :db/valueType type}
-    ;:db.install/_attribute :db.part/db}
     {:db/cardinality :db.cardinality/one}
     opts))
 

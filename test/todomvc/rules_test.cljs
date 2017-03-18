@@ -9,18 +9,12 @@
                                    entities-where
                                    find-all-done
                                    find-done-count]]
+            [todomvc.util :refer [map->tuple
+                                  insert-fire!]]
             [clara.rules :refer [query insert insert-all fire-rules]]))
 
 (defn mk-todo [done]
   (todo-tx (random-uuid) "Title!" done))
-
-(defn insert-tuples [session tups]
-  (insert-all session (apply concat tups)))
-
-(defn insert-fire! [session facts]
-  (-> session
-    (insert-tuples facts)
-    (fire-rules)))
 
 (def num-todos 5)
 

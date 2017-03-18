@@ -12,7 +12,7 @@
             [lein-figwheel "0.5.6"]
             [lein-doo "0.1.7"]]
 
-  :hooks [leiningen.cljsbuild]
+  ;:hooks [leiningen.cljsbuild]
 
   :clean-targets ^{:protect false} ["resources/public/js" "target"]
 
