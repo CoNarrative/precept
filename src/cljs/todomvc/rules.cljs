@@ -11,7 +11,7 @@
                                   find-by-attribute
                                   clara-tups->maps]]
             [clara.rules.accumulators :as acc]
-            [todomvc.macros :refer-macros [defn-tuple-session]]))
+            [todomvc.macros :refer-macros [def-tuple-session]]))
 
 
 
@@ -83,6 +83,10 @@
 ;  =>
 ;  (insert! [?e :todo/visible :tag]))
 
+(defrule print-all-facts
+  [?fact <- :all [[e a v]] (= ?e e) (= ?a a) (= ?v v)]
+  =>
+  (println "FACT" ?fact))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Queries
@@ -95,9 +99,11 @@
 (defquery find-done-count []
   [?count <- (acc/count) :from [:todo/done [[e a v]] (= v :done)]])
 
-(defsession todos 'todomvc.rules
-  :fact-type-fn (fn [[e a v]] a)
-  :ancestors-fn (fn [type] [:all]))
+;(defsession todos 'todomvc.rules
+;  :fact-type-fn (fn [[e a v]] a)
+;  :ancestors-fn (fn [type] [:all]))
+
+(def-tuple-session todos 'todomvc.rules)
 
 (def facts
   (apply concat
@@ -105,7 +111,6 @@
     (map->tuple (toggle-tx (random-uuid) true))
     (map->tuple (visibility-filter-tx (random-uuid) :all))
     (mapv map->tuple (repeatedly 5 #(todo-tx (random-uuid) "TODO" nil)))))
-
 
 ;(def session (fire-rules (insert-all todos facts)))
 

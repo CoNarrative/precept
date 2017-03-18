@@ -6,6 +6,7 @@
             [todomvc.events :refer [get-todos]]))
 
 (defn get-visibility-filter [db]
+  (println "Got visibility filter" (entities-where db :ui/visibility-filter))
   (:ui/visibility-filter
     (first (entities-where db :ui/visibility-filter))))
 

@@ -4,14 +4,14 @@
        (:require [clara.rules :refer [defsession fire-rules insert query defquery]])))
 
 
-(defmacro defn-tuple-session
+(defmacro def-tuple-session
   "Wrapper around Clara's `defsession` macro.
   Preloads query helpers."
   [name & sources-and-options]
   ;(let [options (filter keyword? sources-and-options)])
   `(defsession
      ~name
-     ;'todomvc.util
+     'todomvc.util
      ~@sources-and-options
      :fact-type-fn ~'(fn [[e a v]] a)
      :ancestors-fn ~'(fn [type] [:all])))

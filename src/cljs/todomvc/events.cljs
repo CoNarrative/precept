@@ -7,8 +7,8 @@
                            visibility-filter-tx
                            toggle-tx
                            find-all-done]]
-    [todomvc.util :refer [entity entities-where map->tuple]]
-    [clara.rules :refer [insert retract fire-rules query]]
+    [todomvc.util :refer [entity entities-where map->tuple facts-where]]
+    [clara.rules :refer [insert-all insert retract fire-rules query]]
     [cljs.spec :as s]))
 
 
@@ -51,15 +51,17 @@
     {:db session}))
 
 (defn old-showing [session]
+  (println "Old showing.." (first (entities-where session :ui/visibility-filter)))
   (first (entities-where session :ui/visibility-filter)))
 (reg-event-db
   :set-showing
   (fn [session [_ new-filter-kw]]
     (prn "Session in set showing" session)
     (prn "New filter keyword is" new-filter-kw)
-    (let [old         (old-showing session)
-          removed     (retract session (map->tuple old))
-          with-new    (insert removed (map->tuple (visibility-filter-tx (random-uuid) new-filter-kw)))
+    (let [old         (map->tuple (old-showing session))
+          removed     (retract session (first old))
+          with-new    (insert-all removed (map->tuple
+                                            (visibility-filter-tx (random-uuid) new-filter-kw)))
           new-session (fire-rules with-new)]
       (prn "old " old)
       (prn "removed " removed)
