@@ -16,7 +16,7 @@
   (fn [session] (entities-where session :todo/title)))
 
 (defn get-visible-todos [session]
-  (entities-where session :todo/visible true))
+  (entities-where session :todo/visible))
 (reg-sub :visible-todos get-visible-todos)
 
 (reg-sub

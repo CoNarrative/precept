@@ -76,7 +76,7 @@
   (fn [session [_ text]]
     (let [id    (random-uuid)
           todo  (todo-tx id text nil)]
-      (fire-rules (insert session (map->tuple todo))))))
+      (fire-rules (insert session (first (map->tuple todo)))))))
 
 (defn get-todo [session id]
   (entity session id))
