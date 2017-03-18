@@ -126,5 +126,5 @@
   :complete-all-toggle
   (fn [session _]
     (-> session
-      (insert (map->tuple (toggle-tx (random-uuid) true)))
+      (insert (first (map->tuple (toggle-tx (random-uuid) true))))
       (fire-rules))))
