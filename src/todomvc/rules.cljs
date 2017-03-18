@@ -23,7 +23,6 @@
   (merge
     {:db/id        id
      :todo/title   title}
-
     (when-not (nil? done)
       {:todo/done done})))
 
@@ -67,12 +66,17 @@
   =>
   (insert! [?e :todo/visible :tag]))
 
-(defrule todo-is-visible-when-a-friday
-  [:exists [:today/is-friday]]
-  [:todo/title [[e a v]] (= ?e e)]
-  =>
-  (println "BOOM")
-  (insert! [?e :todo/visible :tag]))
+;(defrule todo-is-visible-when-a-friday
+;  [:exists [:today/is-friday]]
+;  [:todo/title [[e a v]] (= ?e e)]
+;  =>
+;  (println "BOOM")
+;  (insert! [?e :todo/visible* :tag]))
+;
+;(defrule todo-visible-*
+;  [:exists [:todo/visible* [[e a v]] (= e? e)]]
+;  =>
+;  (insert! [?e :todo/visible :tag]))
 
 ;(defrule show-active
 ;  [Showing (= key :active)]
@@ -228,6 +232,7 @@
 
 (def session (fire-rules (insert-all todos facts)))
 
+
 (def all-done (query session find-all-done))
 
 
@@ -248,4 +253,5 @@
   ([session a v e] (map #(entity session (:db/id %)) (qave session a v e))))
 
 ;(cljs.pprint/pprint (map #(entity session (:db/id %)) (qav session :todo/done :done)))
-(cljs.pprint/pprint (entities-where session :todo/visible :tag))
+(cljs.pprint/pprint (entities-where session :todo/visible))
+

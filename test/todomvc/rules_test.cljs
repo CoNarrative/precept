@@ -7,6 +7,7 @@
                                    toggle-tx
                                    map->tuple
                                    entities-where
+                                   find-all-done
                                    find-done-count]]
             [clara.rules :refer [query insert insert-all fire-rules]]))
 
@@ -36,23 +37,22 @@
 
   (testing "show-all"
     (testing "All visible when :ui/visibility-filter :all"
-      (let [facts       (into
-                          (vector (map->tuple (visibility-filter-tx (random-uuid) :all)))
-                          (map map->tuple (repeatedly num-todos #(mk-todo :done))))
-            session     (insert-fire! todos facts)
-            visible     (entities-where session :todo/visible)]
+      (let [facts   (into
+                      (vector (map->tuple (visibility-filter-tx (random-uuid) :all)))
+                      (map map->tuple (repeatedly num-todos #(mk-todo :done))))
+            session (insert-fire! todos facts)
+            visible (entities-where session :todo/visible)]
         (is (= num-todos (count visible))))))
 
   (testing "show-done"
     (testing "Todos with status :done only when :ui/visibility-filter :done"
-      (let [facts       (concat
-                          (vector (map->tuple (visibility-filter-tx (random-uuid) :done)))
-                          (vector (map->tuple (mk-todo nil)))
-                          (mapv map->tuple (repeatedly (dec num-todos) #(mk-todo :done))))
-            session     (insert-fire! todos facts)
-            visible     (entities-where session :todo/visible)]
+      (let [facts   (concat
+                      (vector (map->tuple (visibility-filter-tx (random-uuid) :done)))
+                      (vector (map->tuple (mk-todo nil)))
+                      (mapv map->tuple (repeatedly (dec num-todos) #(mk-todo :done))))
+            session (insert-fire! todos facts)
+            done    (query session find-all-done)
+            visible (entities-where session :todo/visible)]
         (is (= (dec num-todos) (count visible)))))))
-
-
 
 (run-tests)
