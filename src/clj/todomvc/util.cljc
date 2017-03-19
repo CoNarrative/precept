@@ -14,8 +14,8 @@
   (mapv (fn [[a v]] [(:db/id m) a v]) (dissoc m :db/id)))
 
 (defn insert-tuples [session tups]
-  (insert-all session (apply concat tups))) ;; into seq? might solve one vs many and be
-  ;; performant (no-op)
+  (insert-all session (apply concat tups)))                 ;; into seq? might solve one vs many and be
+;; performant (no-op)
 
 (defn insert-fire!
   "Inserts facts into session and fires rules
@@ -65,13 +65,17 @@
     (query session qav- :?a a :?v v :?e e)))
 
 (defquery entity-
-  [:?eid]
-  [?entity <- :all [[e a v]] (= e ?eid)])
+  [:?e]
+  [?entity <- :all [[e a v]] (= ?e e)])
+
+(defn entityv
+  [session e]
+  (mapv :?entity (query session entity- :?e e)))
 
 (defn entity
-  [session id]
+  [session e]
   (entity-tuples->entity-map
-    (mapv :?entity (query session entity- :?eid id))))
+    (entityv session e)))
 
 (defquery find-by-attribute-
   [:?a]

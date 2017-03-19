@@ -86,10 +86,9 @@
   ; (retract {:todo/keys :all})
   ; (retract {:todo/keys [title visible done]})
   ; (retract-entity ?e)
-  ;; Can we run a query in RHS???
+  ;; can we run a query in RHS???
   (println "Retracting entity " ?entity)
   (doseq [tuple ?entity] (retract! tuple)))
-  ;(retract! ?entity))
 
 (defrule clear-completed-action-is-done-when-no-done-todos
   [?action <- :ui/clear-completed]

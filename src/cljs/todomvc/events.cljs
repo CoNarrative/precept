@@ -8,7 +8,7 @@
                            toggle-tx
                            clear-completed-action
                            find-all-done]]
-    [todomvc.util :refer [entity entities-where map->tuple facts-where insert-fire!]]
+    [todomvc.util :refer [entity entityv entities-where map->tuple facts-where insert-fire!]]
     [clara.rules :refer [insert-all insert retract fire-rules query]]
     [cljs.spec :as s]))
 
@@ -79,8 +79,6 @@
           todo (todo-tx id text nil)]
       (fire-rules (insert session (first (map->tuple todo)))))))
 
-(defn get-todo [session id]
-  (entity session id))
 (reg-event-db
   :toggle-done
   (fn [session [_ id]]
@@ -94,23 +92,23 @@
   (fn [session [_ id title]]
     (prn ":save action id" id)
     (prn ":save action title" title)
-    (let [todo         (get-todo session id)
+    (let [todo         (entity session id)
           updated-todo (assoc todo :todo/title title)]
       (prn ":save session" session)
       (prn ":save todo" todo)
       (prn ":save updated-todo" updated-todo)
       (-> session
-        (retract (map->tuple todo))
+        (retract (first (map->tuple todo)))
         (insert updated-todo)
         (fire-rules)))))
 
 (reg-event-db
   :delete-todo
   (fn [session [_ id]]
-    (let [todo (get-todo session id)]
-      (-> session
-        (retract todo)
-        (fire-rules)))))
+    (let [todov (entityv session id)]
+      (println "Deleting" todov)
+      (fire-rules (apply (partial retract session) todov)))))
+
 
 (defn get-all-done [session]
   (:?todos (first (query session find-all-done))))
