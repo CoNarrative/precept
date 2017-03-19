@@ -30,6 +30,10 @@
   {:db/id              id
    :ui/toggle-complete bool})
 
+(def clear-completed-action
+  {:db/id              (random-uuid)
+   :ui/clear-completed :tag})
+
 
 (defrule todo-is-visible-when-filter-is-all
   [:ui/visibility-filter [[e a v]] (= v :all)]
@@ -68,8 +72,31 @@
   =>
   (println "Total todos: " ?total)
   (println "Total done: " ?total-done)
-  (println "Retracting toggle: " ?toggle)
+  (println "Retracting toggle-all-complete action: " ?toggle)
   (retract! ?toggle))
+
+(defrule no-done-todos-when-clear-completed-action
+  ; when clear completed action exists
+  [:exists [:ui/clear-completed]]
+  ; and there's a todo that is marked "done"
+  [:todo/title [[e a v]] (= ?e e)]
+  [:todo/done [[e a v]] (= ?e e)]
+  [?entity <- (acc/all) :from [:all [[e a v]] (= ?e e)]]
+  =>
+  ; (retract {:todo/keys :all})
+  ; (retract {:todo/keys [title visible done]})
+  ; (retract-entity ?e)
+  ;; Can we run a query in RHS???
+  (println "Retracting entity " ?entity)
+  (doseq [tuple ?entity] (retract! tuple)))
+  ;(retract! ?entity))
+
+(defrule clear-completed-action-is-done-when-no-done-todos
+  [?action <- :ui/clear-completed]
+  [:not [:exists [:todo/done]]]
+  =>
+  (println "Clear-completed action finished. Retracting " ?action)
+  (retract! ?action))
 
 ;(defrule todo-is-visible-when-a-friday
 ;  [:exists [:today/is-friday]]

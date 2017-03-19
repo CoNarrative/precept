@@ -13,11 +13,14 @@
 (reg-sub :showing get-visibility-filter)
 
 (reg-sub :todos
-  (fn [session] (entities-where session :todo/title)))
+  (fn [session]
+    (let [todos (entities-where session :todo/title)]
+      (println "Got todos: " todos)
+      todos)))
 
-(defn get-visible-todos [session]
-  (entities-where session :todo/visible))
-(reg-sub :visible-todos get-visible-todos)
+
+(reg-sub :visible-todos
+  (fn [session] (entities-where session :todo/visible)))
 
 (reg-sub
   :all-complete?
@@ -26,8 +29,9 @@
     (seq todos)))
 
 (defn get-done-count [session]
-  (or (:?count (first (query session find-done-count)))
-    0))
+  (let [done-count (:?count (first (query session find-done-count)))]
+    (println "Got done count" done-count)
+    (or done-count 0)))
 (reg-sub :completed-count get-done-count)
 
 (reg-sub

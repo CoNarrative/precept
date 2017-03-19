@@ -14,7 +14,8 @@
   (mapv (fn [[a v]] [(:db/id m) a v]) (dissoc m :db/id)))
 
 (defn insert-tuples [session tups]
-  (insert-all session (apply concat tups)))
+  (insert-all session (apply concat tups))) ;; into seq? might solve one vs many and be
+  ;; performant (no-op)
 
 (defn insert-fire!
   "Inserts facts into session and fires rules

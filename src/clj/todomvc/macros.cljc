@@ -3,7 +3,7 @@
     #?(:clj
        (:require [clara.rules :refer [defsession fire-rules insert query defquery]])))
 
-
+; TODO. write as fn...
 (defmacro def-tuple-session
   "Wrapper around Clara's `defsession` macro.
   Preloads query helpers."
