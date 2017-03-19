@@ -1,5 +1,6 @@
 (ns todomvc.tuple-rule
-    (:require [clara.rules.compiler :as com]
+    (:require [clara.rules :refer [defrule]]
+              [clara.rules.compiler :as com]
               [clara.rules.dsl :as dsl]))
 
 
@@ -49,40 +50,39 @@
 ;       ;; Add the environment, if given.
 ;       (not (empty? env)) (assoc :env matching-env)))))
 (defn is-binding? [x]
-  ;(println "Is a binding?" x)
+  (println "Is a binding?" x)
   ;TODO. Long cannot be cast to Named
   (= (first (name x)) \?))
 
-(defn rewrite-lhs [forms]
-  (println "Forms" forms)
-  (mapv (fn main-one [form]
-         ;(println "Form" form)
-         ;(println "Type" (type form))
-         (println "is op" (dsl/ops (first form)))
-         (if (dsl/ops (first form))
-           form
-           (let [bindings (into {}
-                            (filter
-                              (fn [[k v]]
-                                (and (not= \_ v)
-                                     (identity v)
-                                     (is-binding? v)))
-                              ;(juxt (comp identity second)
-                              ;      (partial (not= \_)) second
-                              ;      (comp is-binding? second)))
-                              {:e (first form)
-                               :a (second form)
-                               :v (last form)}))
-                 attribute (if (keyword? (second form)) (second form) :all)]
-             (prn "Bindigs are" bindings)
-             ;(println "attribute is" attribute)
-            (vector
-              attribute (vector ['e 'a 'v])
-              (map (fn last-one [[k v]]
-                       (println "k v bindings" k v)
-                       (list '= v (symbol (name k)))) bindings)))))
+(defn tuple-bindings [tuple]
+  (into {}
+    (filter
+      (fn [[k v]]
+        (and (not= \_ v)
+          (identity v)
+          (is-binding? v)))
+      {:e (first tuple)
+       :a (second tuple)
+       :v (last tuple)})))
 
-    forms))
+(defn rewrite-lhs [exprs]
+  (mapv (fn main-one [expr]
+          (println "expr" expr)
+          (println "is op" (dsl/ops (first expr)))
+          (if (dsl/ops (first expr))
+            expr
+            (let [tuple     (first expr)
+                  bindings  (tuple-bindings tuple)
+                  attribute (if (keyword? (second tuple)) (second tuple) :all)]
+              (println "Bindings: " bindings)
+              (reduce
+                (fn last-one [condition [k v]]
+                  (println "K V" k v)
+                  (conj condition (list '= v (symbol (name k)))))
+                (vector attribute (vector ['e 'a 'v]))
+                bindings))))
+    exprs))
+
 #?(:clj
    (defmacro def-tuple-rule
      "Defines a rule and stores it in the given var. For instance, a simple rule would look like this:
@@ -105,25 +105,21 @@
              body       (if doc (rest body) body)
              properties (if (map? (first body)) (first body) nil)
              definition (if properties (rest body) body)
-             {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-             lhs-new    (rewrite-lhs (first lhs))]
-         (println "LHS" lhs-new)
-         (println "RHS" rhs)
+             {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)]
+         ;(println "LHS in" lhs)
+         ;(println "LHS out" (rewrite-lhs lhs))
          (when-not rhs
            (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).")
                     {})))
          `(def ~(vary-meta name assoc :rule true :doc doc)
-            (cond-> ~(dsl/parse-rule* lhs-new rhs properties {} (meta &form))
+            (cond-> ~(dsl/parse-rule* (rewrite-lhs lhs) rhs properties {} (meta &form))
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
               ~doc (assoc :doc ~doc)))))))
 
 ;LHS ([[?e :todo/title _]] [:exists [:todo/done]])
 
 ;LHS ([:todo/title [[e a v]] (= ?e e)] [:exists [:todo/done]])
-(rewrite-lhs (first
-               '([
-                  [?e :todo/title _]
-                  [:exists [:todo/done]]])))
+(rewrite-lhs '([[?e :todo/title _]] [:exists [:todo/done]]))
 
 (macroexpand
   '(def-tuple-rule my-tuple-rule
@@ -134,7 +130,7 @@
      (println "Hello!")))
 
 (macroexpand
-  '(def-tuple-rule my-regular-rule
+  '(defrule my-regular-rule
      "Docstring!!"
      [:todo/title [[e a v]] (= ?e e)]
      [:exists [:todo/done]]
