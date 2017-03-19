@@ -4,7 +4,7 @@
                                  insert-unconditional!
                                  insert-all-unconditional!
                                  retract! query fire-rules]]
-            [todomvc.util :refer [map->tuple
+            [todomvc.util :refer [map->tuples
                                   attr-ns
                                   entities-where
                                   entity
@@ -134,9 +134,9 @@
 (def facts
   (apply concat
     ;[[(random-uuid) :today/is-friday :tag]]
-    (map->tuple (toggle-tx (random-uuid) true))
-    (map->tuple (visibility-filter-tx (random-uuid) :all))
-    (mapv map->tuple (repeatedly 5 #(todo-tx (random-uuid) "TODO" nil)))))
+    (map->tuples (toggle-tx (random-uuid) true))
+    (map->tuples (visibility-filter-tx (random-uuid) :all))
+    (mapv map->tuples (repeatedly 5 #(todo-tx (random-uuid) "TODO" nil)))))
 
 ;(def session (fire-rules (insert-all todos facts)))
 

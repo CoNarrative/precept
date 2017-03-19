@@ -10,7 +10,10 @@
 (defn attr-ns [attr]
   (subs (first (clojure.string/split attr "/")) 1))
 
-(defn map->tuple [m]
+(defn map->tuples
+  "Transforms entity map to vector of tuples
+  [ [] ... ]"
+  [m]
   (mapv (fn [[a v]] [(:db/id m) a v]) (dissoc m :db/id)))
 
 (defn insert-tuples [session tups]

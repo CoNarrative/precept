@@ -8,7 +8,7 @@
                            toggle-tx
                            clear-completed-action
                            find-all-done]]
-    [todomvc.util :refer [entity entityv entities-where map->tuple facts-where insert-fire!]]
+    [todomvc.util :refer [entity entityv entities-where map->tuples facts-where insert-fire!]]
     [clara.rules :refer [insert-all insert retract fire-rules query]]
     [cljs.spec :as s]))
 
@@ -59,9 +59,9 @@
   (fn [session [_ new-filter-kw]]
     (prn "Session in set showing" session)
     (prn "New filter keyword is" new-filter-kw)
-    (let [old         (map->tuple (old-showing session))
+    (let [old         (map->tuples (old-showing session))
           removed     (retract session (first old))
-          with-new    (insert-all removed (map->tuple
+          with-new    (insert-all removed (map->tuples
                                             (visibility-filter-tx (random-uuid) new-filter-kw)))
           new-session (fire-rules with-new)]
       (prn "old " old)
@@ -77,14 +77,14 @@
   (fn [session [_ text]]
     (let [id   (random-uuid)
           todo (todo-tx id text nil)]
-      (fire-rules (insert session (first (map->tuple todo)))))))
+      (fire-rules (insert session (first (map->tuples todo)))))))
 ;TODO. Convert to action pattern
 (reg-event-db
   :toggle-done
   (fn [session [_ id]]
     (if-let [done (not-empty (entities-where session :todo/done :tag id))]
       (-> session
-        (retract first (map->tuple done))
+        (retract first (map->tuples done))
         (fire-rules))
       (-> session
         (insert [id :todo/done :tag])
@@ -101,8 +101,8 @@
       (prn ":save todo" todo)
       (prn ":save updated-todo" updated-todo)
       (-> session
-        (retract (first (map->tuple todo)))
-        (insert (first (map->tuple updated-todo)))
+        (retract (first (map->tuples todo)))
+        (insert (first (map->tuples updated-todo)))
         (fire-rules)))))
 
 (reg-event-db
@@ -115,12 +115,12 @@
 (reg-event-db
   :clear-completed
   (fn [session] (-> session
-                  (insert (first (map->tuple clear-completed-action)))
+                  (insert (first (map->tuples clear-completed-action)))
                   (fire-rules))))
 
 (reg-event-db
   :complete-all-toggle
   (fn [session _]
     (-> session
-      (insert (first (map->tuple (toggle-tx (random-uuid) true))))
+      (insert (first (map->tuples (toggle-tx (random-uuid) true))))
       (fire-rules))))

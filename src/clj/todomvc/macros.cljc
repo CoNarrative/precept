@@ -13,4 +13,3 @@
      ~@sources-and-options
      :fact-type-fn ~'(fn [[e a v]] a)
      :ancestors-fn ~'(fn [type] [:all])))
-
