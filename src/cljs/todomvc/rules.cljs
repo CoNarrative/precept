@@ -123,7 +123,7 @@
   [:test (= (attr-ns ?a) "todo")])
 
 (defquery find-done-count []
-  [?count <- (acc/count) :from [:todo/done [[e a v]] (= v :done)]])
+  [?count <- (acc/count) :from [:todo/done]])
 
 ;(defsession todos 'todomvc.rules
 ;  :fact-type-fn (fn [[e a v]] a)

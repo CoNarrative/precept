@@ -78,15 +78,18 @@
     (let [id   (random-uuid)
           todo (todo-tx id text nil)]
       (fire-rules (insert session (first (map->tuple todo)))))))
-
+;TODO. Convert to action pattern
 (reg-event-db
   :toggle-done
   (fn [session [_ id]]
-    (let [statuses (entities-where session id)]
+    (if-let [done (not-empty (entities-where session :todo/done :tag id))]
       (-> session
-        (retract (map map->tuple statuses))
+        (retract first (map->tuple done))
+        (fire-rules))
+      (-> session
+        (insert [id :todo/done :tag])
         (fire-rules)))))
-
+;TODO. Convert to action pattern
 (reg-event-db
   :save
   (fn [session [_ id title]]
