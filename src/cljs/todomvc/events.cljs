@@ -99,7 +99,7 @@
       (prn ":save updated-todo" updated-todo)
       (-> session
         (retract (first (map->tuple todo)))
-        (insert updated-todo)
+        (insert (first (map->tuple updated-todo)))
         (fire-rules)))))
 
 (reg-event-db
@@ -109,9 +109,6 @@
       (println "Deleting" todov)
       (fire-rules (apply (partial retract session) todov)))))
 
-
-(defn get-all-done [session]
-  (:?todos (first (query session find-all-done))))
 (reg-event-db
   :clear-completed
   (fn [session] (-> session

@@ -77,13 +77,13 @@
   (entity-tuples->entity-map
     (entityv session e)))
 
-(defquery find-by-attribute-
+(defquery qa-
   [:?a]
   [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
 
-(defn find-by-attribute [session kw]
+(defn qa [session a]
   (clara-tups->maps
-    (query session find-by-attribute- :?a kw)))
+    (query session qa- :?a a)))
 
 (defn keyed-tup->vector-tup [m]
   (into [] (vals m)))
@@ -91,12 +91,12 @@
 
 (defn entities-where
   "Returns hydrated entities matching an attribute-only or an attribute-value query"
-  ([session a] (map #(entity session (:db/id %)) (find-by-attribute session a)))
+  ([session a] (map #(entity session (:db/id %)) (qa session a)))
   ([session a v] (map #(entity session (:db/id %)) (qav session a v)))
   ([session a v e] (map #(entity session (:db/id %)) (qave session a v e))))
 
 (defn facts-where
   "Returns tuples matching a v e query where v, e optional"
-  ([session a] (mapv keyed-tup->vector-tup (find-by-attribute session a)))
+  ([session a] (mapv keyed-tup->vector-tup (qa session a)))
   ([session a v] (mapv keyed-tup->vector-tup (qav session a v)))
   ([session a v e] (mapv keyed-tup->vector-tup (qave session a v e))))

@@ -8,7 +8,7 @@
                                   attr-ns
                                   entities-where
                                   entity
-                                  find-by-attribute
+                                  qa
                                   clara-tups->maps]]
             [clara.rules.accumulators :as acc]
             [todomvc.macros :refer-macros [def-tuple-session]]))
