@@ -50,27 +50,34 @@
 ;       (not (empty? env)) (assoc :env matching-env)))))
 (defn is-binding? [x]
   ;(println "Is a binding?" x)
+  ;TODO. Long cannot be cast to Named
   (= (first (name x)) \?))
 
 (defn rewrite-lhs [forms]
   (println "Forms" forms)
-  (map (fn main-one [form]
+  (mapv (fn main-one [form]
          ;(println "Form" form)
          ;(println "Type" (type form))
-         ;(println "is op" (dsl/ops (first form)))
+         (println "is op" (dsl/ops (first form)))
          (if (dsl/ops (first form))
            form
-           (let [bindings (filter
-                            (juxt (comp identity second)
-                                  (comp is-binding? second))
-                            {:e (first form)
-                             :a (second form)
-                             :v (last form)})
-                 attribute (or (keyword? (:a bindings)) :all)]
+           (let [bindings (into {}
+                            (filter
+                              (fn [[k v]]
+                                (and (not= \_ v)
+                                     (identity v)
+                                     (is-binding? v)))
+                              ;(juxt (comp identity second)
+                              ;      (partial (not= \_)) second
+                              ;      (comp is-binding? second)))
+                              {:e (first form)
+                               :a (second form)
+                               :v (last form)}))
+                 attribute (if (keyword? (second form)) (second form) :all)]
              (prn "Bindigs are" bindings)
              ;(println "attribute is" attribute)
             (vector
-              attribute
+              attribute (vector ['e 'a 'v])
               (map (fn last-one [[k v]]
                        (println "k v bindings" k v)
                        (list '= v (symbol (name k)))) bindings)))))
@@ -99,14 +106,14 @@
              properties (if (map? (first body)) (first body) nil)
              definition (if properties (rest body) body)
              {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-             lhs-new    (rewrite-lhs lhs)]
-         (println "LHS" lhs)
+             lhs-new    (rewrite-lhs (first lhs))]
+         (println "LHS" lhs-new)
          (println "RHS" rhs)
          (when-not rhs
            (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).")
                     {})))
          `(def ~(vary-meta name assoc :rule true :doc doc)
-            (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
+            (cond-> ~(dsl/parse-rule* lhs-new rhs properties {} (meta &form))
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
               ~doc (assoc :doc ~doc)))))))
 
@@ -121,7 +128,7 @@
 (macroexpand
   '(def-tuple-rule my-tuple-rule
      "Docstring!!"
-     [[?e :todo/title _] (> ?e 1)]
+     [[?e :todo/title _]]
      [:exists [:todo/done]]
      =>
      (println "Hello!")))
