@@ -51,32 +51,68 @@
 ;       (not (empty? env)) (assoc :env matching-env)))))
 (defn binding? [x]
   (println "Is a binding?" x)
-  ;TODO. Long cannot be cast to Named
-  (and (symbol? x)
-       (= (first (name x)) \?)))
+  (and
+    (symbol? x)
+    (= (first (name x)) \?)))
 
-(defn tuple-bindings [tuple]
+(defn sexpr? [x]
+  (println "Is a sexpr?" x)
+  (and
+    (list? x)))
+    ;(fn? (first x))))
+
+(defn value-expr? [x]
+  (println "Is a value-expr?" x)
+  (and
+    (not= \_ x)
+    (not (binding? x))
+    (not (sexpr? x))))
+
+
+(defn variable-bindings [tuple]
   (into {}
-    (filter
-      (fn [[k v]]
-        (and (not= \_ v)
-          (identity v)
-          (binding? v)))
+    (filter (fn [[k v]] (binding? v))
       {:e (first tuple)
        :a (second tuple)
        :v (last tuple)})))
 
+(defn sexprs [tuple]
+  (into {}
+    (filter (fn [[k v]]
+              []
+              (sexpr? v))
+      {:a (second tuple)
+       :v (last tuple)})))
+
+(defn positional-value [tuple]
+  (into {}
+    (filter (fn [[k v]]
+              (value-expr? v))
+      {:v (last tuple)})))
+
 (defn parse-as-tuple [expr]
-  (let [tuple     (first expr)
-        bindings  (tuple-bindings tuple)
-        attribute (if (keyword? (second tuple)) (second tuple) :all)]
+  (let [tuple                    (first expr)
+        bindings                 (variable-bindings tuple)
+        positional-sexprs (println (sexprs tuple))
+        bindings-and-constraint-values (merge bindings
+                                         (sexprs tuple)
+                                         (positional-value tuple))
+
+        value-expressions (positional-value tuple)
+        attribute                (if (keyword? (second tuple)) (second tuple) :all)]
     (println "Tuple: " tuple)
+    (println "Variable bindings for form:" bindings)
+    (println "Value expressions for form" value-expressions)
+    (println "With s-exprs merged:" bindings-and-constraint-values)
     (reduce
-      (fn last-one [condition [k v]]
-        (println "K V" k v)
-        (conj condition (list '= v (symbol (name k)))))
+      (fn last-one [rule-expr [eav v]]
+        (println "K V" eav v)
+        (conj rule-expr
+          (if (list? v)                                     ; s-expr?
+            v
+            (list '= v (symbol (name eav))))))
       (vector attribute (vector ['e 'a 'v]))
-      bindings)))
+      bindings-and-constraint-values)))
 
 (defn parse-with-fact-expression [expr]
   (let [fact-expression (take 2 expr)
