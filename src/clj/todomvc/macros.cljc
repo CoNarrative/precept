@@ -26,30 +26,5 @@
 ;     [:effect [[?e :todo/done :tag]]]
 ;     [:todo/title [[e a v]] (= ?e e)]))
 ;
-(defmacro tuple-rule
-  [name & body])
-
-(macroexpand
-  '(defrule foo
-    ; when toggle complete action exists
-    [:exists [:ui/toggle-complete]]
-    ; and there's a todo that isn't marked "done"
-    [:todo/title [[e a v]] (= ?e e)]
-    [:not [:todo/done [[e a v]] (= ?e e)]]
-    =>
-    (println "Marked done via toggle complete:" ?e)
-    (insert-unconditional! [?e :todo/done :done])))
-
-
-(macroexpand
-  '(defrule bar
-     ; if arity one match on attr
-     [:exists [:ui/toggle-complete]]
-     ; if arity 3 assume e a v
-     [[?e :todo/title _]]
-     [:not [[?e :todo/done ?v] (> ?v 3)]]
-     =>
-     (println "Marked done via toggle complete:" ?e)
-     (insert-unconditional! [?e :todo/done :done])))
 
 
