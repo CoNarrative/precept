@@ -190,14 +190,16 @@
                      [123 :oh :hi]]
                  (repeatedly 5 #(vector "null" true "null"))))
     (fire-rules)))
-(-> record-session clara.rules.compiler/to-beta-graph clojure.pprint/pprint)
+(-> [record-session] clara.rules.compiler/to-beta-graph clojure.pprint/pprint)
 (-> [record-session] clara.rules.compiler/to-alpha-graph clojure.pprint/pprint)
 (inspect/inspect record-session)
 (inspect/explain-activations record-session)
 (trace/get-trace record-session)
 
-(-> tuple-session clara.rules.compiler/to-beta-graph clojure.pprint/pprint)
-(-> [tuple-session] clara.rules.compiler/to-alpha-graph clojure.pprint/pprint)
+(-> [record-session] com/to-beta-graph clojure.pprint/pprint)
+
+(-> [tuple-session] clara.rules.compiler/to-beta-graph clojure.pprint/pprint)
+;(-> [tuple-session] clara.rules.compiler/to-alpha-tree clojure.pprint/pprint)
 (inspect/inspect tuple-session)
 (inspect/explain-activations tuple-session)
 (trace/get-trace tuple-session)

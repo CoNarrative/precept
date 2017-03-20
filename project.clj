@@ -2,7 +2,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.9.89"]
                  [com.cerner/clara-rules "0.13.0"]
-                 [org.toomuchcode/clara-tools "0.1.1"]
+                 [org.toomuchcode/clara-tools "0.1.1" :exclusions [org.toomuchcode/clara-rules]]
                  [reagent "0.6.0-rc"]
                  [re-frame "0.9.0"]
                  [binaryage/devtools "0.8.1"]
