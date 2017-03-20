@@ -49,10 +49,11 @@
 ;
 ;       ;; Add the environment, if given.
 ;       (not (empty? env)) (assoc :env matching-env)))))
-(defn is-binding? [x]
+(defn binding? [x]
   (println "Is a binding?" x)
   ;TODO. Long cannot be cast to Named
-  (= (first (name x)) \?))
+  (and (symbol? x)
+       (= (first (name x)) \?)))
 
 (defn tuple-bindings [tuple]
   (into {}
@@ -60,7 +61,7 @@
       (fn [[k v]]
         (and (not= \_ v)
           (identity v)
-          (is-binding? v)))
+          (binding? v)))
       {:e (first tuple)
        :a (second tuple)
        :v (last tuple)})))
@@ -91,7 +92,7 @@
                 op              (keyword? (dsl/ops leftmost))
                 fact-expression (and (not (keyword? leftmost))
                                   (not (vector? leftmost))
-                                  (is-binding? leftmost))]
+                                  (binding? leftmost))]
             (cond
               op expr
               fact-expression (parse-with-fact-expression expr)
@@ -141,7 +142,25 @@
 (macroexpand
   '(def-tuple-rule my-tuple-rule
      "Docstring!!"
-     [?todo <- [?e :todo/title v]]
+     [?todo <- [?e :todo/title _]]
+     [:exists [:todo/done]]
+     =>
+     (println "Hello!")))
+
+(macroexpand
+  '(def-tuple-rule my-tuple-rule
+     "Docstring!!"
+     [[?e :todo/title ?v]]
+     [[?e2 :todo/title ?v]]
+     [:exists [:todo/done]]
+     =>
+     (println "Hello!")))
+
+(macroexpand
+  '(defrule my-tuple-rule
+     "Docstring!!"
+     [:todo/title [[e a v]] (= ?e e) (= v ?v)]
+     [:todo/title [[e a v]] (not= e ?e) (= ?v2 ?v)]
      [:exists [:todo/done]]
      =>
      (println "Hello!")))
@@ -177,3 +196,11 @@
      [:todo/title [[e a v]] (= e? e)]
      =>
      (println "Hello!")))
+
+
+(defmacro infix [infixed]
+  (list (second infixed) (first infixed) (last infixed)))
+
+(infix (1 + 1))
+
+(+ 1 1)
