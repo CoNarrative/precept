@@ -79,18 +79,19 @@
 
 (defn parse-with-fact-expression [expr]
   (let [fact-expression (take 2 expr)
-         expression (drop 2 expr)]
-   (conj (lazy-seq (parse-as-tuple expression))
-         (second fact-expression)
-         (first fact-expression))))
+        expression      (drop 2 expr)]
+    (conj (lazy-seq (parse-as-tuple expression))
+      (second fact-expression)
+      (first fact-expression))))
 
 
 (defn rewrite-lhs [exprs]
   (mapv (fn main-one [expr]
-          (let [leftmost (first expr)
-                op (keyword? (dsl/ops leftmost))
+          (let [leftmost        (first expr)
+                op              (keyword? (dsl/ops leftmost))
                 fact-expression (and (not (keyword? leftmost))
-                                     (is-binding? leftmost))]
+                                  (not (vector? leftmost))
+                                  (is-binding? leftmost))]
             (cond
               op expr
               fact-expression (parse-with-fact-expression expr)
@@ -115,10 +116,10 @@
      [name & body]
      (if (com/compiling-cljs?)
        `(clara.macros/defrule ~name ~@body)
-       (let [doc        (if (string? (first body)) (first body) nil)
-             body       (if doc (rest body) body)
-             properties (if (map? (first body)) (first body) nil)
-             definition (if properties (rest body) body)
+       (let [doc             (if (string? (first body)) (first body) nil)
+             body            (if doc (rest body) body)
+             properties      (if (map? (first body)) (first body) nil)
+             definition      (if properties (rest body) body)
              {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
              lhs-detuplified (rewrite-lhs lhs)]
          ;(println "LHS in" lhs)
@@ -136,6 +137,7 @@
 ;LHS ([:todo/title [[e a v]] (= ?e e)] [:exists [:todo/done]])
 (rewrite-lhs '([[?e :todo/title _]] [:exists [:todo/done]]))
 
+;TODO. Test these also. SHould work and be equivalent since b0c3f1c082dde6019675cc24a5a0120ce9c544ac
 (macroexpand
   '(def-tuple-rule my-tuple-rule
      "Docstring!!"
