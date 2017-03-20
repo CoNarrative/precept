@@ -65,22 +65,36 @@
        :a (second tuple)
        :v (last tuple)})))
 
+(defn parse-as-tuple [expr]
+  (let [tuple     (first expr)
+        bindings  (tuple-bindings tuple)
+        attribute (if (keyword? (second tuple)) (second tuple) :all)]
+    (println "Tuple: " tuple)
+    (reduce
+      (fn last-one [condition [k v]]
+        (println "K V" k v)
+        (conj condition (list '= v (symbol (name k)))))
+      (vector attribute (vector ['e 'a 'v]))
+      bindings)))
+
+(defn parse-with-fact-expression [expr]
+  (let [fact-expression (take 2 expr)
+         expression (drop 2 expr)]
+   (conj (lazy-seq (parse-as-tuple expression))
+         (second fact-expression)
+         (first fact-expression))))
+
+
 (defn rewrite-lhs [exprs]
   (mapv (fn main-one [expr]
-          (println "expr" expr)
-          (println "is op" (dsl/ops (first expr)))
-          (if (dsl/ops (first expr))
-            expr
-            (let [tuple     (first expr)
-                  bindings  (tuple-bindings tuple)
-                  attribute (if (keyword? (second tuple)) (second tuple) :all)]
-              (println "Bindings: " bindings)
-              (reduce
-                (fn last-one [condition [k v]]
-                  (println "K V" k v)
-                  (conj condition (list '= v (symbol (name k)))))
-                (vector attribute (vector ['e 'a 'v]))
-                bindings))))
+          (let [leftmost (first expr)
+                op (keyword? (dsl/ops leftmost))
+                fact-expression (and (not (keyword? leftmost))
+                                     (is-binding? leftmost))]
+            (cond
+              op expr
+              fact-expression (parse-with-fact-expression expr)
+              :else (parse-as-tuple expr))))
     exprs))
 
 #?(:clj
@@ -105,14 +119,15 @@
              body       (if doc (rest body) body)
              properties (if (map? (first body)) (first body) nil)
              definition (if properties (rest body) body)
-             {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)]
+             {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
+             lhs-detuplified (rewrite-lhs lhs)]
          ;(println "LHS in" lhs)
-         ;(println "LHS out" (rewrite-lhs lhs))
+         (println "LHS out" lhs-detuplified)
          (when-not rhs
            (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).")
                     {})))
          `(def ~(vary-meta name assoc :rule true :doc doc)
-            (cond-> ~(dsl/parse-rule* (rewrite-lhs lhs) rhs properties {} (meta &form))
+            (cond-> ~(dsl/parse-rule* lhs-detuplified rhs properties {} (meta &form))
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
               ~doc (assoc :doc ~doc)))))))
 
@@ -121,6 +136,23 @@
 ;LHS ([:todo/title [[e a v]] (= ?e e)] [:exists [:todo/done]])
 (rewrite-lhs '([[?e :todo/title _]] [:exists [:todo/done]]))
 
+(macroexpand
+  '(def-tuple-rule my-tuple-rule
+     "Docstring!!"
+     [?todo <- [?e :todo/title v]]
+     [:exists [:todo/done]]
+     =>
+     (println "Hello!")))
+
+(macroexpand
+  '(defrule my-regular-rule
+     "Docstring!!"
+     [?todo <- :todo/title [[e a v]] (= ?e e)]
+     [:exists [:todo/done]]
+     =>
+     (println "Hello!")))
+
+;TODO. Test these. Should be equivalent as of 23814274a376f12535c455a55ed9d5e85c81f5c9
 (macroexpand
   '(def-tuple-rule my-tuple-rule
      "Docstring!!"
