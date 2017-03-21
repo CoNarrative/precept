@@ -8,8 +8,9 @@
                            toggle-tx
                            clear-completed-action
                            find-all-done]]
-    [todomvc.util :refer [entity entityv entities-where map->tuples facts-where insert-fire!]]
-    [clara.rules :refer [insert-all insert retract fire-rules query]]
+    [todomvc.util :refer [insert entity entityv entities-where map->tuples facts-where
+                          insert-fire!]]
+    [clara.rules :refer [retract fire-rules query]]
     [cljs.spec :as s]))
 
 
@@ -61,8 +62,7 @@
     (prn "New filter keyword is" new-filter-kw)
     (let [old         (map->tuples (old-showing session))
           removed     (retract session (first old))
-          with-new    (insert-all removed (map->tuples
-                                            (visibility-filter-tx (random-uuid) new-filter-kw)))
+          with-new    (insert removed (visibility-filter-tx (random-uuid) new-filter-kw))
           new-session (fire-rules with-new)]
       (prn "old " old)
       (prn "removed " removed)
@@ -77,7 +77,7 @@
   (fn [session [_ text]]
     (let [id   (random-uuid)
           todo (todo-tx id text nil)]
-      (fire-rules (insert session (first (map->tuples todo)))))))
+      (fire-rules (insert session todo)))))
 ;TODO. Convert to action pattern
 (reg-event-db
   :toggle-done
@@ -102,7 +102,7 @@
       (prn ":save updated-todo" updated-todo)
       (-> session
         (retract (first (map->tuples todo)))
-        (insert (first (map->tuples updated-todo)))
+        (insert updated-todo)
         (fire-rules)))))
 
 (reg-event-db
@@ -115,12 +115,12 @@
 (reg-event-db
   :clear-completed
   (fn [session] (-> session
-                  (insert (first (map->tuples clear-completed-action)))
+                  (insert clear-completed-action)
                   (fire-rules))))
 
 (reg-event-db
   :complete-all-toggle
   (fn [session _]
     (-> session
-      (insert (first (map->tuples (toggle-tx (random-uuid) true))))
+      (insert (toggle-tx (random-uuid) true))
       (fire-rules))))

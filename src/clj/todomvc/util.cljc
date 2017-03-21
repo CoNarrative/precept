@@ -25,19 +25,22 @@
 
 (defn insert [session facts]
   "Inserts either: {} [{}...] [] [[]..]"
-  (insert-all session (apply concat (insertable facts))))
+  (let [insertables (insertable facts)]
+    (println "Insertables!" insertables)
+    (println "INSERTING" (apply concat (vector insertables)))
+    (insert-all session (apply concat (vector insertables)))))
 
 
-(defn insert-tuples [session tups]
-  "Inserts vector of tuples into session"
-  (insert-all session (apply concat tups)))
+;(defn insert-tuples [session tups]
+;  "Inserts vector of tuples into session"
+;  (insert-all session (apply concat tups)))
 
 (defn insert-fire!
   "Inserts facts into session and fires rules
     `facts` - vec of vecs `[ [] ... ]`"
   [session facts]
   (-> session
-    (insert-tuples facts)
+    (insert facts)
     (fire-rules)))
 
 (defn clara-tups->maps
