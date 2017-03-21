@@ -1,15 +1,13 @@
 (ns todomvc.events
   (:require
     [todomvc.db :refer [todos->local-store]]
-    [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v
-                           after debug]]
+    [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v after debug]]
     [todomvc.rules :refer [todo-tx
                            visibility-filter-tx
-                           toggle-tx
+                           mark-all-done-action
                            clear-completed-action
                            find-all-done]]
-    [todomvc.util :refer [insert entity entityv entities-where map->tuples facts-where
-                          insert-fire!]]
+    [todomvc.util :refer [insert entity entityv entities-where map->tuples facts-where insert-fire!]]
     [clara.rules :refer [retract fire-rules query]]
     [cljs.spec :as s]))
 
@@ -70,14 +68,22 @@
       (prn "new session " new-session)
       new-session)))
 
-(defn get-todos [session]
-  (entities-where session :todo/title))
+; TODO. Above should be more like the following, using lib's versions of remove and insert
+; to cut down on boilerplate when possible
+;(reg-event-db
+;  :set-showing
+;  (fn [session [_ new-filter-kw]]
+;    (prn "Session in set showing" session)
+;    (prn "New filter keyword is" new-filter-kw)
+;    (println "Filter from session" (first (entities-where session :ui/visibility-filter)))
+;    (let [filter (first (entities-where session :ui/visibility-filter))
+;          removed     (retract session filter)]
+;      (insert-fire! removed (visibility-filter-tx (random-uuid) new-filter-kw)))))
+
 (reg-event-db
   :add-todo
-  (fn [session [_ text]]
-    (let [id   (random-uuid)
-          todo (todo-tx id text nil)]
-      (fire-rules (insert session todo)))))
+  (fn [session [_ text]] (insert-fire! session (todo-tx (random-uuid) text nil))))
+
 ;TODO. Convert to action pattern
 (reg-event-db
   :toggle-done
@@ -86,9 +92,8 @@
       (-> session
         (retract first (map->tuples done))
         (fire-rules))
-      (-> session
-        (insert [id :todo/done :tag])
-        (fire-rules)))))
+      (insert-fire! session [id :todo/done :tag]))))
+
 ;TODO. Convert to action pattern
 (reg-event-db
   :save
@@ -100,6 +105,7 @@
       (prn ":save session" session)
       (prn ":save todo" todo)
       (prn ":save updated-todo" updated-todo)
+      ;(modify session todo updated-todo)
       (-> session
         (retract (first (map->tuples todo)))
         (insert updated-todo)
@@ -114,13 +120,8 @@
 
 (reg-event-db
   :clear-completed
-  (fn [session] (-> session
-                  (insert clear-completed-action)
-                  (fire-rules))))
+  (fn [session] (insert-fire! session clear-completed-action)))
 
 (reg-event-db
   :complete-all-toggle
-  (fn [session _]
-    (-> session
-      (insert (toggle-tx (random-uuid) true))
-      (fire-rules))))
+  (fn [session] (insert-fire! session (mark-all-done-action))))

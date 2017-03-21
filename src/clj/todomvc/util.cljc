@@ -30,10 +30,18 @@
     (println "INSERTING" (apply concat (vector insertables)))
     (insert-all session (apply concat (vector insertables)))))
 
+;(defn retract [session & facts]
+;  "Retracts either: {} [{}...] [] [[]..]"
+;  (let [insertables (insertable facts)]
+;    (println "Retractables?!" insertables)
+;    (println "RETRACTING!" (apply concat (vector insertables)))
+;    (retract session (apply concat (vector insertables)))))
 
-;(defn insert-tuples [session tups]
-;  "Inserts vector of tuples into session"
-;  (insert-all session (apply concat tups)))
+; Not a true modify...going fast will come back. Thinking fn argument like updateIn
+;(defn modify [session old new]
+;  (-> session
+;    (retract old)
+;    (insert new)))
 
 (defn insert-fire!
   "Inserts facts into session and fires rules

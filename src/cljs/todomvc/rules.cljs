@@ -17,8 +17,8 @@
 
 (defn todo-tx [id title done]
   (merge
-    {:db/id        id
-     :todo/title   title}
+    {:db/id      id
+     :todo/title title}
     (when-not (nil? done)
       {:todo/done done})))
 
@@ -26,9 +26,9 @@
   {:db/id                id
    :ui/visibility-filter kw})
 
-(defn toggle-tx [id bool]
-  {:db/id              id
-   :ui/toggle-complete bool})
+(defn mark-all-done-action []
+  {:db/id              (random-uuid)
+   :ui/toggle-complete :tag})
 
 (def clear-completed-action
   {:db/id              (random-uuid)
@@ -65,7 +65,7 @@
   (insert-unconditional! [?e :todo/done :done]))
 
 (defrule remove-toggle-complete-when-all-todos-done
-  [?toggle <- :ui/toggle-complete [[e a v]] (= v true)]
+  [?toggle <- :ui/toggle-complete]
   [?total <- (acc/count) :from [:todo/title]]
   [?total-done <- (acc/count) :from [:todo/done]]
   [:test (not (not (= ?total ?total-done)))]
@@ -131,12 +131,12 @@
 
 (def-tuple-session todos 'todomvc.rules)
 
-(def facts
-  (apply concat
+;(def facts
+;  (apply concat
     ;[[(random-uuid) :today/is-friday :tag]]
-    (map->tuples (toggle-tx (random-uuid) true))
-    (map->tuples (visibility-filter-tx (random-uuid) :all))
-    (mapv map->tuples (repeatedly 5 #(todo-tx (random-uuid) "TODO" nil)))))
+    ;(map->tuples (toggle-tx (random-uuid) true))
+    ;(map->tuples (visibility-filter-tx (random-uuid) :all))
+    ;(mapv map->tuples (repeatedly 5 #(todo-tx (random-uuid) "TODO" nil))))
 
 ;(def session (fire-rules (insert-all todos facts)))
 

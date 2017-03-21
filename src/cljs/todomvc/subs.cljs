@@ -2,8 +2,7 @@
   (:require [re-frame.core :refer [reg-sub subscribe]]
             [clara.rules :refer [query]]
             [todomvc.util :refer [entities-where]]
-            [todomvc.rules :refer [find-done-count]]
-            [todomvc.events :refer [get-todos]]))
+            [todomvc.rules :refer [find-done-count]]))
 
 (defn get-visibility-filter [db]
   (println "Got visibility filter" (entities-where db :ui/visibility-filter))

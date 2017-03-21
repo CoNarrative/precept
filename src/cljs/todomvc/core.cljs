@@ -9,8 +9,7 @@
             [todomvc.views]
             [devtools.core :as devtools]
             [todomvc.rules :refer [todos visibility-filter-tx]]
-            [todomvc.util :refer [insert map->tuples]]
-            [clara.rules :refer [fire-rules]])
+            [todomvc.util :refer [insert-fire!]])
   (:import [goog History]
            [goog.history EventType]))
 
@@ -50,9 +49,7 @@
   ;; Using the sync version of dispatch means that value is in
   ;; place before we go onto the next step.
   (dispatch-sync [:initialise-db
-                  (-> todos
-                    (insert (visibility-filter-tx (random-uuid) :all))
-                    (fire-rules))])
+                  (insert-fire! todos (visibility-filter-tx (random-uuid) :all))])
 
 
   ;; Render the UI into the HTML's <div id="app" /> element
