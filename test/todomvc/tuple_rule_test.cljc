@@ -76,30 +76,30 @@
 
 (run-tests)
 
-(macroexpand
-  '(def-tuple-rule my-dsl-rule
-     "Docstring!!"
-     [?todo <- [?e :todo/title "Hi"]]
-     ;[:exists [_ :todo/done (= ?v 3)]]
-     [[_ :todo/done (= ?v 3)]]
-     =>
-     (println "Hello!")))
-
-
-(macroexpand
-  '(def-tuple-rule my-dsl-rule
-     "Docstring!!"
-     [[?e :todo/title]]
-     [:exists [_ :todo/done (= ?v 3)]]
-     =>
-     (println "Hello!")))
-;; bad
-;; LHS out [[:todo/title [[e a v]] (= ?e e)] [:exists [_ :todo/done (= ?v 3)]]]
-
-(macroexpand
-  '(defrule my-rule
-     "Docstring!!"
-     [:todo/title [[e a v]] (= ?e e)]
-     [:exists [:todo/done [[e a v]] (= ?v 3)]]
-     =>
-     (println "Hello!")))
+;(macroexpand
+;  '(def-tuple-rule my-dsl-rule
+;     "Docstring!!"
+;     [?todo <- [?e :todo/title "Hi"]]
+;     ;[:exists [_ :todo/done (= ?v 3)]]
+;     [[_ :todo/done (= ?v 3)]]
+;     =>
+;     (println "Hello!")))
+;
+;
+;(macroexpand
+;  '(def-tuple-rule my-dsl-rule
+;     "Docstring!!"
+;     [[?e :todo/title]]
+;     [:exists [_ :todo/done (= ?v 3)]]
+;     =>
+;     (println "Hello!")))
+;;; bad
+;;; LHS out [[:todo/title [[e a v]] (= ?e e)] [:exists [_ :todo/done (= ?v 3)]]]
+;
+;(macroexpand
+;  '(defrule my-rule
+;     "Docstring!!"
+;     [:todo/title [[e a v]] (= ?e e)]
+;     [:exists [:todo/done [[e a v]] (= ?v 3)]]
+;     =>
+;     (println "Hello!")))

@@ -27,8 +27,9 @@
 
 (defn value-expr? [x]
   (println "Is a value-expr?" x)
+  (println "Type in value-expr test" (type x))
   (and
-    (not= \_ x)
+    (not= '_ x)
     (not (binding? x))
     (not (sexpr? x))))
 
@@ -43,7 +44,6 @@
 (defn sexprs [tuple]
   (into {}
     (filter (fn [[k v]]
-              []
               (sexpr? v))
       {:a (second tuple)
        :v (last tuple)})))
@@ -51,8 +51,10 @@
 (defn positional-value [tuple]
   (into {}
     (filter (fn [[k v]]
-              (value-expr? v))
-      {:v (last tuple)})))
+              (and
+                (identity v)
+                (value-expr? v)))
+      {:v (first (drop 2 tuple))})))
 
 (defn parse-as-tuple [expr]
   (let [tuple                          (first expr)
