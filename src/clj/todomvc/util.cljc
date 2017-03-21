@@ -12,17 +12,29 @@
 
 (defn map->tuples
   "Transforms entity map to vector of tuples
-  [ [] ... ]"
+  {a1 v1 a2 v2 :db/id eid} -> [ [eid a1 v1] ... ]"
   [m]
   (mapv (fn [[a v]] [(:db/id m) a v]) (dissoc m :db/id)))
 
+(defn insertable [x]
+  (cond
+    (map? x) (map->tuples x)
+    (map? (first x)) (mapv map->tuples x)
+    (vector? (first x)) x
+    :else (vector x)))
+
+(defn insert [session facts]
+  "Inserts either: {} [{}...] [] [[]..]"
+  (insert-all session (apply concat (insertable facts))))
+
+
 (defn insert-tuples [session tups]
-  (insert-all session (apply concat tups)))                 ;; into seq? might solve one vs many and be
-;; performant (no-op)
+  "Inserts vector of tuples into session"
+  (insert-all session (apply concat tups)))
 
 (defn insert-fire!
   "Inserts facts into session and fires rules
-    `facts` - Seq containing vec of vecs `'([ [][] ])`"
+    `facts` - vec of vecs `[ [] ... ]`"
   [session facts]
   (-> session
     (insert-tuples facts)

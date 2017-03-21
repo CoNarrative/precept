@@ -1,6 +1,11 @@
 (ns todomvc.util-test
   (:require [clojure.test :refer [deftest testing is run-tests]]
-            [todomvc.util :refer :all]))
+            [todomvc.tuplerules :refer [def-tuple-session]]
+            [todomvc.util :refer :all]
+            [clara.rules :refer [query defquery]]))
+
+(defquery find-all []
+  [:all [[e a v]] (= ?e e) (= ?a a) (= ?v v)])
 
 (defn todo-tx [id title done]
   (merge
@@ -26,5 +31,14 @@
           "Every entry in main vector should pass the tuple test")
       (is (every? #(= (first %) (:db/id entity-map)) entity-vec)
           "Every entry should use the :db/id from the map for its eid"))))
+
+(deftest insertable-test
+  (let [fact (todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
+        facts (into [] (repeat 5 fact))]
+    (is (= (every? is-tuple? (insertable fact))))
+    (is (= (every? is-tuple? (insertable facts))))
+    (is (= (every? is-tuple? (insertable (insertable fact)))))
+    (is (= (every? is-tuple? (insertable (insertable facts)))))))
+
 
 (run-tests)
