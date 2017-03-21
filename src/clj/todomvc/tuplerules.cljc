@@ -7,19 +7,20 @@
     #?(:cljs (:require-macros todomvc.tuplerules)))
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
-(defn compiling-cljs?
-  "Return true if we are currently generating cljs code.  Useful because cljx does not
-         provide a hook for conditional macro expansion."
-  []
-  (boolean
-    (when-let [n (find-ns 'cljs.analyzer)]
-      (when-let [v (ns-resolve n '*cljs-file*)]
-        ;; We perform this require only if we are compiling ClojureScript
-        ;; so non-ClojureScript users do not need to pull in
-        ;; that dependency.
-        (require 'clara.macros)
-        (require 'todomvc.macros)
-        @v))))
+#?(:clj
+    (defn compiling-cljs?
+      "Return true if we are currently generating cljs code.  Useful because cljx does not
+             provide a hook for conditional macro expansion."
+      []
+      (boolean
+        (when-let [n (find-ns 'cljs.analyzer)]
+          (when-let [v (ns-resolve n '*cljs-file*)]
+            ;; We perform this require only if we are compiling ClojureScript
+            ;; so non-ClojureScript users do not need to pull in
+            ;; that dependency.
+            (require 'clara.macros)
+            (require 'todomvc.macros)
+            @v)))))
 
 #?(:clj
    (defmacro def-tuple-session
