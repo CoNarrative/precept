@@ -3,19 +3,22 @@
               [clara.rules :refer [defrule]]
               [todomvc.tuplerules :refer [def-tuple-rule]]
               [todomvc.macros :refer [binding?
-                                          variable-bindings
-                                          parse-as-tuple
-                                          parse-with-fact-expression
-                                          rewrite-lhs]]])
+                                      variable-bindings
+                                      positional-value
+                                      value-expr?
+                                      parse-as-tuple
+                                      parse-with-fact-expression
+                                      rewrite-lhs]]])
 
 
 ;TODO. generative testing
+
 
 (deftest binding?-test
   (is (= true (binding? '?foo)))
   (is (= false (binding? 'foo)))
   (is (= false (binding? 42)))
-  (is (= false (binding? "str")))
+  (is (= false (binding? "?str")))
   (is (= false (binding? :kw)))
   (is (= false (binding? [])))
   (is (= false (binding? '[?e :kw 2])))
@@ -35,7 +38,20 @@
     (is (= {:e '?e :a '?a :v '?v} (variable-bindings e-a-v)))
     (is (= {:a '?a :v '?v} (variable-bindings _-a-v)))))
 
-(deftest value-or-sexprjj)
+(deftest positional-value-test
+  (let [e1    '[?e :ns/foo 42]
+        e2    '[?e :ns/foo]
+        e3    '[?e :ns/foo _]
+        e-a   '[?e ?a 42]
+        e-a-v '[?e ?a ?v]
+        _-a-v '[_ ?a ?v]]
+    (is (= {:v 42} (positional-value e1)))
+    (is (= {} (positional-value e2)))
+    (is (= {} (positional-value e3)))
+    (is (= {:v 42} (positional-value e-a)))
+    (is (= {} (positional-value e-a-v)))
+    (is (= {} (positional-value _-a-v)))))
+
 
 (deftest parse-as-tuple-test
   (is (= '[:ns/attr [[e a v]] (= ?e e)]

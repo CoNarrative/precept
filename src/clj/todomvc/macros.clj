@@ -13,6 +13,7 @@
      :fact-type-fn ~'(fn [[e a v]] a)
      :ancestors-fn ~'(fn [type] [:all])))
 
+;TODO. use .spec to define schema
 (defn binding? [x]
   (println "Is a binding?" x)
   (and
@@ -25,10 +26,12 @@
     (list? x)))
 ;(fn? (first x))))
 
+;TODO. use .spec to define schema
 (defn value-expr? [x]
   (println "Is a value-expr?" x)
   (println "Type in value-expr test" (type x))
   (and
+    (identity x)
     (not= '_ x)
     (not (binding? x))
     (not (sexpr? x))))
@@ -43,27 +46,21 @@
 
 (defn sexprs [tuple]
   (into {}
-    (filter (fn [[k v]]
-              (sexpr? v))
+    (filter (fn [[k v]] (sexpr? v))
       {:a (second tuple)
        :v (last tuple)})))
 
 (defn positional-value [tuple]
   (into {}
-    (filter (fn [[k v]]
-              (and
-                (identity v)
-                (value-expr? v)))
+    (filter (fn [[k v]] (value-expr? v))
       {:v (first (drop 2 tuple))})))
 
 (defn parse-as-tuple [expr]
   (let [tuple                          (first expr)
         bindings                       (variable-bindings tuple)
-        positional-sexprs              (println (sexprs tuple))
         bindings-and-constraint-values (merge bindings
                                          (sexprs tuple)
                                          (positional-value tuple))
-
         value-expressions              (positional-value tuple)
         attribute                      (if (keyword? (second tuple)) (second tuple) :all)]
     (println "Tuple: " tuple)
