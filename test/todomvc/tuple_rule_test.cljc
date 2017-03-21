@@ -1,6 +1,7 @@
 (ns todomvc.tuple-rule-test
     [:require [clojure.test :refer [deftest testing is run-tests]]
               [clara.rules :refer [defrule]]
+              [clara.rules.accumulators :as acc]
               [todomvc.tuplerules :refer [def-tuple-rule]]
               [todomvc.macros :refer [binding?
                                       variable-bindings
@@ -20,9 +21,9 @@
   (is (= false (binding? 42)))
   (is (= false (binding? "?str")))
   (is (= false (binding? :kw)))
-  (is (= false (binding? [])))
+  (is (= false (binding? '[])))
   (is (= false (binding? '[?e :kw 2])))
-  (is (= false (binding? ['?e :kw 2]))))
+  (is (= false (binding? '['?e :kw 2]))))
 
 (deftest tuple-bindings-test
   (let [e1    '[?e :ns/foo 42]
@@ -72,7 +73,7 @@
           (rewrite-lhs '[[:not [:ns/foo]]]))))
   ;(is (= '[[:not [_ :ns/foo (= v 3)]]])
   ;    (rewrite-lhs '[[:not [:ns/foo]]]))))
-  (testing "Should expand to clara equivalent"
+  (testing "Basic rule with exists"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 "Docstring!!"
@@ -86,8 +87,24 @@
                [:todo/title [[e a v]] (= ?e e)]
                [:exists [:todo/done]]
                =>
-               (println "Hello!")))))))
-
+               (println "Hello!"))))))
+  (testing "With accumulator"
+    (is (= (macroexpand
+             '(def-tuple-rule my-rule
+                "Docstring!!"
+                [[?e :todo/title _]]
+                [?foo <- (acc/all) from [:todo/title]]
+                [:exists [:todo/done]]
+                =>
+                (println "Hello!")))
+           (macroexpand
+             '(defrule my-rule
+                "Docstring!!"
+                [:todo/title [[e a v]] (= ?e e)]
+                [?foo <- (acc/all) from [:todo/title]]
+                [:exists [:todo/done]]
+                =>
+                (println "Hello!")))))))
 
 
 (run-tests)

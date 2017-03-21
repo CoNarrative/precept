@@ -21,10 +21,8 @@
     (= (first (name x)) \?)))
 
 (defn sexpr? [x]
-  (println "Is a sexpr?" x)
-  (and
-    (list? x)))
-;(fn? (first x))))
+  (println "Is a sexpr?" x (and (list? x)))
+  (list? x))
 
 ;TODO. use .spec to define schema
 (defn value-expr? [x]
@@ -36,6 +34,12 @@
     (not (binding? x))
     (not (sexpr? x))))
 
+(defn has-accumulator? [expr]
+  (println "Has accumulator ?" (sexpr? (first expr)))
+  (and
+    (sexpr? (first expr))
+    (or (= (second expr) 'from)
+        (= (second expr) :from))))
 
 (defn variable-bindings [tuple]
   (into {}
@@ -44,7 +48,7 @@
        :a (second tuple)
        :v (last tuple)})))
 
-(defn sexprs [tuple]
+(defn sexprs-with-bindings [tuple]
   (into {}
     (filter (fn [[k v]] (sexpr? v))
       {:a (second tuple)
@@ -59,7 +63,7 @@
   (let [tuple                          (first expr)
         bindings                       (variable-bindings tuple)
         bindings-and-constraint-values (merge bindings
-                                         (sexprs tuple)
+                                         (sexprs-with-bindings tuple)
                                          (positional-value tuple))
         value-expressions              (positional-value tuple)
         attribute                      (if (keyword? (second tuple)) (second tuple) :all)]
@@ -68,10 +72,10 @@
     (println "Value expressions for form" value-expressions)
     (println "With s-exprs merged:" bindings-and-constraint-values)
     (reduce
-      (fn last-one [rule-expr [eav v]]
+      (fn [rule-expr [eav v]]
         (println "K V" eav v)
         (conj rule-expr
-          (if (list? v)                                     ; s-expr?
+          (if (sexpr? v)
             v
             (list '= v (symbol (name eav))))))
       (vector attribute (vector ['e 'a 'v]))
@@ -84,15 +88,33 @@
       (second fact-expression)
       (first fact-expression))))
 
+(defn parse-with-accumulator [expr]
+  (let [fact-expression (take 2 expr)
+        accumulator      (take 2 (drop 2 expr))
+        expression (drop 4 expr)]
+    (vector
+       (first fact-expression)
+       (second fact-expression)
+       (first accumulator)
+       (second accumulator)
+       (if-let [attr-only (= (count expression) 1)]
+         (first expression)
+         (parse-as-tuple expression)))))
+
 (defn rewrite-lhs [exprs]
-  (mapv (fn main-one [expr]
+  (mapv (fn [expr]
           (let [leftmost        (first expr)
                 op              (keyword? (dsl/ops leftmost))
                 fact-expression (and (not (keyword? leftmost))
-                                  (not (vector? leftmost))
-                                  (binding? leftmost))]
+                                     (not (vector? leftmost))
+                                     (binding? leftmost))
+                has-accumulator (if (and (true? fact-expression)
+                                         (has-accumulator? (drop 2 expr)))
+                                    true
+                                    nil)]
             (cond
               op expr
+              has-accumulator (parse-with-accumulator expr)
               fact-expression (parse-with-fact-expression expr)
               :else (parse-as-tuple expr))))
     exprs))
