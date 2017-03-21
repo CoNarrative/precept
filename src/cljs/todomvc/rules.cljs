@@ -11,7 +11,7 @@
                                   qa
                                   clara-tups->maps]]
             [clara.rules.accumulators :as acc]
-            [todomvc.macros :refer-macros [def-tuple-session]]))
+            [todomvc.tuplerules :refer-macros [def-tuple-session]]))
 
 
 

@@ -1,12 +1,13 @@
 (ns todomvc.tuple-rule-test
     [:require [clojure.test :refer [deftest testing is run-tests]]
               [clara.rules :refer [defrule]]
-              [todomvc.tuple-rule :refer [binding?
+              [todomvc.tuplerules :refer [def-tuple-rule]]
+              [todomvc.macros :refer [binding?
                                           variable-bindings
                                           parse-as-tuple
                                           parse-with-fact-expression
-                                          rewrite-lhs
-                                          def-tuple-rule]]])
+                                          rewrite-lhs]]])
+
 
 ;TODO. generative testing
 
