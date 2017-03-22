@@ -6,6 +6,9 @@
                  [clara.rules :refer [mk-session]]))
     #?(:cljs (:require-macros todomvc.tuplerules)))
 
+(defn printmac [x & args])
+  ;(println x args))
+
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj
     (defn compiling-cljs?
@@ -42,9 +45,9 @@
              properties      (if (map? (first body)) (first body) nil)
              definition      (if properties (rest body) body)
              {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-             lhs-detuplified (into '() (rewrite-lhs lhs))]
-         ;(println "LHS in" lhs)
-         (println "LHS out" lhs-detuplified)
+             lhs-detuplified (reverse (into '() (rewrite-lhs lhs)))]
+         (printmac "LHS before" lhs)
+         (printmac "LHS after" lhs-detuplified)
          (when-not rhs
            (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).")
                     {})))
