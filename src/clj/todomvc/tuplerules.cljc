@@ -42,7 +42,7 @@
              properties      (if (map? (first body)) (first body) nil)
              definition      (if properties (rest body) body)
              {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-             lhs-detuplified (rewrite-lhs lhs)]
+             lhs-detuplified (into '() (rewrite-lhs lhs))]
          ;(println "LHS in" lhs)
          (println "LHS out" lhs-detuplified)
          (when-not rhs

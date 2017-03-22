@@ -15,54 +15,54 @@
 ;TODO. generative testing
 
 
-(deftest binding?-test
-  (is (= true (binding? '?foo)))
-  (is (= false (binding? 'foo)))
-  (is (= false (binding? 42)))
-  (is (= false (binding? "?str")))
-  (is (= false (binding? :kw)))
-  (is (= false (binding? '[])))
-  (is (= false (binding? '[?e :kw 2])))
-  (is (= false (binding? '['?e :kw 2]))))
-
-(deftest tuple-bindings-test
-  (let [e1    '[?e :ns/foo 42]
-        e2    '[?e :ns/foo]
-        e3    '[?e :ns/foo _]
-        e-a   '[?e ?a 42]
-        e-a-v '[?e ?a ?v]
-        _-a-v '[_ ?a ?v]]
-    (is (= {:e '?e} (variable-bindings e1)))
-    (is (= {:e '?e} (variable-bindings e2)))
-    (is (= {:e '?e} (variable-bindings e3)))
-    (is (= {:e '?e :a '?a} (variable-bindings e-a)))
-    (is (= {:e '?e :a '?a :v '?v} (variable-bindings e-a-v)))
-    (is (= {:a '?a :v '?v} (variable-bindings _-a-v)))))
-
-(deftest positional-value-test
-  (let [e1    '[?e :ns/foo 42]
-        e2    '[?e :ns/foo]
-        e3    '[?e :ns/foo _]
-        e-a   '[?e ?a 42]
-        e-a-v '[?e ?a ?v]
-        _-a-v '[_ ?a ?v]]
-    (is (= {:v 42} (positional-value e1)))
-    (is (= {} (positional-value e2)))
-    (is (= {} (positional-value e3)))
-    (is (= {:v 42} (positional-value e-a)))
-    (is (= {} (positional-value e-a-v)))
-    (is (= {} (positional-value _-a-v)))))
-
-
-(deftest parse-as-tuple-test
-  (is (= '[:ns/attr [[e a v]] (= ?e e)]
-        (parse-as-tuple '[[?e :ns/attr _]])))
-  (is (= '[:ns/attr [[e a v]] (= ?e e)]
-        (parse-as-tuple '[[?e :ns/attr _]])))
-  (is (= '[:ns/attr [[e a v]] (= ?e e) (= ?v v)]
-        (parse-as-tuple '[[?e :ns/attr ?v]])))
-  (is (= '[:ns/attr [[e a v]] (= ?e e)]
-        (parse-as-tuple '[[?e :ns/attr]]))))
+;(deftest binding?-test
+;  (is (= true (binding? '?foo)))
+;  (is (= false (binding? 'foo)))
+;  (is (= false (binding? 42)))
+;  (is (= false (binding? "?str")))
+;  (is (= false (binding? :kw)))
+;  (is (= false (binding? '[])))
+;  (is (= false (binding? '[?e :kw 2])))
+;  (is (= false (binding? '['?e :kw 2]))))
+;
+;(deftest tuple-bindings-test
+;  (let [e1    '[?e :ns/foo 42]
+;        e2    '[?e :ns/foo]
+;        e3    '[?e :ns/foo _]
+;        e-a   '[?e ?a 42]
+;        e-a-v '[?e ?a ?v]
+;        _-a-v '[_ ?a ?v]]
+;    (is (= {:e '?e} (variable-bindings e1)))
+;    (is (= {:e '?e} (variable-bindings e2)))
+;    (is (= {:e '?e} (variable-bindings e3)))
+;    (is (= {:e '?e :a '?a} (variable-bindings e-a)))
+;    (is (= {:e '?e :a '?a :v '?v} (variable-bindings e-a-v)))
+;    (is (= {:a '?a :v '?v} (variable-bindings _-a-v)))))
+;
+;(deftest positional-value-test
+;  (let [e1    '[?e :ns/foo 42]
+;        e2    '[?e :ns/foo]
+;        e3    '[?e :ns/foo _]
+;        e-a   '[?e ?a 42]
+;        e-a-v '[?e ?a ?v]
+;        _-a-v '[_ ?a ?v]]
+;    (is (= {:v 42} (positional-value e1)))
+;    (is (= {} (positional-value e2)))
+;    (is (= {} (positional-value e3)))
+;    (is (= {:v 42} (positional-value e-a)))
+;    (is (= {} (positional-value e-a-v)))
+;    (is (= {} (positional-value _-a-v)))))
+;
+;
+;(deftest parse-as-tuple-test
+;  (is (= '[:ns/attr [[e a v]] (= ?e e)]
+;        (parse-as-tuple '[[?e :ns/attr _]])))
+;  (is (= '[:ns/attr [[e a v]] (= ?e e)]
+;        (parse-as-tuple '[[?e :ns/attr _]])))
+;  (is (= '[:ns/attr [[e a v]] (= ?e e) (= ?v v)]
+;        (parse-as-tuple '[[?e :ns/attr ?v]])))
+;  (is (= '[:ns/attr [[e a v]] (= ?e e)]
+;        (parse-as-tuple '[[?e :ns/attr]]))))
 
 (deftest rewrite-lhs-test
   (testing "Ops - :exists, :not, :and, :or"
@@ -85,6 +85,21 @@
             '(defrule my-rule
                "Docstring!!"
                [:todo/title [[e a v]] (= ?e e)]
+               [:exists [:todo/done]]
+               =>
+               (println "Hello!"))))))
+  (testing "Rule with a value"
+    (is (= (macroexpand
+             (def-tuple-rule my-rule
+                "Docstring!!"
+                [[?e :todo/title "Hello"]]
+                [:exists [:todo/done]]
+                =>
+                (println "Hello!")))
+          (macroexpand
+            (defrule my-rule
+               "Docstring!!"
+               [:todo/title [[e a v]] (= ?e e) (= "Hello" v)]
                [:exists [:todo/done]]
                =>
                (println "Hello!"))))))

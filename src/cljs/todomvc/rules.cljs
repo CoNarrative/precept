@@ -11,7 +11,7 @@
                                   qa
                                   clara-tups->maps]]
             [clara.rules.accumulators :as acc]
-            [todomvc.tuplerules :refer-macros [def-tuple-session]]))
+            [todomvc.tuplerules :refer-macros [def-tuple-session def-tuple-rule]]))
 
 
 
@@ -34,12 +34,16 @@
   {:db/id              (random-uuid)
    :ui/clear-completed :tag})
 
-
-(defrule todo-is-visible-when-filter-is-all
-  [:ui/visibility-filter [[e a v]] (= v :all)]
-  [:todo/title [[e a v]] (= ?e e)]
+(def-tuple-rule todo-is-visible-when-filter-is-all
+  [[_ :ui/visibility-filter :all]]
+  [[?e :todo/title]]
   =>
   (insert! [?e :todo/visible :tag]))
+;(defrule todo-is-visible-when-filter-is-all
+;  [:ui/visibility-filter [[e a v]] (= v :all)]
+;  [:todo/title [[e a v]] (= ?e e)]
+;  =>
+;  (insert! [?e :todo/visible :tag]))
 
 (defrule todo-is-visible-when-filter-is-done-and-todo-done
   [:ui/visibility-filter [[e a v]] (= v :done)]
@@ -125,11 +129,12 @@
 (defquery find-done-count []
   [?count <- (acc/count) :from [:todo/done]])
 
-;(defsession todos 'todomvc.rules
+;(defsession todos [print-all-facts]
 ;  :fact-type-fn (fn [[e a v]] a)
 ;  :ancestors-fn (fn [type] [:all]))
 
 (def-tuple-session todos 'todomvc.rules)
+;(def-tuple-session todos [todo-is-visible-when-filter-is-all])
 
 ;(def facts
 ;  (apply concat

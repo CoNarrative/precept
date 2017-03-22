@@ -1,7 +1,12 @@
 (ns todomvc.macros
     (:require [clara.rules :refer [defrule]]
               [clara.rules.dsl :as dsl]
+              [clara.macros :as cm]
               [clara.rules.compiler :as com]))
+
+(defn printmac [x & args]
+  (comment (println x args)))
+
 (defmacro def-tuple-session
   "Wrapper around Clara's `defsession` macro.
   Preloads query helpers."
@@ -15,19 +20,23 @@
 
 ;TODO. use .spec to define schema
 (defn binding? [x]
-  (println "Is a binding?" x)
+  (printmac "Is a binding?" x)
+  (printmac "passes " (try (= (first (name x)) \?)
+                       (catch ClassCastException e
+                         false)))
+
   (and
     (symbol? x)
     (= (first (name x)) \?)))
 
 (defn sexpr? [x]
-  (println "Is a sexpr?" x (and (list? x)))
+  (printmac "Is a sexpr?" x (and (list? x)))
   (list? x))
 
 ;TODO. use .spec to define schema
 (defn value-expr? [x]
-  (println "Is a value-expr?" x)
-  (println "Type in value-expr test" (type x))
+  (printmac "Is a value-expr?" x)
+  (printmac "Type in value-expr test" (type x))
   (and
     (identity x)
     (not= '_ x)
@@ -35,7 +44,7 @@
     (not (sexpr? x))))
 
 (defn has-accumulator? [expr]
-  (println "Has accumulator ?" (sexpr? (first expr)))
+  (printmac "Has accumulator ?" (sexpr? (first expr)))
   (and
     (sexpr? (first expr))
     (or (= (second expr) 'from)
@@ -67,13 +76,13 @@
                                          (positional-value tuple))
         value-expressions              (positional-value tuple)
         attribute                      (if (keyword? (second tuple)) (second tuple) :all)]
-    (println "Tuple: " tuple)
-    (println "Variable bindings for form:" bindings)
-    (println "Value expressions for form" value-expressions)
-    (println "With s-exprs merged:" bindings-and-constraint-values)
+    (printmac "Tuple: " tuple)
+    (printmac "Variable bindings for form:" bindings)
+    (printmac "Value expressions for form" value-expressions)
+    (printmac "With s-exprs merged:" bindings-and-constraint-values)
     (reduce
       (fn [rule-expr [eav v]]
-        (println "K V" eav v)
+        (printmac "K V" eav v)
         (conj rule-expr
           (if (sexpr? v)
             v
@@ -126,8 +135,22 @@
         properties (if (map? (first body)) (first body) nil)
         definition (if properties (rest body) body)
         {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-        rw-lhs     (rewrite-lhs lhs)]
-    `(clara.macros/defrule ~name ~doc ~body ~properties ~rw-lhs ~rhs)))
+        rw-lhs    (reverse (into '() (rewrite-lhs lhs)))
+        unwrite-rhs (rest rhs)
+        rule `(~@rw-lhs ~'=> ~@unwrite-rhs)]
+        ;test (printmac "test1" (dsl/split-lhs-rhs (conj (rest rhs) '=> (rest rw-lhs))))
+        ;test2 (printmac "test2" (dsl/split-lhs-rhs rule))]
+    ;(printmac "GUTS" rule)
+    ;(printmac "rw-lhs" rw-lhs)
+    `(cm/defrule ~name ~@rw-lhs ~'=> ~@unwrite-rhs)))
+    ;`(cm/defrule ~name ~(list ~doc ~@rw-lhs ~'=> ~@unwrite-rhs))))
+
+;(def-tuple-rule foo
+;  [[_ :bar "hi"]]
+;  [[_ :there 42]]
+;  =>
+;  (println "x")
+;  (println "y"))
 
 ;(defmacro defaction
 ;  [name event effect & body]
