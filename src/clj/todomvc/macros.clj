@@ -5,7 +5,7 @@
               [clara.rules.compiler :as com]))
 
 (defn printmac [x & args]
-  (comment (println x args)))
+  (println x args))
 
 (defmacro def-tuple-session
   "Wrapper around Clara's `defsession` macro.
@@ -51,6 +51,11 @@
         (= (second expr) :from))))
 
 (defn variable-bindings [tuple]
+  (printmac "Getting variable bindings for " tuple)
+  ;(printmac "passes " (try (binding? tuple)
+  ;                     (catch ClassCastException e
+  ;                       false)
+
   (into {}
     (filter (fn [[k v]] (binding? v))
       {:e (first tuple)
@@ -69,6 +74,8 @@
       {:v (first (drop 2 tuple))})))
 
 (defn parse-as-tuple [expr]
+  "Parses rule expression as if it contains just a tuple.
+  Does not take tuple as input! [ [] ], not []"
   (let [tuple                          (first expr)
         bindings                       (variable-bindings tuple)
         bindings-and-constraint-values (merge bindings
@@ -87,7 +94,8 @@
           (if (sexpr? v)
             v
             (list '= v (symbol (name eav))))))
-      (vector attribute (vector ['e 'a 'v]))
+      (vector attribute
+              (vector ['e 'a 'v]))
       bindings-and-constraint-values)))
 
 (defn parse-with-fact-expression [expr]
@@ -110,6 +118,15 @@
          (first expression)
          (parse-as-tuple expression)))))
 
+(defn parse-with-op [expr]
+  (let [outer-op (dsl/ops (first expr))
+        inner-op (dsl/ops (first (second expr)))]
+    (if inner-op
+      (vector outer-op (vector inner-op (parse-as-tuple (second (second expr)))))
+      (vector outer-op (if (= 1 (count (second expr))) ;;attribute only
+                           (second expr)
+                           (parse-as-tuple (vector (second expr))))))))
+
 (defn rewrite-lhs [exprs]
   (mapv (fn [expr]
           (let [leftmost        (first expr)
@@ -122,7 +139,7 @@
                                     true
                                     nil)]
             (cond
-              op expr
+              op (parse-with-op expr)
               has-accumulator (parse-with-accumulator expr)
               fact-expression (parse-with-fact-expression expr)
               :else (parse-as-tuple expr))))

@@ -113,7 +113,23 @@
                 [?foo <- (acc/all) from [:todo/title]]
                 [:exists [:todo/done]]
                 =>
-                (println "Hello!")))))))
+                (println "Hello!"))))))
+  (testing "With nested ops"
+    (is (= (macroexpand
+            '(def-tuple-rule my-rule
+              [[_ :ui/visibility-filter :active]]
+              [[?e :todo/title]]
+              [:not [?e :todo/done]]
+              =>
+              (insert! [?e :todo/visible :tag])))
+          (macroexpand
+           '(defrule my-rule
+             [:ui/visibility-filter [[e a v]] (= :active v)]
+             [:todo/title [[e a v]] (= ?e e)]
+             [:not [:todo/done [[e a v]] (= ?e e)]]
+             =>
+             (insert! [?e :todo/visible :tag])))))))
+
 
 
 (run-tests)
