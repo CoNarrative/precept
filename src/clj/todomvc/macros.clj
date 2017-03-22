@@ -21,9 +21,9 @@
 ;TODO. use .spec to define schema
 (defn binding? [x]
   (printmac "Is a binding?" x)
-  (printmac "passes " (try (= (first (name x)) \?)
-                       (catch ClassCastException e
-                         false)))
+  ;(printmac "passes " (try (= (first (name x)) \?)
+  ;                     (catch ClassCastException e
+  ;                       false))
 
   (and
     (symbol? x)
@@ -122,7 +122,10 @@
   (let [outer-op (dsl/ops (first expr))
         inner-op (dsl/ops (first (second expr)))]
     (if inner-op
-      (vector outer-op (vector inner-op (parse-as-tuple (second (second expr)))))
+      (vector outer-op (vector inner-op
+                          (if (= 1 (count (second (second expr)))) ;;attribute only
+                             (second (second expr))
+                             (parse-as-tuple (vector (second (second expr)))))))
       (vector outer-op (if (= 1 (count (second expr))) ;;attribute only
                            (second expr)
                            (parse-as-tuple (vector (second expr))))))))

@@ -114,7 +114,7 @@
                 [:exists [:todo/done]]
                 =>
                 (println "Hello!"))))))
-  (testing "With nested ops"
+  (testing "With ops that contain tuple expressions"
     (is (= (macroexpand
             '(def-tuple-rule my-rule
               [[_ :ui/visibility-filter :active]]
@@ -128,8 +128,22 @@
              [:todo/title [[e a v]] (= ?e e)]
              [:not [:todo/done [[e a v]] (= ?e e)]]
              =>
-             (insert! [?e :todo/visible :tag])))))))
-
+             (insert! [?e :todo/visible :tag]))))))
+  (testing "With nested ops"
+      (is (= (macroexpand
+              '(def-tuple-rule my-rule
+                 ;[?action <- [:ui/clear-completed]]
+                 [:not [:exists [:todo/done]]]
+                 =>
+                 (println "Clear-completed action finished. Retracting " ?action)
+                 (retract! ?action)))
+            (macroexpand
+              '(defrule my-rule
+                ;[?action <- [:ui/clear-completed]]
+                [:not [:exists [:todo/done]]]
+                =>
+                (println "Clear-completed action finished. Retracting " ?action)
+                (retract! ?action)))))))
 
 
 (run-tests)
