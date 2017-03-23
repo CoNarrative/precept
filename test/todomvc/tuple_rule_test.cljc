@@ -71,6 +71,15 @@
       "Should return exists keyword in first position as-is")
     (is (= '[[:not [:ns/foo]]]
           (rewrite-lhs '[[:not [:ns/foo]]]))))
+  (testing ":test keyword should pass through"
+    (is (= '[[:test (= 1 1)]]
+           (rewrite-lhs '[[:test (= 1 1)]]))))
+  (testing "Fact assignment: Attribute-only with no brackets"
+    (is (= '[[?toggle <- :ui/toggle-complete]]
+          (rewrite-lhs '[[?toggle <- :ui/toggle-complete]]))))
+  (testing "Fact assignment: Attribute-only with brackets"
+    (is (= '[[?toggle <- [:ui/toggle-complete]]]
+          (rewrite-lhs '[[?toggle <- [:ui/toggle-complete]]]))))
   ;(is (= '[[:not [_ :ns/foo (= v 3)]]])
   ;    (rewrite-lhs '[[:not [:ns/foo]]]))))
   (testing "Basic rule with exists"
@@ -88,13 +97,13 @@
                (println "Hello!"))))))
   (testing "Rule with a value"
     (is (= (macroexpand
-             (def-tuple-rule my-rule
+             '(def-tuple-rule my-rule
                 [[?e :todo/title "Hello"]]
                 [:exists [:todo/done]]
                 =>
                 (println "Hello!")))
           (macroexpand
-            (defrule my-rule
+            '(defrule my-rule
                [:todo/title [[e a v]] (= ?e e) (= "Hello" v)]
                [:exists [:todo/done]]
                =>
@@ -132,18 +141,29 @@
   (testing "With nested ops"
       (is (= (macroexpand
               '(def-tuple-rule my-rule
-                 ;[?action <- [:ui/clear-completed]]
                  [:not [:exists [:todo/done]]]
                  =>
                  (println "Clear-completed action finished. Retracting " ?action)
                  (retract! ?action)))
             (macroexpand
               '(defrule my-rule
-                ;[?action <- [:ui/clear-completed]]
                 [:not [:exists [:todo/done]]]
                 =>
                 (println "Clear-completed action finished. Retracting " ?action)
-                (retract! ?action)))))))
+                (retract! ?action))))))
+  (testing "Accum with fact assignment"
+    (is (= (macroexpand
+             '(def-tuple-rule my-rule
+                [?entity <- (acc/all) :from [?e :all]]
+                =>
+                (println "Clear-completed action finished. Retracting " ?action)
+                (retract! ?action)))
+          (macroexpand
+            '(defrule my-rule
+               [?entity <- (acc/all) :from [:all [[e a v]] (= ?e e)]]
+               =>
+               (println "Clear-completed action finished. Retracting " ?action)
+               (retract! ?action)))))))
 
 
 (run-tests)

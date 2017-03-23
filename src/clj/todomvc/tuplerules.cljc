@@ -6,8 +6,8 @@
                  [clara.rules :refer [mk-session]]))
     #?(:cljs (:require-macros todomvc.tuplerules)))
 
-(defn printmac [x & args])
-  ;(println x args))
+(defn printmac [x & args]
+  (comment (println x args)))
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj

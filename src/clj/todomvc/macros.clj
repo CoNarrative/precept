@@ -5,7 +5,7 @@
               [clara.rules.compiler :as com]))
 
 (defn printmac [x & args]
-  (println x args))
+  (comment (println x args)))
 
 (defmacro def-tuple-session
   "Wrapper around Clara's `defsession` macro.
@@ -17,6 +17,11 @@
      ~@sources-and-options
      :fact-type-fn ~'(fn [[e a v]] a)
      :ancestors-fn ~'(fn [type] [:all])))
+
+(defn attr-only? [x]
+  (let [s (if (vector? x) (first x) x)]
+       (printmac "Attr only?" s (keyword? s))
+       (keyword? s)))
 
 ;TODO. use .spec to define schema
 (defn binding? [x]
@@ -30,7 +35,6 @@
     (= (first (name x)) \?)))
 
 (defn sexpr? [x]
-  (printmac "Is a sexpr?" x (and (list? x)))
   (list? x))
 
 ;TODO. use .spec to define schema
@@ -48,14 +52,10 @@
   (and
     (sexpr? (first expr))
     (or (= (second expr) 'from)
-        (= (second expr) :from))))
+      (= (second expr) :from))))
 
 (defn variable-bindings [tuple]
   (printmac "Getting variable bindings for " tuple)
-  ;(printmac "passes " (try (binding? tuple)
-  ;                     (catch ClassCastException e
-  ;                       false)
-
   (into {}
     (filter (fn [[k v]] (binding? v))
       {:e (first tuple)
@@ -95,7 +95,7 @@
             v
             (list '= v (symbol (name eav))))))
       (vector attribute
-              (vector ['e 'a 'v]))
+        (vector ['e 'a 'v]))
       bindings-and-constraint-values)))
 
 (defn parse-with-fact-expression [expr]
@@ -107,41 +107,53 @@
 
 (defn parse-with-accumulator [expr]
   (let [fact-expression (take 2 expr)
-        accumulator      (take 2 (drop 2 expr))
-        expression (drop 4 expr)]
+        accumulator     (take 2 (drop 2 expr))
+        expression      (drop 4 expr)]
+    (printmac "To parse as tuple expr" expression)
     (vector
-       (first fact-expression)
-       (second fact-expression)
-       (first accumulator)
-       (second accumulator)
-       (if-let [attr-only (= (count expression) 1)]
-         (first expression)
-         (parse-as-tuple expression)))))
+      (first fact-expression)
+      (second fact-expression)
+      (first accumulator)
+      (second accumulator)
+      (if (attr-only? (first expression))
+          (first expression)
+          (parse-as-tuple expression)))))
 
 (defn parse-with-op [expr]
   (let [outer-op (dsl/ops (first expr))
         inner-op (dsl/ops (first (second expr)))]
     (if inner-op
       (vector outer-op (vector inner-op
-                          (if (= 1 (count (second (second expr)))) ;;attribute only
-                             (second (second expr))
-                             (parse-as-tuple (vector (second (second expr)))))))
-      (vector outer-op (if (= 1 (count (second expr))) ;;attribute only
-                           (second expr)
-                           (parse-as-tuple (vector (second expr))))))))
+                         (if (= 1 (count (second (second expr)))) ;;attribute only
+                           (second (second expr))
+                           (parse-as-tuple (vector (second (second expr)))))))
+      (vector outer-op (if (= 1 (count (second expr)))      ;;attribute only
+                         (second expr)
+                         (parse-as-tuple (vector (second expr))))))))
+(defn is-test-expr? [x]
+  ;(println "Is test expr?" x
+  ;  (and (keyword? x)
+  ;     (= (name x) "test")))
+  (and (keyword? x)
+       (= (name x) "test")))
 
 (defn rewrite-lhs [exprs]
   (mapv (fn [expr]
           (let [leftmost        (first expr)
                 op              (keyword? (dsl/ops leftmost))
                 fact-expression (and (not (keyword? leftmost))
-                                     (not (vector? leftmost))
-                                     (binding? leftmost))
+                                  (not (vector? leftmost))
+                                  (binding? leftmost))
+                binding-to-type-only (and fact-expression
+                                       (attr-only? (first (drop 2 expr))))
                 has-accumulator (if (and (true? fact-expression)
                                          (has-accumulator? (drop 2 expr)))
                                     true
-                                    nil)]
+                                    nil)
+                is-test-expr (is-test-expr? leftmost)]
             (cond
+              is-test-expr expr
+              binding-to-type-only expr
               op (parse-with-op expr)
               has-accumulator (parse-with-accumulator expr)
               fact-expression (parse-with-fact-expression expr)
@@ -150,20 +162,20 @@
 
 (defmacro def-tuple-rule
   [name & body]
-  (let [doc        (if (string? (first body)) (first body) nil)
-        body       (if doc (rest body) body)
-        properties (if (map? (first body)) (first body) nil)
-        definition (if properties (rest body) body)
+  (let [doc         (if (string? (first body)) (first body) nil)
+        body        (if doc (rest body) body)
+        properties  (if (map? (first body)) (first body) nil)
+        definition  (if properties (rest body) body)
         {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-        rw-lhs    (reverse (into '() (rewrite-lhs lhs)))
+        rw-lhs      (reverse (into '() (rewrite-lhs lhs)))
         unwrite-rhs (rest rhs)
-        rule `(~@rw-lhs ~'=> ~@unwrite-rhs)]
-        ;test (printmac "test1" (dsl/split-lhs-rhs (conj (rest rhs) '=> (rest rw-lhs))))
-        ;test2 (printmac "test2" (dsl/split-lhs-rhs rule))]
+        rule        `(~@rw-lhs ~'=> ~@unwrite-rhs)]
+    ;test (printmac "test1" (dsl/split-lhs-rhs (conj (rest rhs) '=> (rest rw-lhs))))
+    ;test2 (printmac "test2" (dsl/split-lhs-rhs rule))]
     ;(printmac "GUTS" rule)
     ;(printmac "rw-lhs" rw-lhs)
     `(cm/defrule ~name ~@rw-lhs ~'=> ~@unwrite-rhs)))
-    ;`(cm/defrule ~name ~(list ~doc ~@rw-lhs ~'=> ~@unwrite-rhs))))
+;`(cm/defrule ~name ~(list ~doc ~@rw-lhs ~'=> ~@unwrite-rhs))))
 
 ;(def-tuple-rule foo
 ;  [[_ :bar "hi"]]
