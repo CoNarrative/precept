@@ -1,5 +1,5 @@
 (ns todomvc.tuple-rule-test
-    [:require [clojure.test :refer [deftest testing is run-tests]]
+    (:require [clojure.test :refer [deftest testing is run-tests]]
               [clara.rules :refer [defrule]]
               [clara.rules.accumulators :as acc]
               [todomvc.tuplerules :refer [def-tuple-rule]]
@@ -9,7 +9,7 @@
                                       value-expr?
                                       parse-as-tuple
                                       parse-with-fact-expression
-                                      rewrite-lhs]]])
+                                      rewrite-lhs]]))
 
 
 ;TODO. generative testing
@@ -76,14 +76,12 @@
   (testing "Basic rule with exists"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
-                "Docstring!!"
                 [[?e :todo/title _]]
                 [:exists [:todo/done]]
                 =>
                 (println "Hello!")))
           (macroexpand
             '(defrule my-rule
-               "Docstring!!"
                [:todo/title [[e a v]] (= ?e e)]
                [:exists [:todo/done]]
                =>
@@ -91,14 +89,12 @@
   (testing "Rule with a value"
     (is (= (macroexpand
              (def-tuple-rule my-rule
-                "Docstring!!"
                 [[?e :todo/title "Hello"]]
                 [:exists [:todo/done]]
                 =>
                 (println "Hello!")))
           (macroexpand
             (defrule my-rule
-               "Docstring!!"
                [:todo/title [[e a v]] (= ?e e) (= "Hello" v)]
                [:exists [:todo/done]]
                =>
@@ -106,7 +102,6 @@
   (testing "With accumulator"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
-                "Docstring!!"
                 [[?e :todo/title _]]
                 [?foo <- (acc/all) from [:todo/title]]
                 [:exists [:todo/done]]
@@ -114,12 +109,41 @@
                 (println "Hello!")))
            (macroexpand
              '(defrule my-rule
-                "Docstring!!"
                 [:todo/title [[e a v]] (= ?e e)]
                 [?foo <- (acc/all) from [:todo/title]]
                 [:exists [:todo/done]]
                 =>
-                (println "Hello!")))))))
+                (println "Hello!"))))))
+  (testing "With ops that contain tuple expressions"
+    (is (= (macroexpand
+            '(def-tuple-rule my-rule
+              [[_ :ui/visibility-filter :active]]
+              [[?e :todo/title]]
+              [:not [?e :todo/done]]
+              =>
+              (insert! [?e :todo/visible :tag])))
+          (macroexpand
+           '(defrule my-rule
+             [:ui/visibility-filter [[e a v]] (= :active v)]
+             [:todo/title [[e a v]] (= ?e e)]
+             [:not [:todo/done [[e a v]] (= ?e e)]]
+             =>
+             (insert! [?e :todo/visible :tag]))))))
+  (testing "With nested ops"
+      (is (= (macroexpand
+              '(def-tuple-rule my-rule
+                 ;[?action <- [:ui/clear-completed]]
+                 [:not [:exists [:todo/done]]]
+                 =>
+                 (println "Clear-completed action finished. Retracting " ?action)
+                 (retract! ?action)))
+            (macroexpand
+              '(defrule my-rule
+                ;[?action <- [:ui/clear-completed]]
+                [:not [:exists [:todo/done]]]
+                =>
+                (println "Clear-completed action finished. Retracting " ?action)
+                (retract! ?action)))))))
 
 
 (run-tests)
@@ -134,13 +158,12 @@
 ;     (println "Hello!")))
 ;
 ;
-;(macroexpand
-;  '(def-tuple-rule my-dsl-rule
-;     "Docstring!!"
-;     [[?e :todo/title]]
-;     [:exists [_ :todo/done (= ?v 3)]]
-;     =>
-;     (println "Hello!")))
+;(def-tuple-rule my-dsl-rule
+;   "Docstring!!"
+;   [[?e :todo/title _]]
+;   [:exists [:todo/done]]
+;   =>
+;   (println "Hello!"))
 ;;; bad
 ;;; LHS out [[:todo/title [[e a v]] (= ?e e)] [:exists [_ :todo/done (= ?v 3)]]]
 ;

@@ -6,10 +6,10 @@
                                    visibility-filter-tx
                                    toggle-tx
                                    map->tuple
-                                   entities-where
                                    find-all-done
                                    find-done-count]]
             [todomvc.util :refer [map->tuples
+                                  entities-where
                                   insert-fire!]]
             [clara.rules :refer [query insert insert-all fire-rules]]))
 
