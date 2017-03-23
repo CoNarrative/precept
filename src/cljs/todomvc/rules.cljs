@@ -1,35 +1,8 @@
 (ns todomvc.rules
-  (:require [clara.rules :refer [insert insert-all insert! insert-all!
-                                 insert-unconditional!
-                                 insert-all-unconditional!
-                                 retract! query fire-rules]]
-            [todomvc.util :refer [map->tuples
-                                  attr-ns
-                                  entities-where
-                                  entity
-                                  qa
-                                  clara-tups->maps]]
+  (:require [clara.rules :refer [insert! insert-unconditional! retract!]]
             [clara.rules.accumulators :as acc]
+            [todomvc.util :refer [attr-ns]]
             [todomvc.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]))
-
-(defn todo-tx [id title done]
-  (merge
-    {:db/id      id
-     :todo/title title}
-    (when-not (nil? done)
-      {:todo/done done})))
-
-(defn visibility-filter-tx [id kw]
-  {:db/id                id
-   :ui/visibility-filter kw})
-
-(defn mark-all-done-action []
-  {:db/id              (random-uuid)
-   :ui/toggle-complete :tag})
-
-(def clear-completed-action
-  {:db/id              (random-uuid)
-   :ui/clear-completed :tag})
 
 (def-tuple-rule todo-is-visible-when-filter-is-all
   [[_ :ui/visibility-filter :all]]
@@ -90,14 +63,10 @@
   (println "Clear-completed action finished. Retracting " ?action)
   (retract! ?action))
 
-;(defrule print-all-facts
-;  [?fact <- :all [[e a v]] (= ?e e) (= ?a a) (= ?v v)]
-;  =>
-;  (println "FACT" ?fact))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Queries
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(def-tuple-rule print-all-facts
+  [?fact <- [?e ?a ?v]]
+  =>
+  (println "FACT" ?fact))
 
 (def-tuple-query find-all-done []
   [[?e ?a ?v]]
@@ -106,26 +75,4 @@
 (def-tuple-query find-done-count []
   [?count <- (acc/count) :from [:todo/done]])
 
-(def-tuple-session todos 'todomvc.rules)
-
-;(def facts
-;  (apply concat
-    ;[[(random-uuid) :today/is-friday :tag]]
-    ;(map->tuples (toggle-tx (random-uuid) true))
-    ;(map->tuples (visibility-filter-tx (random-uuid) :all))
-    ;(mapv map->tuples (repeatedly 5 #(todo-tx (random-uuid) "TODO" nil))))
-
-;(def session (fire-rules (insert-all todos facts)))
-
-;(def all-done (query session find-all-done))
-
-
-;(cljs.pprint/pprint (entity session (:db/id (first (clara-tups->maps all-done)))))
-
-;(cljs.pprint/pprint  all-done)
-
-;(cljs.pprint/pprint (find-by-attribute session :ui/visibility-filter))
-
-;(cljs.pprint/pprint (map #(entity session (:db/id %)) (qav session :todo/done :done)))
-;(cljs.pprint/pprint (entities-where session :todo/visible))
-
+(def-tuple-session app-session 'todomvc.rules)

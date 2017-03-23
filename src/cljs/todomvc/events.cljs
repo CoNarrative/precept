@@ -1,45 +1,40 @@
 (ns todomvc.events
   (:require
-    [todomvc.db :refer [todos->local-store]]
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v after debug]]
-    [todomvc.rules :refer [todo-tx
-                           visibility-filter-tx
-                           mark-all-done-action
-                           clear-completed-action
-                           find-all-done]]
+    [todomvc.facts :refer [todo visibility-filter mark-all-done-action clear-completed-action]]
+    [todomvc.rules :refer [find-all-done]]
     [todomvc.util :refer [insert entity entityv entities-where map->tuples facts-where insert-fire!]]
-    [clara.rules :refer [retract fire-rules query]]
-    [cljs.spec :as s]))
+    [clara.rules :refer [retract fire-rules]]))
 
 
 ;; -- Interceptors --------------------------------------------------------------
 ;;
 
-(defn check-and-throw
-  "throw an exception if db doesn't match the spec"
-  [a-spec db]
-  (when-not (s/valid? a-spec db)
-    (throw (ex-info (str "spec check failed: " (s/explain-str a-spec db)) {}))))
+;(defn check-and-throw
+;  "throw an exception if db doesn't match the spec"
+;  [a-spec db]
+;  (when-not (s/valid? a-spec db)
+;    (throw (ex-info (str "spec check failed: " (s/explain-str a-spec db)) {}))))
 
 ;; Event handlers change state, that's their job. But what happens if there's
 ;; a bug which corrupts app state in some subtle way? This interceptor is run after
 ;; each event handler has finished, and it checks app-db against a spec.  This
 ;; helps us detect event handler bugs early.
-(def check-spec-interceptor (after (partial check-and-throw :todomvc.db/db)))
+;(def check-spec-interceptor (after (partial check-and-throw :todomvc.db/db)))
 
 ;; this interceptor stores todos into local storage
 ;; we attach it to each event handler which could update todos
-(def ->local-store (after todos->local-store))
+;(def ->local-store (after todos->local-store))
 
 ;; Each event handler can have its own set of interceptors (middleware)
 ;; But we use the same set of interceptors for all event habdlers related
 ;; to manipulating todos.
 ;; A chain of interceptors is a vector.
-(def todo-interceptors [check-spec-interceptor              ;; ensure the spec is still valid
-                        (path :todos)                       ;; 1st param to handler will be the value from this path
-                        ->local-store                       ;; write todos to localstore
-                        (when ^boolean js/goog.DEBUG debug) ;; look in your browser console for debug logs
-                        trim-v])                            ;; removes first (event id) element from the event vec
+;(def todo-interceptors [check-spec-interceptor              ;; ensure the spec is still valid
+;                        (path :todos)                       ;; 1st param to handler will be the value from this path
+;                        ->local-store                       ;; write todos to localstore
+;                        (when ^boolean js/goog.DEBUG debug) ;; look in your browser console for debug logs
+;                        trim-v])                            ;; removes first (event id) element from the event vec
 
 
 ;; -- Event Handlers ----------------------------------------------------------
@@ -60,7 +55,7 @@
     (prn "New filter keyword is" new-filter-kw)
     (let [old         (map->tuples (old-showing session))
           removed     (retract session (first old))
-          with-new    (insert removed (visibility-filter-tx (random-uuid) new-filter-kw))
+          with-new    (insert removed (visibility-filter (random-uuid) new-filter-kw))
           new-session (fire-rules with-new)]
       (prn "old " old)
       (prn "removed " removed)
@@ -78,11 +73,11 @@
 ;    (println "Filter from session" (first (entities-where session :ui/visibility-filter)))
 ;    (let [filter (first (entities-where session :ui/visibility-filter))
 ;          removed     (retract session filter)]
-;      (insert-fire! removed (visibility-filter-tx (random-uuid) new-filter-kw)))))
+;      (insert-fire! removed (visibility-filter (random-uuid) new-filter-kw)))))
 
 (reg-event-db
   :add-todo
-  (fn [session [_ text]] (insert-fire! session (todo-tx (random-uuid) text nil))))
+  (fn [session [_ text]] (insert-fire! session (todo (random-uuid) text nil))))
 
 ;TODO. Convert to action pattern
 (reg-event-db

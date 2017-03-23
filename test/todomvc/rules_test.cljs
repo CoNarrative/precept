@@ -1,10 +1,8 @@
 (ns todomvc.rules-test
   (:require-macros [clara.macros :refer [defsession]])
   (:require [cljs.test :refer-macros [deftest testing is testing run-tests]]
+            [todomvc.facts :as facts]
             [todomvc.rules :refer [todos
-                                   todo-tx
-                                   visibility-filter-tx
-                                   toggle-tx
                                    map->tuple
                                    find-all-done
                                    find-done-count]]
@@ -14,7 +12,7 @@
             [clara.rules :refer [query insert insert-all fire-rules]]))
 
 (defn mk-todo [done]
-  (todo-tx (random-uuid) "Title!" done))
+  (facts/todo (random-uuid) "Title!" done))
 
 (def num-todos 5)
 
@@ -32,7 +30,7 @@
   (testing "show-all"
     (testing "All visible when :ui/visibility-filter :all"
       (let [facts   (into
-                      (vector (map->tuples (visibility-filter-tx (random-uuid) :all)))
+                      (vector (map->tuples (facts/visibility-filter (random-uuid) :all)))
                       (map map->tuples (repeatedly num-todos #(mk-todo :done))))
             session (insert-fire! todos facts)
             visible (entities-where session :todo/visible)]
@@ -41,7 +39,7 @@
   (testing "show-done"
     (testing "Todos with status :done only when :ui/visibility-filter :done"
       (let [facts   (concat
-                      (vector (map->tuples (visibility-filter-tx (random-uuid) :done)))
+                      (vector (map->tuples (facts/visibility-filter (random-uuid) :done)))
                       (vector (map->tuples (mk-todo nil)))
                       (mapv map->tuples (repeatedly (dec num-todos) #(mk-todo :done))))
             session (insert-fire! todos facts)
