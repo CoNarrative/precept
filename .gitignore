@@ -7,3 +7,4 @@ resources/public/js
 /doo-index.html
 /.lein-repl-history
 /.nrepl-port
+/classes/
