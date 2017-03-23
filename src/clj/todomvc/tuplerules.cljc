@@ -56,6 +56,24 @@
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
               ~doc (assoc :doc ~doc)))))))
 
+#?(:clj
+   (defmacro def-tuple-query
+     [name & body]
+     (if (com/compiling-cljs?)
+       `(todomvc.macros/def-tuple-query ~name ~@body)
+       (let [doc (if (string? (first body)) (first body) nil)
+             binding (if doc (second body) (first body))
+             definition (if doc (drop 2 body) (rest body))
+             rw-lhs (reverse (into '() (rewrite-lhs definition)))]
+         `(def ~(vary-meta name assoc :query true :doc doc)
+            (cond-> ~(dsl/parse-query* binding rw-lhs {} (meta &form))
+              ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
+              ~doc (assoc :doc ~doc)))))))
+
+(macroexpand
+  '(def-tuple-query foo
+    []
+    [[?e :ns/foo ?v]]))
 ;;LHS ([[?e :todo/title _]] [:exists [:todo/done]])
 ;
 ;;LHS ([:todo/title [[e a v]] (= ?e e)] [:exists [:todo/done]])

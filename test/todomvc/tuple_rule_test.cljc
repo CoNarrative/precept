@@ -1,8 +1,8 @@
 (ns todomvc.tuple-rule-test
     (:require [clojure.test :refer [deftest testing is run-tests]]
-              [clara.rules :refer [defrule]]
+              [clara.rules :refer [defrule defquery]]
               [clara.rules.accumulators :as acc]
-              [todomvc.tuplerules :refer [def-tuple-rule]]
+              [todomvc.tuplerules :refer [def-tuple-rule def-tuple-query]]
               [todomvc.macros :refer [binding?
                                       variable-bindings
                                       positional-value
@@ -164,6 +164,22 @@
                =>
                (println "Clear-completed action finished. Retracting " ?action)
                (retract! ?action)))))))
+
+(deftest def-tuple-query-test
+  (testing "Query with no args"
+    (is (= (macroexpand
+             '(def-tuple-query my-query []
+                [[?e :foo ?v]]))
+           (macroexpand
+             '(defquery my-query []
+                [:foo [[e a v]] (= ?e e) (= ?v v)])))))
+  (testing "Query with args"
+    (is (= (macroexpand
+             '(def-tuple-query my-query [:?e]
+                [[?e :foo ?v]]))
+          (macroexpand
+            '(defquery my-query [:?e]
+               [:foo [[e a v]] (= ?e e) (= ?v v)]))))))
 
 
 (run-tests)

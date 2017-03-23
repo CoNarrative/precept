@@ -5,6 +5,8 @@
               [clara.rules.compiler :as com]))
 
 (defn printmac [x & args]
+  "Prevent printlns from seeping into compiled code.
+  Remvoe comment macro to see printlns in dev."
   (comment (println x args)))
 
 (defmacro def-tuple-session
@@ -26,16 +28,17 @@
 ;TODO. use .spec to define schema
 (defn binding? [x]
   (printmac "Is a binding?" x)
-  ;(printmac "passes " (try (= (first (name x)) \?)
-  ;                     (catch ClassCastException e
-  ;                       false))
-
   (and
     (symbol? x)
     (= (first (name x)) \?)))
 
 (defn sexpr? [x]
   (list? x))
+
+(defn is-test-expr? [x]
+  (and (keyword? x)
+    (= (name x) "test")))
+
 
 ;TODO. use .spec to define schema
 (defn value-expr? [x]
@@ -99,6 +102,7 @@
       bindings-and-constraint-values)))
 
 (defn parse-with-fact-expression [expr]
+  "Returns Clara DSL for `?binding <- [tuple]`"
   (let [fact-expression (take 2 expr)
         expression      (drop 2 expr)]
     (conj (lazy-seq (parse-as-tuple expression))
@@ -106,6 +110,7 @@
       (first fact-expression))))
 
 (defn parse-with-accumulator [expr]
+  "Returns Clara DSL for `?binding <- (acc/foo) from [tuple]`"
   (let [fact-expression (take 2 expr)
         accumulator     (take 2 (drop 2 expr))
         expression      (drop 4 expr)]
@@ -120,6 +125,8 @@
           (parse-as-tuple expression)))))
 
 (defn parse-with-op [expr]
+  "Returns Clara DSL for `[:op x]`, [:op [:op x] where x is
+  :keyword, [:keyword] or [tuple]"
   (let [outer-op (dsl/ops (first expr))
         inner-op (dsl/ops (first (second expr)))]
     (if inner-op
@@ -130,14 +137,8 @@
       (vector outer-op (if (= 1 (count (second expr)))      ;;attribute only
                          (second expr)
                          (parse-as-tuple (vector (second expr))))))))
-(defn is-test-expr? [x]
-  ;(println "Is test expr?" x
-  ;  (and (keyword? x)
-  ;     (= (name x) "test")))
-  (and (keyword? x)
-       (= (name x) "test")))
-
 (defn rewrite-lhs [exprs]
+  "Returns Clara DSL"
   (mapv (fn [expr]
           (let [leftmost        (first expr)
                 op              (keyword? (dsl/ops leftmost))
@@ -160,7 +161,9 @@
               :else (parse-as-tuple expr))))
     exprs))
 
+;TODO. Pass docstring and properties to Clara's defrule
 (defmacro def-tuple-rule
+  "For CLJS"
   [name & body]
   (let [doc         (if (string? (first body)) (first body) nil)
         body        (if doc (rest body) body)
@@ -168,21 +171,18 @@
         definition  (if properties (rest body) body)
         {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
         rw-lhs      (reverse (into '() (rewrite-lhs lhs)))
-        unwrite-rhs (rest rhs)
-        rule        `(~@rw-lhs ~'=> ~@unwrite-rhs)]
-    ;test (printmac "test1" (dsl/split-lhs-rhs (conj (rest rhs) '=> (rest rw-lhs))))
-    ;test2 (printmac "test2" (dsl/split-lhs-rhs rule))]
-    ;(printmac "GUTS" rule)
-    ;(printmac "rw-lhs" rw-lhs)
+        unwrite-rhs (rest rhs)]
     `(cm/defrule ~name ~@rw-lhs ~'=> ~@unwrite-rhs)))
-;`(cm/defrule ~name ~(list ~doc ~@rw-lhs ~'=> ~@unwrite-rhs))))
 
-;(def-tuple-rule foo
-;  [[_ :bar "hi"]]
-;  [[_ :there 42]]
-;  =>
-;  (println "x")
-;  (println "y"))
+(defmacro def-tuple-query
+  "For CLJS"
+  [name & body]
+  (let [doc (if (string? (first body)) (first body) nil)
+        binding (if doc (second body) (first body))
+        definition (if doc (drop 2 body) (rest body))
+        rw-lhs      (reverse (into '() (rewrite-lhs definition)))
+        passthrough (filter #(not (nil? %)) (list doc binding))]
+    `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
 
 ;(defmacro defaction
 ;  [name event effect & body]
