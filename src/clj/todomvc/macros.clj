@@ -137,6 +137,7 @@
       (vector outer-op (if (= 1 (count (second expr)))      ;;attribute only
                          (second expr)
                          (parse-as-tuple (vector (second expr))))))))
+
 (defn rewrite-lhs [exprs]
   "Returns Clara DSL"
   (mapv (fn [expr]

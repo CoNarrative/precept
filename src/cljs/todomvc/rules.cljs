@@ -57,7 +57,7 @@
 ; (retract-entity ?e)
 
 (def-tuple-rule clear-completed-action-is-done-when-no-done-todos
-  [?action <- [:ui/clear-completed]]
+  [?action <- :ui/clear-completed]
   [:not [:exists [:todo/done]]]
   =>
   (println "Clear-completed action finished. Retracting " ?action)
