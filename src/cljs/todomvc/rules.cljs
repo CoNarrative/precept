@@ -1,5 +1,4 @@
 (ns todomvc.rules
-  (:require-macros [clara.macros :refer [defrule defquery defsession]])
   (:require [clara.rules :refer [insert insert-all insert! insert-all!
                                  insert-unconditional!
                                  insert-all-unconditional!
@@ -11,7 +10,7 @@
                                   qa
                                   clara-tups->maps]]
             [clara.rules.accumulators :as acc]
-            [todomvc.tuplerules :refer-macros [def-tuple-session def-tuple-rule]]))
+            [todomvc.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]))
 
 (defn todo-tx [id title done]
   (merge
@@ -100,11 +99,11 @@
 ;; Queries
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defquery find-all-done []
-  [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)]
+(def-tuple-query find-all-done []
+  [[?e ?a ?v]]
   [:test (= (attr-ns ?a) "todo")])
 
-(defquery find-done-count []
+(def-tuple-query find-done-count []
   [?count <- (acc/count) :from [:todo/done]])
 
 (def-tuple-session todos 'todomvc.rules)
