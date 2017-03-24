@@ -38,6 +38,11 @@
     (println "RETRACTING!" insertables)
     (apply (partial clara.rules/retract session) insertables)))
 
+(defn replace! [session this that]
+  (-> session
+    (retract this)
+    (insert that)))
+
 ; Not a true modify...going fast will come back. Thinking fn argument like updateIn
 ;(defn modify [session old new]
 ;  (-> session
@@ -48,9 +53,16 @@
   "Inserts facts into session and fires rules
     `facts` - vec of vecs `[ [] ... ]`"
   [session facts]
-  (println "Inserting and firing w/ facts" facts)
   (-> session
     (insert facts)
+    (fire-rules)))
+
+(defn retract-fire!
+  "Inserts facts into session and fires rules
+    `facts` - vec of vecs `[ [] ... ]`"
+  [session facts]
+  (-> session
+    (retract facts)
     (fire-rules)))
 
 (defn clara-tups->maps

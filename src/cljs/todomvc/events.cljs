@@ -3,8 +3,15 @@
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v after debug]]
     [todomvc.facts :refer [todo visibility-filter mark-all-done-action clear-completed-action]]
     [todomvc.rules :refer [find-all-done]]
-    [todomvc.util :refer [insert qa- retract entity entityv entities-where map->tuples facts-where
-                          insert-fire!]]
+    [todomvc.util :refer [insert
+                          insert-fire!
+                          retract
+                          retract-fire!
+                          replace!
+                          entity
+                          entityv
+                          entities-where
+                          facts-where]]
     [clara.rules :refer [query fire-rules]]))
 
 (reg-event-fx
@@ -49,24 +56,19 @@
 ;TODO. Convert to action pattern
 (reg-event-db :toggle-done
   (fn [session [_ id]]
-    (let [done-status (:todo/done (entity session id))]
-      (println "done status" done-status)
-      (if done-status
-        (-> session
-          (retract [id :todo/done :tag])
-          (fire-rules))
-        (insert-fire! session [id :todo/done :tag])))))
+    (let [done (:todo/done (entity session id))
+          fact [id :todo/done :tag]]
+      (if done
+        (retract-fire! session fact)
+        (insert-fire! session fact)))))
 
 ;TODO. Convert to action pattern
 (reg-event-db :save
   (fn [session [_ id title]]
     (let [todo         (entity session id)
           updated-todo (assoc todo :todo/title title)]
-      (prn ":save updated-todo" updated-todo)
-      ;(modify session todo updated-todo)
       (-> session
-        (retract todo)
-        (insert updated-todo)
+        (replace! todo updated-todo)
         (fire-rules)))))
 
 (reg-event-db :delete-todo
