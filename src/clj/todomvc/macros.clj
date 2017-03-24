@@ -194,8 +194,6 @@
 
 (defmacro deflogical
   [name & body]
-  (println "BODY" (first body))
-  (println "LHS" (rest body))
   (let [doc         (if (string? (first body)) (first body) nil)
         body        (if doc (rest body) body)
         properties  (if (map? (first body)) (first body) nil)

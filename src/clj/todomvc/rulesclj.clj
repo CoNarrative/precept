@@ -5,14 +5,14 @@
 ;                                   retract! query fire-rules
 ;                                   mk-session
 ;                                   defrule defquery defsession]]
+;              [todomvc.tuplerules :refer [def-tuple-session def-tuple-rule]]
 ;              [todomvc.util :refer [map->tuples
 ;                                    attr-ns]]
 ;              [clara.rules.accumulators :as acc]
 ;              [clara.tools.inspect :as inspect]
 ;              [clara.tools.tracing :as trace]
 ;              [clara.rules.compiler :as com]))
-;[clara.tools.watch :as watch]
-;[todomvc.macros :refer [def-tuple-session]]
+;;[clara.tools.watch :as watch]
 ;
 ;
 ;(defn random-uuid []
@@ -37,10 +37,9 @@
 ;  {:db/id              (random-uuid)
 ;   :ui/clear-completed :tag})
 ;
-;
-;(defrule todo-is-visible-when-filter-is-all
-;  [:ui/visibility-filter [[e a v]] (= v :all)]
-;  [:todo/title [[e a v]] (= ?e e)]
+;(def-tuple-rule todo-is-visible-when-filter-is-all
+;  [[_ :ui/visibility-filter :all]]
+;  [[?e :todo/title]]
 ;  =>
 ;  (insert! [?e :todo/visible :tag]))
 ;
