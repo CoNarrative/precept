@@ -1,5 +1,5 @@
 (defproject todomvc "0.0.0"
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
                  [org.clojure/clojurescript "1.9.89"]
                  [com.cerner/clara-rules "0.13.0"]
                  [org.toomuchcode/clara-tools "0.1.1" :exclusions [org.toomuchcode/clara-rules]]
