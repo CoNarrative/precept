@@ -2,7 +2,6 @@
   (:require
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v after debug]]
     [todomvc.facts :refer [todo visibility-filter mark-all-done-action clear-completed-action]]
-    [todomvc.rules :refer [find-all-done]]
     [todomvc.util :refer [insert
                           insert-fire!
                           retract
@@ -12,7 +11,7 @@
                           entityv
                           entities-where
                           facts-where]]
-    [clara.rules :refer [query fire-rules]]))
+    [clara.rules :refer [fire-rules]]))
 
 (reg-event-fx
   :initialise-db
@@ -21,7 +20,6 @@
     {:db session}))
 
 (defn old-showing [session]
-  (println "Old showing.." (first (entities-where session :ui/visibility-filter)))
   (first (entities-where session :ui/visibility-filter)))
 
 (reg-event-db :set-showing
@@ -32,19 +30,6 @@
       (-> session
         (replace! old new)
         (fire-rules)))))
-
-
-; TODO. Above should be more like the following, using lib's versions of remove and insert
-; to cut down on boilerplate when possible
-;(reg-event-db
-;  :set-showing
-;  (fn [session [_ new-filter-kw]]
-;    (prn "Session in set showing" session)
-;    (prn "New filter keyword is" new-filter-kw)
-;    (println "Filter from session" (first (entities-where session :ui/visibility-filter)))
-;    (let [filter (first (entities-where session :ui/visibility-filter))
-;          removed     (retract session filter)]
-;      (insert-fire! removed (visibility-filter (random-uuid) new-filter-kw)))))
 
 (reg-event-db :add-todo
   (fn [session [_ text]] (insert-fire! session (todo (random-uuid) text nil))))

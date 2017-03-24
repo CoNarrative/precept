@@ -4,6 +4,7 @@
             [todomvc.util :refer [attr-ns]]
             [todomvc.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]))
 
+
 (def-tuple-rule todo-is-visible-when-filter-is-all
   [[_ :ui/visibility-filter :all]]
   [[?e :todo/title]]
