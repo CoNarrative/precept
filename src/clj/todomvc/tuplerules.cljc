@@ -1,6 +1,6 @@
 (ns todomvc.tuplerules
     #?(:clj
-       (:require [todomvc.macros :refer [rewrite-lhs]]
+       (:require [todomvc.macros :refer [rewrite-lhs insert-each-logical]]
                  [clara.rules.dsl :as dsl]
                  [clara.rules.compiler :as com]
                  [clara.rules :refer [mk-session]]))
@@ -67,5 +67,23 @@
              rw-lhs (reverse (into '() (rewrite-lhs definition)))]
          `(def ~(vary-meta name assoc :query true :doc doc)
             (cond-> ~(dsl/parse-query* binding rw-lhs {} (meta &form))
+              ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
+              ~doc (assoc :doc ~doc)))))))
+
+#?(:clj
+   (defmacro deflogical
+     [name & body]
+     (if (compiling-cljs?)
+       `(todomvc.macros/deflogical ~name ~@body)
+       (let [doc         (if (string? (first body)) (first body) nil)
+             body        (if doc (rest body) body)
+             properties  (if (map? (first body)) (first body) nil)
+             definition  (if properties (rest body) body)
+             facts (first definition)
+             condition (rest definition)
+             lhs (reverse (into '() (rewrite-lhs condition)))
+             rhs (insert-each-logical facts)]
+         `(def ~(vary-meta name assoc :rule true :doc doc)
+            (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
               ~doc (assoc :doc ~doc)))))))

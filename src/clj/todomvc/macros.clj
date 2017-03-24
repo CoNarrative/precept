@@ -1,5 +1,5 @@
 (ns todomvc.macros
-    (:require [clara.rules :refer [defrule]]
+    (:require [clara.rules :refer [defrule insert!]]
               [clara.rules.dsl :as dsl]
               [clara.macros :as cm]
               [clara.rules.compiler :as com]))
@@ -184,6 +184,27 @@
         rw-lhs      (reverse (into '() (rewrite-lhs definition)))
         passthrough (filter #(not (nil? %)) (list doc binding))]
     `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
+
+(defn insert-each-logical [facts]
+  "Returns sequence of facts with insert! if seq of one or insert-all! if multiple"
+  (println "facts" facts)
+  (if (= (count facts) 1)
+    `(do (~'insert! ~(first facts)))
+    `(do (~'insert-all! ~facts))))
+
+(defmacro deflogical
+  [name & body]
+  (println "BODY" (first body))
+  (println "LHS" (rest body))
+  (let [doc         (if (string? (first body)) (first body) nil)
+        body        (if doc (rest body) body)
+        properties  (if (map? (first body)) (first body) nil)
+        definition  (if properties (rest body) body)
+        facts (first definition)
+        condition (rest definition)
+        lhs (reverse (into '() (rewrite-lhs condition)))
+        rhs (insert-each-logical facts)]
+    `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
 
 ;(defmacro defaction
 ;  [name event effect & body]
