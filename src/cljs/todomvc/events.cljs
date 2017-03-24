@@ -3,8 +3,9 @@
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v after debug]]
     [todomvc.facts :refer [todo visibility-filter mark-all-done-action clear-completed-action]]
     [todomvc.rules :refer [find-all-done]]
-    [todomvc.util :refer [insert entity entityv entities-where map->tuples facts-where insert-fire!]]
-    [clara.rules :refer [retract fire-rules]]))
+    [todomvc.util :refer [insert qave- retract entity entityv entities-where map->tuples facts-where
+                          insert-fire!]]
+    [clara.rules :refer [query fire-rules]]))
 
 
 ;; -- Interceptors --------------------------------------------------------------
@@ -53,8 +54,8 @@
   (fn [session [_ new-filter-kw]]
     (prn "Session in set showing" session)
     (prn "New filter keyword is" new-filter-kw)
-    (let [old         (map->tuples (old-showing session))
-          removed     (retract session (first old))
+    (let [old         (old-showing session)
+          removed     (retract session old)
           with-new    (insert removed (visibility-filter (random-uuid) new-filter-kw))
           new-session (fire-rules with-new)]
       (prn "old " old)
@@ -83,11 +84,13 @@
 (reg-event-db
   :toggle-done
   (fn [session [_ id]]
-    (if-let [done (not-empty (entities-where session :todo/done :tag id))]
-      (-> session
-        (retract first (map->tuples done))
-        (fire-rules))
-      (insert-fire! session [id :todo/done :tag]))))
+    (let [done-status (query session qave- :todo/done :tag id)]
+      (println "done status" done-status)
+      (if done-status
+        (-> session
+          (retract done-status)
+          (fire-rules))
+        (insert-fire! session [id :todo/done :tag])))))
 
 ;TODO. Convert to action pattern
 (reg-event-db
@@ -102,7 +105,7 @@
       (prn ":save updated-todo" updated-todo)
       ;(modify session todo updated-todo)
       (-> session
-        (retract (first (map->tuples todo)))
+        (retract todo)
         (insert updated-todo)
         (fire-rules)))))
 
@@ -111,7 +114,7 @@
   (fn [session [_ id]]
     (let [todov (entityv session id)]
       (println "Deleting" todov)
-      (fire-rules (apply (partial retract session) todov)))))
+      (fire-rules (retract session todov)))))
 
 (reg-event-db
   :clear-completed

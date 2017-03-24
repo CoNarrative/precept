@@ -38,10 +38,10 @@
 (deftest insertable-test
   (let [m-fact  (todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
         m-facts (into [] (repeat 5 m-fact))]
-    (is (= (every? is-tuple? (insertable m-fact))))
-    (is (= (every? is-tuple? (insertable m-facts))))
-    (is (= (every? is-tuple? (insertable (insertable m-fact)))))
-    (is (= (every? is-tuple? (insertable (insertable m-facts)))))))
+    (is (every? is-tuple? (insertable m-fact)))
+    (is (every? is-tuple? (insertable m-facts)))
+    (is (every? is-tuple? (insertable (insertable m-fact))))
+    (is (every? is-tuple? (insertable (insertable m-facts))))))
 
 (deftest insert-test
   (let [session @(def-tuple-session mysess)
@@ -53,6 +53,6 @@
                                 (insert m-facts)))]
     (is (= :add-facts (:type (first trace))))
     (is (= (count (:facts (first trace)))
-          (* numfacts (dec (count (keys m-fact))))))))
+           (* numfacts (dec (count (keys m-fact))))))))
 
 (run-tests)
