@@ -23,20 +23,16 @@
 (defn old-showing [session]
   (println "Old showing.." (first (entities-where session :ui/visibility-filter)))
   (first (entities-where session :ui/visibility-filter)))
-(reg-event-db
-  :set-showing
+
+(reg-event-db :set-showing
   (fn [session [_ new-filter-kw]]
-    (prn "Session in set showing" session)
-    (prn "New filter keyword is" new-filter-kw)
     (let [old         (old-showing session)
-          removed     (retract session old)
-          with-new    (insert removed (visibility-filter (random-uuid) new-filter-kw))
-          new-session (fire-rules with-new)]
-      (prn "old " old)
-      (prn "removed " removed)
-      (prn "with-new " with-new)
-      (prn "new session " new-session)
-      new-session)))
+          new (visibility-filter (random-uuid) new-filter-kw)]
+      (prn "Changing filter keyword from " old " to " new)
+      (-> session
+        (replace! old new)
+        (fire-rules)))))
+
 
 ; TODO. Above should be more like the following, using lib's versions of remove and insert
 ; to cut down on boilerplate when possible
