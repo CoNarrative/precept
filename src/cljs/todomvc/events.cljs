@@ -3,42 +3,9 @@
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v after debug]]
     [todomvc.facts :refer [todo visibility-filter mark-all-done-action clear-completed-action]]
     [todomvc.rules :refer [find-all-done]]
-    [todomvc.util :refer [insert qave- retract entity entityv entities-where map->tuples facts-where
+    [todomvc.util :refer [insert qa- retract entity entityv entities-where map->tuples facts-where
                           insert-fire!]]
     [clara.rules :refer [query fire-rules]]))
-
-
-;; -- Interceptors --------------------------------------------------------------
-;;
-
-;(defn check-and-throw
-;  "throw an exception if db doesn't match the spec"
-;  [a-spec db]
-;  (when-not (s/valid? a-spec db)
-;    (throw (ex-info (str "spec check failed: " (s/explain-str a-spec db)) {}))))
-
-;; Event handlers change state, that's their job. But what happens if there's
-;; a bug which corrupts app state in some subtle way? This interceptor is run after
-;; each event handler has finished, and it checks app-db against a spec.  This
-;; helps us detect event handler bugs early.
-;(def check-spec-interceptor (after (partial check-and-throw :todomvc.db/db)))
-
-;; this interceptor stores todos into local storage
-;; we attach it to each event handler which could update todos
-;(def ->local-store (after todos->local-store))
-
-;; Each event handler can have its own set of interceptors (middleware)
-;; But we use the same set of interceptors for all event habdlers related
-;; to manipulating todos.
-;; A chain of interceptors is a vector.
-;(def todo-interceptors [check-spec-interceptor              ;; ensure the spec is still valid
-;                        (path :todos)                       ;; 1st param to handler will be the value from this path
-;                        ->local-store                       ;; write todos to localstore
-;                        (when ^boolean js/goog.DEBUG debug) ;; look in your browser console for debug logs
-;                        trim-v])                            ;; removes first (event id) element from the event vec
-
-
-;; -- Event Handlers ----------------------------------------------------------
 
 (reg-event-fx
   :initialise-db
@@ -76,32 +43,25 @@
 ;          removed     (retract session filter)]
 ;      (insert-fire! removed (visibility-filter (random-uuid) new-filter-kw)))))
 
-(reg-event-db
-  :add-todo
+(reg-event-db :add-todo
   (fn [session [_ text]] (insert-fire! session (todo (random-uuid) text nil))))
 
 ;TODO. Convert to action pattern
-(reg-event-db
-  :toggle-done
+(reg-event-db :toggle-done
   (fn [session [_ id]]
-    (let [done-status (query session qave- :todo/done :tag id)]
+    (let [done-status (:todo/done (entity session id))]
       (println "done status" done-status)
       (if done-status
         (-> session
-          (retract done-status)
+          (retract [id :todo/done :tag])
           (fire-rules))
         (insert-fire! session [id :todo/done :tag])))))
 
 ;TODO. Convert to action pattern
-(reg-event-db
-  :save
+(reg-event-db :save
   (fn [session [_ id title]]
-    (prn ":save action id" id)
-    (prn ":save action title" title)
     (let [todo         (entity session id)
           updated-todo (assoc todo :todo/title title)]
-      (prn ":save session" session)
-      (prn ":save todo" todo)
       (prn ":save updated-todo" updated-todo)
       ;(modify session todo updated-todo)
       (-> session
@@ -109,17 +69,14 @@
         (insert updated-todo)
         (fire-rules)))))
 
-(reg-event-db
-  :delete-todo
+(reg-event-db :delete-todo
   (fn [session [_ id]]
     (let [todov (entityv session id)]
       (println "Deleting" todov)
       (fire-rules (retract session todov)))))
 
-(reg-event-db
-  :clear-completed
+(reg-event-db :clear-completed
   (fn [session] (insert-fire! session clear-completed-action)))
 
-(reg-event-db
-  :complete-all-toggle
+(reg-event-db :complete-all-toggle
   (fn [session] (insert-fire! session (mark-all-done-action))))

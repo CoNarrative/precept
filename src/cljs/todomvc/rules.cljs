@@ -29,7 +29,7 @@
   [:not [?e :todo/done]]
   =>
   (println "Marked done via toggle complete:" ?e)
-  (insert-unconditional! [?e :todo/done :done]))
+  (insert-unconditional! [?e :todo/done :tag]))
 
 (def-tuple-rule remove-toggle-complete-when-all-todos-done
   [?toggle <- :ui/toggle-complete]

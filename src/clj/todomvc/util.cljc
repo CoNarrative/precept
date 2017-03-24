@@ -36,7 +36,7 @@
   (let [insertables (mapcat insertable facts)]
     (println "Retractables?!" insertables)
     (println "RETRACTING!" insertables)
-    (apply (partial cr/retract session) insertables)))
+    (apply (partial clara.rules/retract session) insertables)))
 
 ; Not a true modify...going fast will come back. Thinking fn argument like updateIn
 ;(defn modify [session old new]
@@ -48,6 +48,7 @@
   "Inserts facts into session and fires rules
     `facts` - vec of vecs `[ [] ... ]`"
   [session facts]
+  (println "Inserting and firing w/ facts" facts)
   (-> session
     (insert facts)
     (fire-rules)))
