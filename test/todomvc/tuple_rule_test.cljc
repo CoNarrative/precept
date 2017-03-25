@@ -11,16 +11,6 @@
                                       parse-with-fact-expression
                                       rewrite-lhs]]))
 
-(deftest binding?-test
-  (is (= true (binding? '?foo)))
-  (is (= false (binding? 'foo)))
-  (is (= false (binding? 42)))
-  (is (= false (binding? "?str")))
-  (is (= false (binding? ':kw)))
-  (is (= false (binding? '[])))
-  (is (= false (binding? '[?e :kw 2])))
-  (is (= false (binding? '['?e :kw 2]))))
-
 (deftest tuple-bindings-test
   (let [e1    '[?e :ns/foo 42]
         e2    '[?e :ns/foo]

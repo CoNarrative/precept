@@ -2,12 +2,14 @@
     (:require [clara.rules :refer [defrule insert!]]
               [clara.rules.dsl :as dsl]
               [clara.macros :as cm]
-              [clara.rules.compiler :as com]))
+              [todomvc.lang :as lang]
+              [clara.rules.compiler :as com]
+              [clojure.spec :as s]))
 
 (defn printmac [x & args]
   "Prevent printlns from seeping into compiled code.
-  Remvoe comment macro to see printlns in dev."
-  (comment (println x args)))
+  Remove comment macro to see printlns in dev."
+  (println x args))
 
 (defmacro def-tuple-session
   "Wrapper around Clara's `defsession` macro.
@@ -25,37 +27,23 @@
        (printmac "Attr only?" s (keyword? s))
        (keyword? s)))
 
-;TODO. use .spec to define schema
 (defn binding? [x]
-  (printmac "Is a binding?" x)
-  (and
-    (symbol? x)
-    (= (first (name x)) \?)))
+  (printmac "Is a binding?" x (s/valid? ::lang/variable-binding x))
+  (s/valid? ::lang/variable-binding x))
 
 (defn sexpr? [x]
-  (list? x))
+  (s/valid? ::lang/s-expr x))
 
 (defn is-test-expr? [x]
-  (and (keyword? x)
-    (= (name x) "test")))
+  (s/valid? ::lang/test-expr x))
 
-
-;TODO. use .spec to define schema
 (defn value-expr? [x]
-  (printmac "Is a value-expr?" x)
-  (printmac "Type in value-expr test" (type x))
-  (and
-    (identity x)
-    (not= '_ x)
-    (not (binding? x))
-    (not (sexpr? x))))
+  (printmac "Is a value-expr?" x (s/valid? ::lang/value-equals-matcher x))
+  (s/valid? ::lang/value-equals-matcher x))
 
 (defn has-accumulator? [expr]
-  (printmac "Has accumulator ?" (sexpr? (first expr)))
-  (and
-    (sexpr? (first expr))
-    (or (= (second expr) 'from)
-      (= (second expr) :from))))
+  (printmac "Has accumulator?" expr (s/valid? ::lang/accum-expr expr))
+  (s/valid? ::lang/accum-expr expr))
 
 (defn variable-bindings [tuple]
   (printmac "Getting variable bindings for " tuple)
@@ -73,7 +61,7 @@
 
 (defn positional-value [tuple]
   (into {}
-    (filter (fn [[k v]] (value-expr? v))
+    (filter (comp value-expr? second)
       {:v (first (drop 2 tuple))})))
 
 (defn parse-as-tuple [expr]
@@ -140,7 +128,7 @@
 
 (defn rewrite-lhs [exprs]
   "Returns Clara DSL"
-  (mapv (fn [expr]
+  (map (fn [expr]
           (let [leftmost        (first expr)
                 op              (keyword? (dsl/ops leftmost))
                 fact-expression (and (not (keyword? leftmost))
@@ -171,7 +159,7 @@
         properties  (if (map? (first body)) (first body) nil)
         definition  (if properties (rest body) body)
         {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-        rw-lhs      (reverse (into '() (rewrite-lhs lhs)))
+        rw-lhs      (rewrite-lhs lhs)
         unwrite-rhs (rest rhs)]
     `(cm/defrule ~name ~@rw-lhs ~'=> ~@unwrite-rhs)))
 
@@ -181,7 +169,7 @@
   (let [doc (if (string? (first body)) (first body) nil)
         binding (if doc (second body) (first body))
         definition (if doc (drop 2 body) (rest body))
-        rw-lhs      (reverse (into '() (rewrite-lhs definition)))
+        rw-lhs      (rewrite-lhs definition)
         passthrough (filter #(not (nil? %)) (list doc binding))]
     `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
 
@@ -200,7 +188,7 @@
         definition  (if properties (rest body) body)
         facts (first definition)
         condition (rest definition)
-        lhs (reverse (into '() (rewrite-lhs condition)))
+        lhs (rewrite-lhs condition)
         rhs (insert-each-logical facts)]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
 

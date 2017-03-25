@@ -1,4 +1,34 @@
-;(ns todomvc.rulesclj
+(ns todomvc.rulesclj
+    (:require [todomvc.tuplerules :refer [def-tuple-rule]]
+              [clara.rules :refer [defrule]]
+              [clojure.test :refer [deftest is run-tests]]
+              [clojure.spec :as s]))
+(macroexpand
+  '(def-tuple-rule foo
+     [[?e :todo/done]]
+     =>
+     (println "Hey")))
+
+(def-tuple-rule foo
+  [[?e :todo/done]]
+  =>
+  (println "Hey"))
+
+(deftest foo
+  (is (= (macroexpand
+           '(def-tuple-rule foo
+               [[?e :todo/done]]
+               =>
+               (println "Hey")))
+         (macroexpand
+           '(defrule foo
+              [:todo/done [[e a v]] (= ?e e)]
+              =>
+              (println "Hey"))))))
+
+
+(s/check-asserts true)
+(run-tests)
 ;    (:require [clara.rules :refer [insert insert-all insert! insert-all!
 ;                                   insert-unconditional!
 ;                                   insert-all-unconditional!
