@@ -140,7 +140,7 @@
 
 (defn rewrite-lhs [exprs]
   "Returns Clara DSL"
-  (mapv (fn [expr]
+  (map (fn [expr]
           (let [leftmost        (first expr)
                 op              (keyword? (dsl/ops leftmost))
                 fact-expression (and (not (keyword? leftmost))
@@ -171,7 +171,7 @@
         properties  (if (map? (first body)) (first body) nil)
         definition  (if properties (rest body) body)
         {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-        rw-lhs      (reverse (into '() (rewrite-lhs lhs)))
+        rw-lhs      (rewrite-lhs lhs)
         unwrite-rhs (rest rhs)]
     `(cm/defrule ~name ~@rw-lhs ~'=> ~@unwrite-rhs)))
 
@@ -181,7 +181,7 @@
   (let [doc (if (string? (first body)) (first body) nil)
         binding (if doc (second body) (first body))
         definition (if doc (drop 2 body) (rest body))
-        rw-lhs      (reverse (into '() (rewrite-lhs definition)))
+        rw-lhs      (rewrite-lhs definition)
         passthrough (filter #(not (nil? %)) (list doc binding))]
     `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
 
@@ -200,7 +200,7 @@
         definition  (if properties (rest body) body)
         facts (first definition)
         condition (rest definition)
-        lhs (reverse (into '() (rewrite-lhs condition)))
+        lhs (rewrite-lhs condition)
         rhs (insert-each-logical facts)]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
 

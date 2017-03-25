@@ -1,4 +1,21 @@
-;(ns todomvc.rulesclj
+(ns todomvc.rulesclj
+  (:require [todomvc.tuplerules :refer [deflogical def-tuple-rule]]))
+
+
+(deflogical thing-is-a-bird :support
+  [[?e :isa-bird]]
+  [[?e :wings]])
+
+(deflogical [[?e :isa-bird]] :support = [[?e :flies]])
+
+(deflogical thing-is-a-bird :support
+  [[?e :isa-bird]]
+  [[?e :flies]])
+
+(deflogical thing-is-a-bird :veto
+  [[?e :isa-bird]]
+  [[?e :metal]])
+
 ;    (:require [clara.rules :refer [insert insert-all insert! insert-all!
 ;                                   insert-unconditional!
 ;                                   insert-all-unconditional!
