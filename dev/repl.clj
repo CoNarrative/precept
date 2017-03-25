@@ -1,3 +1,6 @@
-(use 'figwheel-sidecar.repl-api)
-(start-figwheel!) ;; <-- fetches configuration 
+(ns repl
+  (:require [figwheel-sidecar.repl-api
+             :refer [start-figwheel! cljs-repl]]))
+
+(start-figwheel!)
 (cljs-repl)

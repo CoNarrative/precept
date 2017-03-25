@@ -9,7 +9,7 @@
 (defn printmac [x & args]
   "Prevent printlns from seeping into compiled code.
   Remove comment macro to see printlns in dev."
-  (println x args))
+  (comment (println x args)))
 
 (defmacro def-tuple-session
   "Wrapper around Clara's `defsession` macro.
@@ -23,9 +23,8 @@
      :ancestors-fn ~'(fn [type] [:all])))
 
 (defn attr-only? [x]
-  (let [s (if (vector? x) (first x) x)]
-       (printmac "Attr only?" s (keyword? s))
-       (keyword? s)))
+  (printmac "Attr only?" x (s/valid? ::lang/attribute-matcher x))
+  (s/valid? ::lang/attribute-matcher x))
 
 (defn binding? [x]
   (printmac "Is a binding?" x (s/valid? ::lang/variable-binding x))
@@ -48,14 +47,14 @@
 (defn variable-bindings [tuple]
   (printmac "Getting variable bindings for " tuple)
   (into {}
-    (filter (fn [[k v]] (binding? v))
+    (filter (comp binding? second)
       {:e (first tuple)
        :a (second tuple)
        :v (last tuple)})))
 
 (defn sexprs-with-bindings [tuple]
   (into {}
-    (filter (fn [[k v]] (sexpr? v))
+    (filter (comp sexpr? second)
       {:a (second tuple)
        :v (last tuple)})))
 
@@ -86,7 +85,7 @@
             v
             (list '= v (symbol (name eav))))))
       (vector attribute
-        (vector ['e 'a 'v]))
+        (vector '[e a v]))
       bindings-and-constraint-values)))
 
 (defn parse-with-fact-expression [expr]
