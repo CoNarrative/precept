@@ -43,13 +43,7 @@
     (retract this)
     (insert that)))
 
-; Not a true modify...going fast will come back. Thinking fn argument like updateIn
-;(defn modify [session old new]
-;  (-> session
-;    (retract old)
-;    (insert new)))
-
-(defn insert-fire!
+(defn insert-fire
   "Inserts facts into session and fires rules
     `facts` - vec of vecs `[ [] ... ]`"
   [session facts]
@@ -57,7 +51,7 @@
     (insert facts)
     (fire-rules)))
 
-(defn retract-fire!
+(defn retract-fire
   "Inserts facts into session and fires rules
     `facts` - vec of vecs `[ [] ... ]`"
   [session facts]

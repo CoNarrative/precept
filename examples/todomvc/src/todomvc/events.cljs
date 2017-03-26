@@ -3,9 +3,9 @@
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v after debug]]
     [todomvc.facts :refer [todo visibility-filter mark-all-done-action clear-completed-action]]
     [libx.util :refer [insert
-                          insert-fire!
+                          insert-fire
                           retract
-                          retract-fire!
+                          retract-fire
                           replace!
                           entity
                           entityv
@@ -32,7 +32,7 @@
         (fire-rules)))))
 
 (reg-event-db :add-todo
-  (fn [session [_ text]] (insert-fire! session (todo (random-uuid) text nil))))
+  (fn [session [_ text]] (insert-fire session (todo (random-uuid) text nil))))
 
 ;TODO. Convert to action pattern
 (reg-event-db :toggle-done
@@ -40,8 +40,8 @@
     (let [done (:todo/done (entity session id))
           fact [id :todo/done :tag]]
       (if done
-        (retract-fire! session fact)
-        (insert-fire! session fact)))))
+        (retract-fire session fact)
+        (insert-fire session fact)))))
 
 ;TODO. Convert to action pattern
 (reg-event-db :save
@@ -59,7 +59,7 @@
       (fire-rules (retract session todov)))))
 
 (reg-event-db :clear-completed
-  (fn [session] (insert-fire! session clear-completed-action)))
+  (fn [session] (insert-fire session clear-completed-action)))
 
 (reg-event-db :complete-all-toggle
-  (fn [session] (insert-fire! session (mark-all-done-action))))
+  (fn [session] (insert-fire session (mark-all-done-action))))

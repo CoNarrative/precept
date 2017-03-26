@@ -10,7 +10,7 @@
             [devtools.core :as devtools]
             [todomvc.rules :refer [app-session]]
             [todomvc.facts :refer [visibility-filter]]
-            [libx.util :refer [insert-fire!]])
+            [libx.util :refer [insert-fire]])
   (:import [goog History]
            [goog.history EventType]))
 
@@ -50,7 +50,7 @@
   ;; Using the sync version of dispatch means that value is in
   ;; place before we go onto the next step.
   (dispatch-sync [:initialise-db
-                  (insert-fire! app-session (visibility-filter (random-uuid) :all))])
+                  (insert-fire app-session (visibility-filter (random-uuid) :all))])
 
 
   ;; Render the UI into the HTML's <div id="app" /> element

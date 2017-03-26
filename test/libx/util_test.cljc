@@ -50,7 +50,7 @@
         m-facts (into [] (repeatedly numfacts m-fact))
         trace (trace/get-trace (-> session
                                 (trace/with-tracing)
-                                (insert-fire! m-facts)))]
+                                (insert-fire m-facts)))]
     (is (= :add-facts (:type (first trace))))
     (is (= (count (:facts (first trace)))
            (* numfacts (dec (count (keys (m-fact)))))))))

@@ -8,7 +8,7 @@
                                    find-done-count]]
             [libx.util :refer [map->tuples
                                   entities-where
-                                  insert-fire!]]
+                                  insert-fire]]
             [clara.rules :refer [query insert insert-all fire-rules]]))
 
 (defn mk-todo [done]
@@ -20,11 +20,11 @@
   (testing "find-done-count"
     (testing "should return 0 if no todos done"
       (let [facts   (map map->tuples (repeatedly num-todos #(mk-todo nil)))
-            session (insert-fire! app-session facts)]
+            session (insert-fire app-session facts)]
         (is (= 0 (:?count (first (query session find-done-count)))))))
     (testing "should return 5 if 5 todos done"
       (let [facts   (map map->tuples (repeatedly num-todos #(mk-todo :done)))
-            session (insert-fire! app-session facts)]
+            session (insert-fire app-session facts)]
         (is (= num-todos (:?count (first (query session find-done-count))))))))
 
   (testing "show-all"
@@ -32,7 +32,7 @@
       (let [facts   (into
                       (vector (map->tuples (facts/visibility-filter (random-uuid) :all)))
                       (map map->tuples (repeatedly num-todos #(mk-todo :done))))
-            session (insert-fire! app-session facts)
+            session (insert-fire app-session facts)
             visible (entities-where session :todo/visible)]
         (is (= num-app-session (count visible))))))
 
@@ -42,7 +42,7 @@
                       (vector (map->tuples (facts/visibility-filter (random-uuid) :done)))
                       (vector (map->tuples (mk-todo nil)))
                       (mapv map->tuples (repeatedly (dec num-todos) #(mk-todo :done))))
-            session (insert-fire! app-session facts)
+            session (insert-fire app-session facts)
             done    (query session find-all-done)
             visible (entities-where session :todo/visible)]
         (is (= (dec num-todos) (count visible)))))))

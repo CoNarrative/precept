@@ -8,5 +8,5 @@ resources/public/js
 /libx.iml
 /examples/todomvc/todomvc.iml
 /examples/todomvc/figwheel_server.log
-/examples/todomvc/resources/public/*
+/examples/todomvc/resources/public/js
 /examples/todomvc/target/
