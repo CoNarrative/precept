@@ -1,7 +1,7 @@
 (ns todomvc.subs
   (:require [re-frame.core :refer [reg-sub subscribe]]
             [clara.rules :refer [query]]
-            [todomvc.util :refer [entities-where]]
+            [libx.util :refer [entities-where]]
             [todomvc.rules :refer [find-done-count]]))
 
 

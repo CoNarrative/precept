@@ -2,7 +2,7 @@
   (:require
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v after debug]]
     [todomvc.facts :refer [todo visibility-filter mark-all-done-action clear-completed-action]]
-    [todomvc.util :refer [insert
+    [libx.util :refer [insert
                           insert-fire!
                           retract
                           retract-fire!

@@ -1,6 +1,7 @@
-(defproject todomvc-example "0.0.0"
+(defproject todomvc "0.0.0"
   :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
                  [org.clojure/clojurescript "1.9.494"]
+                 [libx "0.0.0"]
                  [org.clojure/core.async "0.3.442"
                   :exclusions [org.clojure/tools.reader org.clojure/core.async]]
                  [com.cerner/clara-rules "0.13.0"]
@@ -27,13 +28,13 @@
                    [org.clojure/test.check "0.9.0"]]
     :plugins      [[lein-figwheel "0.5.9"
                     :exclusions [org.clojure/clojure org.clojure/core.async]]]
-    :source-paths ["src/clj" "src/cljs" "dev"]}}
+    :source-paths ["src" "dev"]}}
 
   :cljsbuild
   {:builds
    [{:id           "dev"
-     :source-paths ["src/clj" "src/cljs" "dev"]
-     :figwheel     {:on-jsload "libx.core/main"}
+     :source-paths ["src" "dev"]
+     :figwheel     {:on-jsload "todomvc.core/main"}
      :compiler     {:asset-path           "js"
                     :optimizations        :none
                     :cache-analysis       false
@@ -42,18 +43,12 @@
                     :output-dir           "resources/public/js"
                     :output-to            "resources/public/js/client.js"
                     :main                 todomvc.core}}
-    ;{:id "test"
-    ;         :source-paths ["src/libx/rules.cljs" "test"]
-    ;         :compiler {:output-to "resources/public/js/testable.js"
-    ;                    :main libx.runner
-    ;                    :optimizations :none}}
 
     {:id           "prod"
-     :source-paths ["src/clj" "src/cljs"]
+     :source-paths ["src"]
      :compiler     {:optimizations :advanced
                     :elide-asserts true
                     :output-dir    "resources/public/js/min"
                     :output-to     "resources/public/js/min/client.js"
                     :pretty-print  false}}]})
 
-   ;:test-commands {"test" ["lein" "doo" "phantom" "test" "once"]}})

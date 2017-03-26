@@ -6,7 +6,7 @@
                                    map->tuple
                                    find-all-done
                                    find-done-count]]
-            [todomvc.util :refer [map->tuples
+            [libx.util :refer [map->tuples
                                   entities-where
                                   insert-fire!]]
             [clara.rules :refer [query insert insert-all fire-rules]]))

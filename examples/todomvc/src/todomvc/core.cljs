@@ -10,7 +10,7 @@
             [devtools.core :as devtools]
             [todomvc.rules :refer [app-session]]
             [todomvc.facts :refer [visibility-filter]]
-            [todomvc.util :refer [insert-fire!]])
+            [libx.util :refer [insert-fire!]])
   (:import [goog History]
            [goog.history EventType]))
 

@@ -1,12 +1,12 @@
 resources/public/js
 /.idea/
-/todomvc-re-frame.iml
 /target/
 /figwheel_server.log
-/todomvc.iml
-/doo-index.html
 /.lein-repl-history
 /.nrepl-port
 /classes/
-/examples/todomvc/todomvc-example.iml
 /libx.iml
+/examples/todomvc/todomvc.iml
+/examples/todomvc/figwheel_server.log
+/examples/todomvc/resources/public/*
+/examples/todomvc/target/

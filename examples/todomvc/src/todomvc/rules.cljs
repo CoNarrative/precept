@@ -1,8 +1,8 @@
 (ns todomvc.rules
   (:require [clara.rules :refer [insert! insert-unconditional! retract!]]
             [clara.rules.accumulators :as acc]
-            [todomvc.util :refer [attr-ns]]
-            [todomvc.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]))
+            [libx.util :refer [attr-ns]]
+            [libx.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]))
 
 
 (def-tuple-rule todo-is-visible-when-filter-is-all
