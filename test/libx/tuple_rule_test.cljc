@@ -1,9 +1,9 @@
-(ns todomvc.tuple-rule-test
+(ns libx.tuple-rule-test
     (:require [clojure.test :refer [deftest testing is run-tests]]
               [clara.rules :refer [defrule defquery]]
               [clara.rules.accumulators :as acc]
-              [todomvc.tuplerules :refer [def-tuple-rule def-tuple-query]]
-              [todomvc.macros :refer [binding?
+              [libx.tuplerules :refer [def-tuple-rule def-tuple-query]]
+              [libx.macros :refer [binding?
                                       variable-bindings
                                       positional-value
                                       value-expr?

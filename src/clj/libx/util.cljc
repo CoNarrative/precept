@@ -1,4 +1,4 @@
-(ns todomvc.util
+(ns libx.util
     #?(:cljs
        (:require [clara.rules
                   :refer [query insert-all fire-rules]

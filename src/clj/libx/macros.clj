@@ -1,8 +1,8 @@
-(ns todomvc.macros
+(ns libx.macros
     (:require [clara.rules :refer [defrule insert!]]
               [clara.rules.dsl :as dsl]
               [clara.macros :as cm]
-              [todomvc.lang :as lang]
+              [libx.lang :as lang]
               [clara.rules.compiler :as com]
               [clojure.spec :as s]))
 
@@ -17,7 +17,7 @@
   [name & sources-and-options]
   `(clara.macros/defsession
      ~name
-     'todomvc.util
+     'libx.util
      ~@sources-and-options
      :fact-type-fn ~'(fn [[e a v]] a)
      :ancestors-fn ~'(fn [type] [:all])))

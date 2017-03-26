@@ -1,5 +1,5 @@
-;(ns todomvc.rulesclj
-;    (:require [todomvc.tuplerules :refer [def-tuple-rule]]
+;(ns libx.rulesclj
+;    (:require [libx.tuplerules :refer [def-tuple-rule]]
 ;              [clara.rules :refer [defrule]]
 ;              [clojure.test :refer [deftest is run-tests]]
 ;              [clojure.spec :as s]))
@@ -35,8 +35,8 @@
 ;;                                   retract! query fire-rules
 ;;                                   mk-session
 ;;                                   defrule defquery defsession]]
-;;              [todomvc.tuplerules :refer [def-tuple-session def-tuple-rule]]
-;;              [todomvc.util :refer [map->tuples
+;;              [libx.tuplerules :refer [def-tuple-session def-tuple-rule]]
+;;              [libx.util :refer [map->tuples
 ;;                                    attr-ns]]
 ;;              [clara.rules.accumulators :as acc]
 ;;              [clara.tools.inspect :as inspect]
@@ -157,12 +157,12 @@
 ;;;(defquery find-done-count []
 ;;;  [?count <- (acc/count) :from [:todo/done]])
 ;;
-;;;(defsession todos 'todomvc.rulesclj
+;;;(defsession todos 'libx.rulesclj
 ;;;  :fact-type-fn (fn [[e a v]] a)
 ;;;  :ancestors-fn (fn [type] [:all]))
 ;;
 ;;(def empty-session
-;;  (mk-session 'todomvc.rulesclj
+;;  (mk-session 'libx.rulesclj
 ;;    :fact-type-fn (fn [x] (second x))
 ;;    :ancestors-fn (fn [type] [:all])))
 ;;

@@ -8,3 +8,5 @@ resources/public/js
 /.lein-repl-history
 /.nrepl-port
 /classes/
+/examples/todomvc/todomvc-example.iml
+/libx.iml

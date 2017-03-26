@@ -1,6 +1,6 @@
-(ns todomvc.lang-test
+(ns libx.lang-test
     (:require [clojure.test :refer [deftest is testing run-tests]]
-              [todomvc.lang :as lang]
+              [libx.lang :as lang]
               [clojure.spec :as s]
               [clojure.spec.gen :as gen]))
 

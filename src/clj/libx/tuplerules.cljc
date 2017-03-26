@@ -1,10 +1,10 @@
-(ns todomvc.tuplerules
+(ns libx.tuplerules
     #?(:clj
-       (:require [todomvc.macros :refer [rewrite-lhs insert-each-logical]]
+       (:require [libx.macros :refer [rewrite-lhs insert-each-logical]]
                  [clara.rules.dsl :as dsl]
                  [clara.rules.compiler :as com]
                  [clara.rules :refer [mk-session]]))
-    #?(:cljs (:require-macros todomvc.tuplerules)))
+    #?(:cljs (:require-macros libx.tuplerules)))
 
 (defn printmac [x & args]
   (comment (println x args)))
@@ -22,15 +22,15 @@
             ;; so non-ClojureScript users do not need to pull in
             ;; that dependency.
             (require 'clara.macros)
-            (require 'todomvc.macros)
+            (require 'libx.macros)
             @v)))))
 
 #?(:clj
    (defmacro def-tuple-session
      [name & sources-and-options]
      (if (compiling-cljs?)
-       `(todomvc.macros/def-tuple-session ~name ~@sources-and-options)
-       `(def ~name (com/mk-session ~`['todomvc.util
+       `(libx.macros/def-tuple-session ~name ~@sources-and-options)
+       `(def ~name (com/mk-session ~`['libx.util
                                       ~@sources-and-options
                                       :fact-type-fn ~'(fn [[e a v]] a)
                                       :ancestors-fn ~'(fn [type] [:all])])))))
@@ -39,7 +39,7 @@
    (defmacro def-tuple-rule
      [name & body]
      (if (com/compiling-cljs?)
-       `(todomvc.macros/def-tuple-rule ~name ~@body)
+       `(libx.macros/def-tuple-rule ~name ~@body)
        (let [doc             (if (string? (first body)) (first body) nil)
              body            (if doc (rest body) body)
              properties      (if (map? (first body)) (first body) nil)
@@ -60,7 +60,7 @@
    (defmacro def-tuple-query
      [name & body]
      (if (com/compiling-cljs?)
-       `(todomvc.macros/def-tuple-query ~name ~@body)
+       `(libx.macros/def-tuple-query ~name ~@body)
        (let [doc (if (string? (first body)) (first body) nil)
              binding (if doc (second body) (first body))
              definition (if doc (drop 2 body) (rest body))
@@ -74,7 +74,7 @@
    (defmacro deflogical
      [name & body]
      (if (compiling-cljs?)
-       `(todomvc.macros/deflogical ~name ~@body)
+       `(libx.macros/deflogical ~name ~@body)
        (let [doc         (if (string? (first body)) (first body) nil)
              body        (if doc (rest body) body)
              properties  (if (map? (first body)) (first body) nil)

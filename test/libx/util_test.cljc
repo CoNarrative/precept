@@ -1,10 +1,10 @@
-(ns todomvc.util-test
+(ns libx.util-test
     (:require [clojure.test :refer [deftest testing is run-tests]]
-              [todomvc.tuplerules :refer [def-tuple-session]]
+              [libx.tuplerules :refer [def-tuple-session]]
               [clara.tools.inspect :as inspect]
               [clara.tools.tracing :as trace]
-              [todomvc.util :refer :all]
-              [clara.rules :refer [query defquery]]
+              [libx.util :refer :all]
+              [clara.rules :refer [query defquery] :as cr]
               [clara.tools.tracing :as trace]))
 
 (defquery find-all []
@@ -46,13 +46,14 @@
 (deftest insert-test
   (let [session @(def-tuple-session mysess)
         numfacts 5
-        m-fact  (todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
-        m-facts (into [] (repeat numfacts m-fact))
+        m-fact  #(todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
+        m-facts (into [] (repeatedly numfacts m-fact))
         trace (trace/get-trace (-> session
                                 (trace/with-tracing)
-                                (insert m-facts)))]
+                                (insert-fire! m-facts)))]
     (is (= :add-facts (:type (first trace))))
     (is (= (count (:facts (first trace)))
-           (* numfacts (dec (count (keys m-fact))))))))
+           (* numfacts (dec (count (keys (m-fact)))))))))
+
 
 (run-tests)

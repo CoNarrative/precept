@@ -39,7 +39,7 @@
 ;; -- Entry Point -------------------------------------------------------------
 ;; Within ../../resources/public/index.html you'll see this code
 ;;    window.onload = function () {
-;;      todomvc.core.main();
+;;      libx.core.main();
 ;;    }
 ;; So this is the entry function that kicks off the app once the HTML is loaded.
 ;;
@@ -54,7 +54,7 @@
 
 
   ;; Render the UI into the HTML's <div id="app" /> element
-  ;; The view function `todomvc.views/todo-app` is the
+  ;; The view function `libx.views/todo-app` is the
   ;; root view for the entire UI.
   (reagent/render [todomvc.views/todo-app]    ;;
                   (.getElementById js/document "app")))

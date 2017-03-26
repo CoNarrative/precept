@@ -1,6 +1,6 @@
-(ns todomvc.deflogical-test
+(ns libx.deflogical-test
     (:require [clojure.test :refer [deftest run-tests is testing]]
-              [todomvc.tuplerules :refer [deflogical]]
+              [libx.tuplerules :refer [deflogical]]
               [clara.rules :refer [defrule]]))
 
 (deftest deflogical-test

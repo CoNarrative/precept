@@ -1,4 +1,4 @@
-(ns todomvc.lang
+(ns libx.lang
   (:require [clojure.spec :as s]))
 
 (s/def ::variable-binding
