@@ -26,7 +26,7 @@
 (defn todo-item
   []
   (let [editing (reagent/atom false)]
-    (fn [{:keys [id done title]}]
+    (fn [{:keys [db/id todo/title todo/done]}]
       [:li {:class (str (when done "completed ")
                         (when @editing "editing"))}
         [:div.view
@@ -62,7 +62,7 @@
           "Mark all as complete"]
         [:ul#todo-list
           (for [todo  visible-todos]
-            ^{:key (:id todo)} [todo-item todo])]]))
+            ^{:key (:db/id todo)} [todo-item todo])]]))
 
 
 (defn footer-controls

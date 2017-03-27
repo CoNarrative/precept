@@ -8,9 +8,9 @@
             [todomvc.subs]
             [todomvc.views]
             [devtools.core :as devtools]
-            [todomvc.rules :refer [todos
-                                   ->Showing Showing]]
-            [clara.rules :refer [insert fire-rules]])
+            [todomvc.rules :refer [app-session]]
+            [todomvc.facts :refer [visibility-filter]]
+            [libx.util :refer [insert-fire]])
   (:import [goog History]
            [goog.history EventType]))
 
@@ -39,7 +39,7 @@
 ;; -- Entry Point -------------------------------------------------------------
 ;; Within ../../resources/public/index.html you'll see this code
 ;;    window.onload = function () {
-;;      todomvc.core.main();
+;;      libx.core.main();
 ;;    }
 ;; So this is the entry function that kicks off the app once the HTML is loaded.
 ;;
@@ -50,13 +50,11 @@
   ;; Using the sync version of dispatch means that value is in
   ;; place before we go onto the next step.
   (dispatch-sync [:initialise-db
-                  (-> todos
-                    (insert (->Showing :all))
-                    (fire-rules))])
+                  (insert-fire app-session (visibility-filter (random-uuid) :all))])
 
 
   ;; Render the UI into the HTML's <div id="app" /> element
-  ;; The view function `todomvc.views/todo-app` is the
+  ;; The view function `libx.views/todo-app` is the
   ;; root view for the entire UI.
   (reagent/render [todomvc.views/todo-app]    ;;
                   (.getElementById js/document "app")))
