@@ -4,8 +4,6 @@ jobs:
     working_directory: ~/libx
     docker:
       - image: openjdk:8
-    environment:
-      LEIN_ROOT=nbd
     steps:
       - checkout
       - restore_cache:
