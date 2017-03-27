@@ -10,13 +10,13 @@ jobs:
       - checkout
       - restore_cache:
           key: << checksum "project.clj" >>
-      - run: bin/lein deps
+      - run: lein deps
       - save_cache:
           paths:
             - $HOME/.m2
             - $HOME/.lein
           key: << checksum "project.clj" >>
-      - run: bin/lein do test libx.core-test, uberjar
+      - run: lein do test libx.core-test, uberjar
       - store_artifacts:
           path: target/libx.jar
           destination: uberjar
