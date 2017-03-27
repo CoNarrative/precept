@@ -1,0 +1,22 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/libx
+    docker:
+      - image: openjdk:8
+    environment:
+      LEIN_ROOT=nbd
+    steps:
+      - checkout
+      - restore_cache:
+          key: {{ checksum "project.clj" }}
+      - run: bin/lein deps
+      - save_cache:
+          paths:
+            - $HOME/.m2
+            - $HOME/.lein
+          key: {{ checksum "project.clj" }}
+      - run: bin/lein test libx.core-test, uberjar
+      - store_artifacts:
+          path: target/libx.jar
+          destination: uberjar

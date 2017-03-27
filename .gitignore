@@ -10,3 +10,4 @@ resources/public/js
 /examples/todomvc/figwheel_server.log
 /examples/todomvc/resources/public/js
 /examples/todomvc/target/
+/.lein-failures

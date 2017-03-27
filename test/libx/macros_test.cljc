@@ -11,4 +11,4 @@
           wrapper       '(def-tuple-session foo 'libx.macros-test)]
       (is (= (macroexpand clara-session) (macroexpand wrapper))))))
 
-(run-tests)
+(run-tests *ns*)

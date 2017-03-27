@@ -10,24 +10,45 @@
                 [[-1 :foo "bar"]]
                 [[?e :baz]]
                 [[?e :quux]]))
-           (macroexpand
-             '(defrule my-logical
-                [:baz [[e a v]] (= ?e e)]
-                [:quux [[e a v]] (= ?e e)]
-                =>
-                (insert! [-1 :foo "bar"]))))))
-  (testing "Multiple facts"
-    (is (= (macroexpand
-             '(deflogical my-logical
-                [[-1 :foo "bar"] [-2 :foo "baz"]]
-                [[?e :baz]]
-                [[?e :quux]]))
           (macroexpand
             '(defrule my-logical
                [:baz [[e a v]] (= ?e e)]
                [:quux [[e a v]] (= ?e e)]
                =>
-               (insert-all! [[-1 :foo "bar"]
-                             [-2 :foo "baz"]])))))))
+               (insert! [-1 :foo "bar"]))))))
+  (testing "Multiple facts"
+    (let [output   (macroexpand
+                     '(deflogical my-logical
+                        [[-1 :foo "bar"] [-2 :foo "baz"]]
+                        [[?e :baz]]
+                        [[?e :quux]]))
+          expected (macroexpand
+                     '(defrule my-logical
+                        [:baz [[e a v]] (= ?e e)]
+                        [:quux [[e a v]] (= ?e e)]
+                        =>
+                        (insert-all! [[-1 :foo "bar"] [-2 :foo "baz"]])))]
+      (is (= output expected)))))
+;(is (= (macroexpand
+;         `'(deflogical my-logical
+;             [[-1 :foo "bar"] [-2 :foo "baz"]]
+;             [[?e :baz]]
+;             [[?e :quux]])
+;      (macroexpand
+;        `'(defrule my-logical
+;            [:baz [[e a v]] (= ?e e)]
+;            [:quux [[e a v]] (= ?e e)]
+;            =>
+;            (insert-all! [[-1 :foo "bar"]
+;                          [-2 :foo "baz"])))))
 
-(run-tests)
+
+
+;(macroexpand
+;  `'(defrule my-logical
+;      [:baz [[e a v]] (= ?e e)]
+;      [:quux [[e a v]] (= ?e e)]
+;      =>
+;      (insert-all! [[-1 :foo "bar"]
+;                    [-2 :foo "baz"]])))
+
