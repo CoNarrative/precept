@@ -4,7 +4,7 @@ jobs:
     working_directory: ~/libx
     docker:
       - image: openjdk:8
-   environment:
+    environment:
       # Suppress warnings by setting LEIN_ROOT.
       LEIN_ROOT=nbd
     steps:
