@@ -192,14 +192,20 @@
         rhs (insert-each-logical facts)]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
 
+;(defn defaction-body [session]
+;  (-> session
+;    (insert fact)
+;    (fire-rules)
+;    (retract fact)
+;    (fire-rules)))
+
+
 (defmacro defaction
-  [name fact]
-  `(def ~name
-     (fn [session#]
-       (-> session#
-         (insert ~fact)
-         (fire-rules)
-         (retract ~fact)
-         (fire-rules)))))
-
-
+  [name facts]
+  `(defn ~name
+     [~'session]
+     (-> ~'session
+       (insert ~facts)
+       (fire-rules)
+       (retract ~facts)
+       (fire-rules))))
