@@ -1,8 +1,9 @@
 (ns libx.macros
-    (:require [clara.rules :refer [defrule insert!]]
+    (:require [clara.rules :refer [defrule insert! fire-rules]]
               [clara.rules.dsl :as dsl]
               [clara.macros :as cm]
               [libx.lang :as lang]
+              [libx.util :refer [insert retract]]
               [clara.rules.compiler :as com]
               [clojure.spec :as s]))
 
@@ -191,17 +192,14 @@
         rhs (insert-each-logical facts)]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
 
-;(defmacro defaction
-;  [name event effect & body]
-;  `(defrule ~name
-;     (conj `[:exists [event]] ~@body)
-;    => (second effect)))
-;
-;(macroexpand
-;  '(defaction foo
-;     :ui/toggle-complete-action
-;     [:effect [[?e :todo/done :tag]]]
-;     [:todo/title [[e a v]] (= ?e e)]))
-;
+(defmacro defaction
+  [name fact]
+  `(def ~name
+     (fn [session#]
+       (-> session#
+         (insert ~fact)
+         (fire-rules)
+         (retract ~fact)
+         (fire-rules)))))
 
 
