@@ -1,10 +1,12 @@
 (ns libx.tuplerules
     #?(:clj
        (:require [libx.macros :refer [rewrite-lhs insert-each-logical]]
+                 [clara.macros :as cm]
                  [clara.rules.dsl :as dsl]
                  [clara.rules.compiler :as com]
-                 [clara.rules :refer [mk-session]]))
-    #?(:cljs (:require-macros libx.tuplerules)))
+                 [clara.rules :as cr :refer [mk-session]])
+       :cljs
+       (:require-macros libx.tuplerules)))
 
 (defn printmac [x & args]
   (comment (println x args)))

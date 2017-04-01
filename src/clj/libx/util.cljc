@@ -1,10 +1,10 @@
 (ns libx.util
     #?(:cljs
-       (:require [clara.rules
+       (:require [clara.rules :as cr
                   :refer [query insert-all fire-rules]
                   :refer-macros [defquery]]))
     #?(:clj
-       (:require [clara.rules :refer [query defquery insert-all fire-rules]])))
+       (:require [clara.rules :as cr :refer [query defquery insert-all fire-rules]])))
 
 
 (defn attr-ns [attr]
@@ -25,18 +25,13 @@
 
 (defn insert [session & facts]
   "Inserts either: {} [{}...] [] [[]..]"
-  (println "Facts rec'd!" facts)
   (let [insertables (mapcat insertable facts)]
-    (println "Insertables!" insertables)
     (insert-all session insertables)))
 
 (defn retract [session & facts]
   "Retracts either: {} [{}...] [] [[]..]"
-  (println "facts rec'd" facts)
   (let [insertables (mapcat insertable facts)]
-    (println "Retractables?!" insertables)
-    (println "RETRACTING!" insertables)
-    (apply (partial clara.rules/retract session) insertables)))
+    (apply (partial cr/retract session) insertables)))
 
 (defn replace! [session this that]
   (-> session

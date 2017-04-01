@@ -16,7 +16,7 @@
   "Wrapper around Clara's `defsession` macro.
   Preloads query helpers."
   [name & sources-and-options]
-  `(clara.macros/defsession
+  `(cm/defsession
      ~name
      'libx.util
      ~@sources-and-options

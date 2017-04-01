@@ -3,20 +3,20 @@
   <groupId>libx</groupId>
   <artifactId>libx</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.0</version>
+  <version>0.0.2</version>
   <name>libx</name>
   <description/>
   <url>https://github.com/CoNarrative/libx.git</url>
   <licenses>
     <license>
-      <name>Eclipse Public License Same As Clojure</name>
+      <name>Eclipse Public License The Same As Clojure</name>
       <url>http://www.eclipse.org/legal/epl-v10.html</url>
     </license>
   </licenses>
   <scm>
     <connection>scm:git:git://github.com/CoNarrative/todomvc.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/CoNarrative/todomvc.git</developerConnection>
-    <tag>2fc270592cc7537b67e320e5b26b3f66589ad9db
+    <tag>d6980b6c05f0a213671a4d6b7f0d4969514f2002
 </tag>
     <url>https://github.com/CoNarrative/todomvc</url>
   </scm>
