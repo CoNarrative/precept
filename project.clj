@@ -1,4 +1,4 @@
-(defproject libx "0.0.2"
+(defproject libx "0.0.3"
   :url          "https://github.com/CoNarrative/libx.git"
   :license      {:name "Eclipse Public License The Same As Clojure"
                  :url "http://www.eclipse.org/legal/epl-v10.html"}

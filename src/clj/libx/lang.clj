@@ -45,3 +45,8 @@
   (s/or :tuple-2 ::tuple-2
         :tuple-3 ::tuple-3))
 
+(s/def :db/change
+  (s/tuple
+    (s/and some? #(not (s/valid? ::s-expr %)))
+    #{:db/change}
+    ::tuple))

@@ -4,6 +4,7 @@
               [clara.tools.inspect :as inspect]
               [clara.tools.tracing :as trace]
               [libx.util :refer :all]
+              [clojure.spec :as s]
               [clara.rules :refer [query defquery] :as cr]
               [clara.tools.tracing :as trace]))
 
@@ -55,5 +56,12 @@
     (is (= (count (:facts (first trace)))
            (* numfacts (dec (count (keys (m-fact)))))))))
 
+(deftest with-changes-test
+  (let [changes-added (with-changes {:db/id 1 :foo "bar"})
+        [facts changes] (partition-by #(= :db/change (second %)) changes-added)
+        every-change-a-change (every? #(s/valid? :db/change  %) changes)
+        change-facts (map last changes)]
+     (is every-change-a-change)
+     (is (= change-facts facts))))
 
 (run-tests)

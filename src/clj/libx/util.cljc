@@ -6,6 +6,9 @@
     #?(:clj
        (:require [clara.rules :as cr :refer [query defquery insert-all fire-rules]])))
 
+(defn guid []
+  #?(:clj (java.util.UUID/randomUUID)
+     :cljs (random-uuid)))
 
 (defn attr-ns [attr]
   (subs (first (clojure.string/split attr "/")) 1))
@@ -22,6 +25,17 @@
     (map? (first x)) (mapcat map->tuples x)
     (vector? (first x)) x
     :else (vector x)))
+
+(defn facts->changes [facts]
+  (insertable
+    (mapv #(vector (guid) :db/change %)
+      (insertable facts))))
+
+(defn with-changes [facts]
+  "Takes coll [{:db/id id :a v}...]. Returns then as tuples with
+  a :db/change tuple for each"
+  (let [xs (insertable facts)]
+    (into xs (insertable (mapcat facts->changes xs)))))
 
 (defn insert [session & facts]
   "Inserts either: {} [{}...] [] [[]..]"

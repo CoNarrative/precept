@@ -3,7 +3,7 @@
   <groupId>libx</groupId>
   <artifactId>libx</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.2</version>
+  <version>0.0.3</version>
   <name>libx</name>
   <description/>
   <url>https://github.com/CoNarrative/libx.git</url>
@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/CoNarrative/todomvc.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/CoNarrative/todomvc.git</developerConnection>
-    <tag>d6980b6c05f0a213671a4d6b7f0d4969514f2002
+    <tag>02cff534ea21cb4e8f40362a4650099399f9baa2
 </tag>
     <url>https://github.com/CoNarrative/todomvc</url>
   </scm>
