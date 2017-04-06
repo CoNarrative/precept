@@ -10,4 +10,5 @@
 
   :profiles
   {:dev
-   {:dependencies [[org.clojure/test.check "0.9.0"]]}})
+   {:dependencies [[org.clojure/test.check "0.9.0"]
+                   [org.clojure/tools.namespace "0.2.11"]]}})
