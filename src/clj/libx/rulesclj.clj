@@ -29,14 +29,19 @@
 ;
 ;(s/check-asserts true)
 ;(run-tests)
-    (:require [clara.rules :refer [insert insert-all insert! insert-all!
+    (:require [clara.rules :refer [insert!
+                                   insert-all
+                                   insert-all!
                                    insert-unconditional!
                                    insert-all-unconditional!
                                    retract! query fire-rules
                                    mk-session
                                    defrule defquery defsession]]
               [libx.tuplerules :refer [def-tuple-session def-tuple-rule]]
-              [libx.util :refer [map->tuples
+              [libx.util :refer [retract
+                                 insert
+                                 map->tuples
+                                 entities-where
                                     attr-ns]]
               [clara.rules.accumulators :as acc]
               [clara.tools.inspect :as inspect]
@@ -218,26 +223,26 @@
 ;;;;;;;;;;;;;;;
 
 (def-tuple-rule test-insert-l-retract-l
-  [?f <- [?e :hi]]
+  [?f <- [?e :attr/a]]
   =>
-  (println "Found :hi" ?e)
-  (insert! [?e :my-logical-insert ?f]))
+  (println "Found :attr/a" ?f)
+  (insert! [?e :attr/logical-insert ?f]))
 
 (def-tuple-rule foooo
-  [[_ :my-logical-insert ?f]]
+  [[_ :attr/logical-insert ?f]]
   =>
   (println "Found " ?f " Retracting its condition for existing")
   (retract! ?f))
 
 (def-tuple-session the-session 'libx.rulesclj)
 
-(def tuple-session
+(def state-0
   (-> the-session
     (trace/with-tracing)
     (insert-all (into
-                    [[123 :hi "there"]
-                     [123 :hi "there"]
-                     [123 :oh :hi]]
+                    [[123 :attr/a "state-0"]
+                     [123 :attr/a "state-0"]
+                     [123 :attr/b "state-0"]]
                  (repeatedly 5 #(vector (java.util.UUID/randomUUID) :junk 42))))
     (fire-rules)))
 
@@ -246,48 +251,59 @@
 ;(inspect/inspect tuple-session)
 ;(inspect/explain-activations tuple-session)
 
-(def trace (trace/get-trace tuple-session))
-trace
+(def trace-0 (trace/get-trace state-0))
 
-;trace-types
-(into #{} (map :type trace))
+(defn trace-by-type [trace]
+  (select-keys
+    (group-by :type trace)
+    [:add-facts :add-facts-logical :retract-facts :retract-facts-logical]))
 
-(def by-type (select-keys
-               (group-by :type trace)
-               [:add-facts :add-facts-logical :retract-facts :retract-facts-logical]))
-by-type
+(defn retractions [trace-by-type]
+  (select-keys trace-by-type [:retract-facts :retract-facts-logical]))
 
-(def retractions (select-keys by-type [:retract-facts :retract-facts-logical]))
-(def insertions (select-keys by-type [:add-facts :add-facts-logical]))
-retractions
+(defn insertions [trace-by-type]
+  (select-keys trace-by-type [:add-facts :add-facts-logical]))
 
 (defn list-facts [xs]
   (mapcat :facts (mapcat identity (vals xs))))
-
-(list-facts retractions)
-(list-facts insertions)
 
 (defn key-by-hashcode [coll]
   "WILL remove duplicates"
   (zipmap (map hash-ordered-coll coll) coll))
 
-(def hashed-added (key-by-hashcode (list-facts insertions)))
-(def hashed-removed (key-by-hashcode (list-facts retractions)))
-
 (defn select-disjoint [added removed]
-  "Takes m keyed by hashcode"
-  (let [_ (println "Removed" (set (keys removed)))
+  "Takes m keyed by hashcode. Returns same with removals applied to additions"
+  (let [_ (println "Removed" (select-keys removed (set (keys removed))))
         a (set (keys added))
         b (set (keys removed))]
     (select-keys added (remove b a))))
 
-(def added (into [] (vals (select-disjoint hashed-added hashed-removed))))
-(def removed (into [] (vals hashed-removed)))
+(defn split-ops [trace]
+  "Takes trace returned by Clara's get-trace. Returns m of :adds, :retracts"
+  (let [by-type (trace-by-type trace)
+        hashed-adds (key-by-hashcode (list-facts (insertions by-type)))
+        hashed-retracts (key-by-hashcode (list-facts (retractions by-type)))]
+    {:added (into [] (vals (select-disjoint hashed-adds hashed-retracts)))
+     :retracted (into [] (vals hashed-retracts))}))
 
-added
-removed
+(split-ops trace-0)
 
+(entities-where state-0 :attr/a)
+(entities-where state-0 :attr/b)
 
+(def state-1
+  (-> state-0
+    (trace/without-tracing)
+    (trace/with-tracing)
+    (retract [123 :attr/b "state-0"])
+    (insert [123 :attr/b "state-1"])
+    (fire-rules)))
 
+(def trace-1 (trace/get-trace state-1))
 
-(refresh)
+(split-ops trace-1)
+
+(entities-where state-1 :attr/a)
+(entities-where state-1 :attr/b)
+
+;(refresh)
