@@ -1,12 +1,10 @@
 (defproject todomvc "0.0.0"
   :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
                  [org.clojure/clojurescript "1.9.494"]
-                 [libx "0.0.0"]
+                 [libx "0.0.3"]
                  [org.clojure/core.async "0.3.442"
-                  :exclusions [org.clojure/tools.reader org.clojure/core.async]]
-                 [com.cerner/clara-rules "0.13.0"]
-                 [org.toomuchcode/clara-tools "0.1.1"
-                  :exclusions [org.toomuchcode/clara-rules]]
+                  :exclusions [org.clojure/tools.reader]]
+                 [com.cerner/clara-rules "0.14.0"]
                  [reagent "0.6.0"]
                  [re-frame "0.9.2"]
                  [binaryage/devtools "0.9.2"]

@@ -202,8 +202,89 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Libx additions
+(ns ns.rulesclj
+    (:require #?(:clj [clojure.core.async :refer [<!! >!! put! go close! chan <! >! go-loop]]
+                 :cljs [cljs.core.async :refer [put! take! go close! chan <! >! go-loop]])
+              [libx.util :refer [entity-tuples->entity-map]]
+              [reagent.core :as r]
+              [reagent.ratom :refer [make-reaction]]
+              [reagent.dom.server :refer [render-to-string]]))
+;; test
+(def changes {:added [[123 :attr/a 42]
+                      [123 :attr/b "x"]
+                      [456 :attr/a "foo"]
+                      [789 :attr/b "baz"]]
+              :removed [[123 :attr/a 42]
+                        [456 :attr/a "foo"]]})
+
+(defn with-op [change op-kw]
+  (mapv (fn [ent] (conj ent (vector (ffirst ent) :op op-kw)))
+    (partition-by first change)))
+
+(defn changes-with-op [changes]
+  (let [added (:added changes)
+        removed (:removed changes)]
+    (mapv entity-tuples->entity-map
+      (into (with-op added :add)
+            (with-op removed :remove)))))
 
 
+(changes-with-op changes)
+
+;; Lib
+(def registry (atom nil))
+
+(def changes-chan (chan 1))
+
+(defn register [id]
+  (let [;ratom (r/atom nil) ; using regular atom for clj repl testing
+        ratom (atom {})]
+    (swap! registry assoc id ratom)
+    ratom))
+
+(defn subscribe [id]
+  "Returns ratom"
+  (register id))
+
+(defn router [in-ch registry] ;; are both global?
+  (go-loop []
+    (if-let [changes (<! in-ch)]
+      (let [id (:db/id changes)
+            op (:op changes)
+            ratom (get @registry id)]
+        (println "Rec'd changes!" changes)
+        ;(println "Ratom" @ratom)
+        (if (= :add op)
+          (do
+            (println "Ratom" ratom)
+            (swap! ratom merge (dissoc changes :op))
+            (recur))
+          (do (swap! ratom (fn [m] (apply dissoc m (keys (remove #(#{:op :db/id} (first %))
+                                                           changes)))))
+              (recur))))
+      (recur))))
+
+(defn create-router [changes-ch registry]
+  (router changes-ch registry))
+
+(def ^:dynamic *foo* (create-router changes-chan registry))
+
+@registry
+(swap! registry (fn [m] (apply dissoc m [123 456])))
+(subscribe 123)
+(subscribe 456)
+(subscribe 789)
+(for [change (changes-with-op changes)]
+  (put! changes-chan change))
+
+
+
+;; App
+
+(defn component [id]
+  (let [state (subscribe id)]
+    (fn []
+      [:div @state])))
 ;; Tests
 
 
