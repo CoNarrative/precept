@@ -1,86 +1,57 @@
-(ns libx.rulesclj
-    ;(:require [libx.tuplerules :refer [def-tuple-rule]]
-    ;          [clara.rules :refer [defrule]]
-    ;          [clojure.test :refer [deftest is run-tests]]
-    ;          [clojure.spec :as s]
-    ;(macroexpand
-    ;  '(def-tuple-rule foo
-    ;     [[?e :todo/done]]
-    ;     =>
-    ;     (println "Hey")))
-    ;
-    ;(def-tuple-rule foo
-    ;  [[?e :todo/done]]
-    ;  =>
-    ;  (println "Hey"))
-    ;
-    ;(deftest foo
-    ;  (is (= (macroexpand
-    ;           '(def-tuple-rule foo
-    ;               [[?e :todo/done]]
-    ;               =>
-    ;               (println "Hey")))
-    ;         (macroexpand
-    ;           '(defrule foo
-    ;              [:todo/done [[e a v]] (= ?e e)]
-    ;              =>
-    ;              (println "Hey"))))))
-    ;
-    ;
-    ;(s/check-asserts true)
-    ;(run-tests)
-    (:require [clara.rules :refer [insert!
-                                   insert-all
-                                   insert-all!
-                                   insert-unconditional!
-                                   insert-all-unconditional!
-                                   retract! query fire-rules
-                                   mk-session
-                                   defrule defquery defsession]]
-              [libx.tuplerules :refer [def-tuple-session def-tuple-rule]]
-              [libx.util :refer [retract
-                                 insert
-                                 map->tuples
-                                 entities-where
-                                 attr-ns]]
-              [clara.rules.accumulators :as acc]
-              [clara.tools.inspect :as inspect]
-              [clara.tools.tracing :as trace]
-              [clara.rules.compiler :as com]
-              [clojure.tools.namespace.repl :refer [refresh]]
-              [clara.rules.engine :as eng]
-              [clara.rules.listener :as l])
-  (:import clara.tools.tracing.TracingListener))
+;(ns libx.rulesclj
+;   (:require [clara.rules :refer [insert!
+;                                  insert-all
+;                                  insert-all!
+;                                  insert-unconditional!
+;                                  insert-all-unconditional!
+;                                  retract! query fire-rules
+;                                  mk-session
+;                                  defrule defquery defsession]]
+;             [libx.tuplerules :refer [def-tuple-session def-tuple-rule]]
+;             [libx.util :refer [retract
+;                                 insert
+;                                 map->tuples
+;                                 entities-where
+;                                 entity
+;                                 attr-ns]]
+;             [clara.rules.accumulators :as acc]
+;             [clara.tools.inspect :as inspect]
+;             [clara.tools.tracing :as trace]
+;             [clara.rules.compiler :as com]
+;             [clojure.tools.namespace.repl :refer [refresh]]
+;             [clara.rules.engine :as eng]
+;             [clara.rules.listener :as l])
+;  (:import clara.tools.tracing.TracingListener))
 ;[clara.tools.watch :as watch]
 
+;
+;(defn random-uuid []
+;  (java.util.UUID/randomUUID))
 
-(defn random-uuid []
-  (java.util.UUID/randomUUID))
+;(defn todo-tx [id title done]
+;  (merge
+;    {:db/id      id
+;     :todo/title title
+;    (when-not (nil? done)
+;      {:todo/done done}))
+;
+;(defn visibility-filter-tx [id kw]
+;  {:db/id                id
+;   :ui/visibility-filter kw))
+;
+;(defn toggle-tx [id bool]
+;  {:db/id              id
+;   :ui/toggle-complete bool))
+;
+;(def clear-completed-action
+;  {:db/id              (random-uuid)
+;   :ui/clear-completed :tag))
 
-(defn todo-tx [id title done]
-  (merge
-    {:db/id      id
-     :todo/title title}
-    (when-not (nil? done)
-      {:todo/done done})))
-
-(defn visibility-filter-tx [id kw]
-  {:db/id                id
-   :ui/visibility-filter kw})
-
-(defn toggle-tx [id bool]
-  {:db/id              id
-   :ui/toggle-complete bool})
-
-(def clear-completed-action
-  {:db/id              (random-uuid)
-   :ui/clear-completed :tag})
-
-(def-tuple-rule todo-is-visible-when-filter-is-all
-  [[_ :ui/visibility-filter :all]]
-  [[?e :todo/title]]
-  =>
-  (insert! [?e :todo/visible :tag]))
+;(def-tuple-rule todo-is-visible-when-filter-is-all
+;  [[_ :ui/visibility-filter :all]]
+;  [[?e :todo/title]]
+;  =>
+;  (insert! [?e :todo/visible :tag]))
 
 ;(defrule todo-is-visible-when-filter-is-done-and-todo-done
 ;  [:ui/visibility-filter [[e a v]] (= v :done)]
@@ -223,194 +194,17 @@
 ;(inspect/explain-activations record-session)
 ;(trace/get-trace record-session)
 ;(-> [record-session] com/to-beta-graph clojure.pprint/pprint)
-;;;;;;;;;;;;;;;
 
-(def-tuple-rule test-insert-l-retract-l
-  [?f <- [?e :attr/a]]
-  =>
-  (println "Found :attr/a" ?f)
-  (insert! [?e :attr/logical-insert ?f]))
-
-(def-tuple-rule foooo
-  [[_ :attr/logical-insert ?f]]
-  =>
-  (println "Found " ?f " Retracting its condition for existing")
-  (retract! ?f))
-
-(def-tuple-rule accumulate-all
-  {:salience -100}
-  [?facts <- (acc/count) :from [:all]]
-  =>
-  (println "Acc all" ?facts))
-
-
-(declare append-trace)
-(declare to-transient-fact-listener)
-
-(deftype PersistentFactListener [trace]
-  l/IPersistentEventListener
-  (to-transient [listener]
-    (to-transient-fact-listener listener)))
-
-(deftype TransientFactListener [trace]
-  l/ITransientEventListener
-  (insert-facts! [listener facts]
-    (append-trace listener {:type :add-facts :facts facts}))
-
-  (insert-facts-logical! [listener node token facts]
-    (append-trace listener {:type :add-facts-logical
-                            ;:token token
-                            :facts facts}))
-
-  (retract-facts! [listener facts]
-    (append-trace listener {:type :retract-facts :facts facts}))
-
-  (retract-facts-logical! [listener node token facts]
-    (append-trace listener {:type :retract-facts-logical
-                            ;:token token
-                            :facts facts}))
-
-  (to-persistent! [listener]
-    (PersistentFactListener. @trace))
-  ;; no-ops
-  (alpha-activate! [listener node facts])
-  (alpha-retract! [listener node facts])
-  (left-activate! [listener node tokens])
-  (left-retract! [listener node tokens])
-  (right-activate! [listener node elements])
-  (right-retract! [listener node elements])
-  (add-activations! [listener node activations])
-  (remove-activations! [listener node activations])
-  (add-accum-reduced! [listener node join-bindings result fact-bindings])
-  (remove-accum-reduced! [listener node join-bindings fact-bindings]))
-
-(defn to-transient-fact-listener [listener]
-  (TransientFactListener. (atom (.-trace listener))))
-
-; Copied from clara.tools.tracing
-(defn append-trace
-  "Appends a trace event and returns a new listener with it."
-  [^TransientFactListener listener event]
-  (reset! (.-trace listener) (conj @(.-trace listener) event)))
-
-; Copied from Clara and modified
-(defn add-listener
-  "Wraps session wrapped with a fact listener or the provided listener if given"
-  ([session]
-   (let [{:keys [listeners] :as components} (eng/components session)]
-      (eng/assemble
-        (assoc components
-          :listeners
-          (conj listeners (PersistentFactListener. []))))))
-  ([session listener]
-   (let [{:keys [listeners] :as components} (eng/components session)]
-       (eng/assemble
-         (assoc components
-           :listeners
-           (conj listeners listener))))))
-
-
-(defn all-listeners
-  "Returns all listener instances or empty list if none."
-  [session]
-  (:listeners (eng/components session)))
-
-; Copied from Clara and modified
-(defn fact-events
-  "Returns [[]...]. List of fact events for each fact listener in the session."
-  [session]
-  (if-let [listeners (->> (eng/components session)
-                      :listeners)]
-                      ;(filter #(instance? PersistentFactListener %))
-                      ;(first))]
-    (mapv #(.-trace ^PersistentFactListener %) listeners)
-    (throw (IllegalStateException. "No PersistentFactListeners found in session."))))
-
-(def-tuple-session the-session 'libx.rulesclj)
-
-(def state-0
-  (-> the-session
-    ;(trace/with-tracing)
-    (add-listener)
-    (insert-all (into
-                    [[123 :attr/a "state-0"]
-                     [123 :attr/a "state-0"]
-                     [123 :attr/b "state-0"]]
-                 (repeatedly 5 #(vector (java.util.UUID/randomUUID) :junk 42))))
-    (fire-rules)))
-
-(fact-events state-0)
 ;(-> [tuple-session] clara.rules.compiler/to-beta-graph clojure.pprint/pprint)
 ;(-> [tuple-session] clara.rules.compiler/to-alpha-tree clojure.pprint/pprint)
 ;(inspect/inspect tuple-session)
 ;(inspect/explain-activations tuple-session)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Libx additions
 
 
-(defn trace-by-type [trace]
-  (select-keys
-    (group-by :type trace)
-    [:add-facts :add-facts-logical :retract-facts :retract-facts-logical]))
+;; Tests
 
-(defn retractions [trace-by-type]
-  (select-keys trace-by-type [:retract-facts :retract-facts-logical #_:accum-reduced]))
 
-(defn insertions [trace-by-type]
-  (select-keys trace-by-type [:add-facts :add-facts-logical]))
-
-(defn list-facts [xs]
-  (mapcat :facts (mapcat identity (vals xs))))
-
-(defn key-by-hashcode [coll]
-  "WILL remove duplicates"
-  (zipmap (map hash-ordered-coll coll) coll))
-
-(defn select-disjoint [added removed]
-  "Takes m keyed by hashcode. Returns same with removals applied to additions"
-  (let [_ (println "Removed" (select-keys removed (set (keys removed))))
-        a (set (keys added))
-        b (set (keys removed))]
-    (select-keys added (remove b a))))
-
-(defn split-ops [trace]
-  "Takes trace returned by Clara's get-trace. Returns m of :adds, :retracts"
-  (let [by-type (trace-by-type trace)
-        hashed-adds (key-by-hashcode (list-facts (insertions by-type)))
-        hashed-retracts (key-by-hashcode (list-facts (retractions by-type)))]
-    {:added (into [] (vals (select-disjoint hashed-adds hashed-retracts)))
-     :retracted (into [] (vals hashed-retracts))}))
-
-(def trace-0 (trace/get-trace state-0))
-(retractions (trace-by-type trace-0))
-(insertions (trace-by-type trace-0))
-(split-ops trace-0)
-
-(entities-where state-0 :attr/a)
-(entities-where state-0 :attr/b)
-
-(def state-1
-  (-> state-0
-    (trace/without-tracing)
-    (trace/with-tracing)
-    (retract [123 :attr/b "state-0"])
-    (insert [123 :attr/b "state-1"])
-    (fire-rules)))
-
-(def trace-1 (trace/get-trace state-1))
-(group-by :type trace-1)
-
-(split-ops trace-1)
-
-(entities-where state-1 :attr/a)
-(entities-where state-1 :attr/b)
-
-(def state-2
-  (-> state-1
-    (trace/without-tracing)
-    (trace/with-tracing)
-    (insert [123 :attr/b "state-2"])
-    (fire-rules)))
-(def trace-2 (trace/get-trace state-1))
-
-(group-by :type trace-2)
 ;(refresh)

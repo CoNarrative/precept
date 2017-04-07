@@ -68,6 +68,7 @@
     (retract facts)
     (fire-rules)))
 
+;TODO. Does not support one-to-many. Attributes will collide
 (defn clara-tups->maps
   "Takes seq of ms with keys :?e :?a :?v, joins on :?e and returns
   vec of ms (one m for each entity)"
@@ -78,6 +79,12 @@
               (reduce (fn [m tup] (assoc m (:?a tup) (:?v tup)))
                 {} ent))))))
 
+(defn clara-tups->tups
+  [tups]
+  (mapv (fn [m] [(:?e m) (:?a m) (:?v m)]) tups))
+
+
+;TODO. Does not support one-to-many. Attributes will collide
 (defn entity-tuples->entity-map
   "Takes list of tuples for a *single* entity and returns single map"
   [tups]
@@ -87,6 +94,19 @@
                   a      v}))
     {} tups))
 
+;(defn entity-tuples->entity-map
+;  "Takes list of tuples for a *single* entity and returns single map"
+;  [tups]
+;  (let [e (ffirst tups)
+;        _ (println e)]
+;    (reduce
+;      (fn [acc [_ a v]]
+;        (let [one-to-many (one-to-many? a)]
+;          (merge acc
+;            (if (and (one-to-many a) (contains? acc a))
+;              {a (conj (a acc) v)}
+;              (merge acc {a v})))))
+;      {} tups)))
 (defquery qav-
   "(Q)uery (A)ttribute (V)alue.
   Finds facts matching args attribute and value"
