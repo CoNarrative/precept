@@ -5,6 +5,7 @@
             [reagent.core :as reagent]
             [re-frame.core :refer [dispatch dispatch-sync]]
             [secretary.core :as secretary]
+            [cljs.core.async :refer [put!]]
             [libx.todomvc.events]
             [libx.todomvc.subs]
             [libx.todomvc.views]
@@ -40,8 +41,10 @@
 
 (init-router!)
 
-;(add-me/send! changes-ch {:db/id -1 :done-count 0 :op :add})
-;(.log js/console "Registry" (libx.core/registry))
+(def changes {:added [[-1 :done/count 1000]]})
+(for [change (libx.core/embed-op changes)]
+  (put! changes-ch change))
+
 (defn ^:export main []
   (let [initial-state (-> app-session
                         (add-me/replace-listener)

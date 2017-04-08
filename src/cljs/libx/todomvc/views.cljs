@@ -70,9 +70,8 @@
   []
   (let [[active] @(subscribe [:footer-counts])
         done @(libx/subscribe -1)
-        _ (println "[sub] Done" done)
+        _ (println "[sub] done" done)
         showing       @(subscribe [:showing])
-        ;showing       @(libx/subscribe :showing)
         a-fn          (fn [filter-kw txt]
                         [:a {:class (when (= filter-kw showing) "selected")
                              :href (str "#/" (name filter-kw))} txt])]
@@ -83,7 +82,7 @@
       [:li (a-fn :all    "All")]
       [:li (a-fn :active "Active")]
       [:li (a-fn :done   "Completed")]]
-     (when (pos? done)
+     (when (pos? (:done/count done))
        [:button#clear-completed {:on-click #(dispatch [:clear-completed])}
         "Clear completed"])]))
 

@@ -20,7 +20,9 @@
 
 (defn subscribe [id]
   "Returns ratom in cljs or atom in clj"
-  (register id))
+  (if-let [existing-sub (get @registry id)]
+    existing-sub
+    (register id)))
 
 (defn with-op [change op-kw]
   (mapv (fn [ent] (conj ent (vector (ffirst ent) :op op-kw)))
@@ -53,10 +55,12 @@
     (if-let [change (<! in-ch)]
       (let [id (:db/id change)
             op (:op change)
-            atom (get @registry id)]
-        (if (= :add op)
-          (do (add atom change) (recur))
-          (do (del atom change) (recur))))
+            atom (get @registry id)
+            _ (println "Change id op atom" change id op atom)]
+        (condp = op
+          :add (do (add atom change) (recur))
+          :remove (do (del atom change) (recur))
+          :default (println "No match for" change)))
       (recur))))
 
 
