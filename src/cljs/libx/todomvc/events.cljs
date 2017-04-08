@@ -1,7 +1,7 @@
-(ns todomvc.events
+(ns libx.todomvc.events
   (:require
     [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v after debug]]
-    [todomvc.facts :refer [todo visibility-filter mark-all-done-action clear-completed-action]]
+    [libx.todomvc.facts :refer [todo visibility-filter mark-all-done-action clear-completed-action]]
     [libx.util :refer [insert
                           insert-fire
                           retract
@@ -12,7 +12,7 @@
                           entities-where
                           facts-where]]
     [libx.listeners :refer [add-listener remove-fact-listeners] :as l]
-    [todomvc.add-me :refer [replace-listener ops]]
+    [libx.todomvc.add-me :refer [replace-listener ops]]
     [clara.rules :refer [fire-rules]]))
 
 (reg-event-fx

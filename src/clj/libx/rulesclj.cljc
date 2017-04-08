@@ -268,9 +268,7 @@
   (router changes-ch registry))
 
 (def ^:dynamic *foo* (create-router changes-chan registry))
-
 @registry
-(swap! registry (fn [m] (apply dissoc m [123 456])))
 (subscribe 123)
 (subscribe 456)
 (subscribe 789)

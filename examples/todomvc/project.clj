@@ -1,31 +1,25 @@
 (defproject todomvc "0.0.0"
   :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
                  [org.clojure/clojurescript "1.9.494"]
-                 [libx "0.0.3"]
-                 [org.clojure/core.async "0.3.442"
-                  :exclusions [org.clojure/tools.reader]]
+                 [libx "0.0.4"]
                  [com.cerner/clara-rules "0.14.0"]
                  [reagent "0.6.0"]
+                 [org.clojure/core.async "0.3.442"]
                  [re-frame "0.9.2"]
                  [binaryage/devtools "0.9.2"]
                  [secretary "1.2.3"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
-            [lein-figwheel "0.5.9"
-             :exclusions [org.clojure/clojure org.clojure/core.async]]]
+            [lein-figwheel "0.5.10-SNAPSHOT"]]
 
   :clean-targets ^{:protect false} ["resources/public/js" "target"]
-
-  :exclusions [org.clojure/core.async]
 
   :profiles
   {:dev
    {:dependencies [[binaryage/devtools "0.8.2"]
-                   [figwheel-sidecar "0.5.9"
-                    :exclusions [org.clojure/clojure org.clojure/core.async]]
+                   [figwheel-sidecar "0.5.10-SNAPSHOT"]
                    [org.clojure/test.check "0.9.0"]]
-    :plugins      [[lein-figwheel "0.5.9"
-                    :exclusions [org.clojure/clojure org.clojure/core.async]]]
+    :plugins      [[lein-figwheel "0.5.10-SNAPSHOT"]]
     :source-paths ["src" "dev"]}}
 
   :cljsbuild

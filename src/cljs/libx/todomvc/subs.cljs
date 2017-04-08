@@ -1,8 +1,8 @@
-(ns todomvc.subs
+(ns libx.todomvc.subs
   (:require [re-frame.core :refer [reg-sub subscribe]]
             [clara.rules :refer [query]]
             [libx.util :refer [entities-where]]
-            [todomvc.rules :refer [find-done-count]]))
+            [libx.todomvc.rules :refer [find-done-count]]))
 
 
 (defn get-visibility-filter [session]

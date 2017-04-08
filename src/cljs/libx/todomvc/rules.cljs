@@ -1,4 +1,4 @@
-(ns todomvc.rules
+(ns libx.todomvc.rules
   (:require [clara.rules :refer [insert! insert-unconditional! retract!]]
             [clara.rules.accumulators :as acc]
             [libx.util :refer [attr-ns]]
@@ -78,4 +78,4 @@
   =>
   (insert! [-1 :done-count ?count]))
 
-(def-tuple-session app-session 'todomvc.rules)
+(def-tuple-session app-session 'libx.todomvc.rules)

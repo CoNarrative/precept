@@ -1,4 +1,4 @@
-(ns todomvc.views
+(ns libx.todomvc.views
   (:require [reagent.core  :as reagent]
             [re-frame.core :refer [subscribe dispatch]]
             [libx.core :as libx]))
