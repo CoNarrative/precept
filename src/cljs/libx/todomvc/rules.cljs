@@ -1,5 +1,5 @@
 (ns libx.todomvc.rules
-  (:require [clara.rules :refer [insert! insert-unconditional! retract!]]
+  (:require [clara.rules :refer [insert! insert-all! insert-unconditional! retract!]]
             [clara.rules.accumulators :as acc]
             [libx.util :refer [attr-ns]]
             [libx.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]))
@@ -74,8 +74,13 @@
   [:test (= (attr-ns ?a) "todo")])
 
 (def-tuple-rule find-done-count
-  [?count <- (acc/count) :from [:todo/done]]
+  [?done <- (acc/count) :from [:todo/done]]
+  [?total <- (acc/count) :from [:todo/title]]
   =>
-  (insert! [-1 :done-count ?count]))
+  (println "done active count" ?done (- ?total ?done))
+  (insert-all! [[-1 :done-count ?done]
+                [-1 :active-count (- ?total ?done)]]))
+
+
 
 (def-tuple-session app-session 'libx.todomvc.rules)

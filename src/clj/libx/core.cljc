@@ -1,28 +1,41 @@
 (ns libx.core
-  (:require [libx.util :refer [entity-tuples->entity-map]]
-    #?(:clj [clojure.core.async :refer [<! >! put! chan go-loop]])
-    #?(:cljs [cljs.core.async :refer [put! chan <! >!]])
-    #?(:cljs [reagent.core :as r]))
+    (:require [libx.util :refer [entity-tuples->entity-map]]
+      #?(:clj [clojure.core.async :refer [<! >! put! chan go-loop]])
+      #?(:clj [reagent.ratom :as rr])
+      #?(:cljs [cljs.core.async :refer [put! chan <! >!]])
+      #?(:cljs [reagent.core :as r]))
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
     ;#?(:clj [reagent.dom.server :refer [render-to-string]])
+
+(defn mk-ratom [args]
+  #?(:clj (atom args) :cljs (r/atom args)))
+
+(def state (mk-ratom {[:foo] "Hey"}))
 
 (def registry (atom nil))
 
 (def changes-ch (chan 1))
 
-(defn mk-atom []
-  #?(:clj (atom {}) :cljs (r/atom {})))
+(defn lens [a path]
+  #?(:clj #(get-in state path) :cljs (r/cursor a path)))
 
-(defn register [id]
-  (let [atom (mk-atom)]
-    (swap! registry assoc id atom)
-    atom))
+(defn register [path]
+  (if-let [existing (get registry path)]
+    existing
+    (let [lens (lens state path)]
+      (swap! registry assoc path lens)
+      lens)))
 
-(defn subscribe [id]
-  "Returns ratom in cljs or atom in clj"
-  (if-let [existing-sub (get @registry id)]
-    existing-sub
-    (register id)))
+(defn subscribe [paths]
+  "Returns atom of r/cursors, one for each path in paths in cljs
+  Idea is that we combine multiple lenses and add access to each by the last key
+  of any 'path' vec supplied to this function, while maintaining reactivity for each.
+  Presumes a transitive property of dereferencing that may or may not pan out."
+  (let [existing (select-keys @state paths)
+        new (remove (set (keys existing)) paths)]
+    (mk-ratom (merge existing
+                (reduce (fn [acc path] (assoc acc (last path) @(register path)))
+                  {} new)))))
 
 (defn with-op [change op-kw]
   (mapv (fn [ent] (conj ent (vector (ffirst ent) :op op-kw)))
@@ -41,8 +54,9 @@
 
 (defn add [atom changes]
   "Merges changes into atom"
-  (swap! atom merge (dissoc changes :op)))
-
+  (swap! atom merge (-> changes
+                      (dissoc :op)
+                      (dissoc :db/id)))) ; temp
 (defn del [atom changes]
   "Removes keys in change from atom"
   (swap! atom (fn [m] (apply dissoc m (keys (clean-changes changes))))))
@@ -55,27 +69,19 @@
     (if-let [change (<! in-ch)]
       (let [id (:db/id change)
             op (:op change)
-            atom (get @registry id)
-            _ (println "Change id op atom" change id op atom)]
+            _ (println "Change id op atom" change id op)]
         (condp = op
-          :add (do (add atom change) (recur))
-          :remove (do (del atom change) (recur))
+          :add (do (add state change) (recur))
+          :remove (do (del state change) (recur))
           :default (println "No match for" change)))
-      (recur))))
+      (recur
 
 
 ;; test
-;(def changes {:added [[123 :attr/a 42]
-;                      [123 :attr/b "x"]
-;                      [456 :attr/a "foo"]
-;                      [789 :attr/b "baz"]]
-;              :removed [[123 :attr/a 42]
-;                        [456 :attr/a "foo"]]})
-;
-;(def ^:dynamic *foo* (router changes-ch registry))
-;@registry
-;(subscribe 123)
-;(subscribe 456)
-;(subscribe 789)
-;(for [change (embed-op changes)]
+;(def changes (embed-op {:added [[-1 :done-count 1000]
+                                [-1 :active-count 5]))))
+;(for [change changes]
 ;  (put! changes-ch change))
+
+;@state
+;@registry

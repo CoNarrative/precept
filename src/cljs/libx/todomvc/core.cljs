@@ -41,9 +41,6 @@
 
 (init-router!)
 
-(def changes {:added [[-1 :done/count 1000]]})
-(for [change (libx.core/embed-op changes)]
-  (put! changes-ch change))
 
 (defn ^:export main []
   (let [initial-state (-> app-session

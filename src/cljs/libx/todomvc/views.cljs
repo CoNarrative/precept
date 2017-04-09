@@ -69,20 +69,20 @@
 (defn footer-controls
   []
   (let [[active] @(subscribe [:footer-counts])
-        done @(libx/subscribe -1)
-        _ (println "[sub] done" done)
+        {:keys [active-count done-count]} @(libx/subscribe [[:active-count] [:done-count]])
+        _ (println "[sub] Active done in render" active-count done-count)
         showing       @(subscribe [:showing])
         a-fn          (fn [filter-kw txt]
                         [:a {:class (when (= filter-kw showing) "selected")
                              :href (str "#/" (name filter-kw))} txt])]
     [:footer#footer
      [:span#todo-count
-      [:strong active] " " (case active 1 "item" "items") " left"]
+      [:strong active-count] " " (case active-count 1 "item" "items") " left"]
      [:ul#filters
       [:li (a-fn :all    "All")]
       [:li (a-fn :active "Active")]
       [:li (a-fn :done   "Completed")]]
-     (when (pos? (:done/count done))
+     (when (pos? done-count)
        [:button#clear-completed {:on-click #(dispatch [:clear-completed])}
         "Clear completed"])]))
 
