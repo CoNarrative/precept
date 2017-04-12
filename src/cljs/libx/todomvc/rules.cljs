@@ -36,7 +36,7 @@
   [?toggle <- :ui/toggle-complete]
   [?total <- (acc/count) :from [:todo/title]]
   [?total-done <- (acc/count) :from [:todo/done]]
-  [:test (not (not (= ?total ?total-done)))]
+  [:test (= ?total ?total-done)]
   =>
   (println "Total todos: " ?total)
   (println "Total done: " ?total-done)
@@ -69,10 +69,6 @@
   =>
   (println "FACT" ?fact))
 
-(def-tuple-query find-all-done []
-  [[?e ?a ?v]]
-  [:test (= (attr-ns ?a) "todo")])
-
 (def-tuple-rule find-done-count
   [?done <- (acc/count) :from [:todo/done]]
   [?total <- (acc/count) :from [:todo/title]]
@@ -81,6 +77,25 @@
   (insert-all! [[-1 :done-count ?done]
                 [-1 :active-count (- ?total ?done)]]))
 
+(def-tuple-rule subs-footer-controls
+  [[?e :component/footer]]
+  [?done-count <- [:done-count]]
+  [?active-count <- [:active-count]]
+  =>
+  (insert-all! [[?e :footer {:active-count ?active-count
+                             :done-count ?done-count}]]))
 
+(def-tuple-rule subs-task-list
+  [[?e :component/task-list]]
+  [?visible-todos <- (acc/all) :from [:todo/visible]]
+  [?active-count <- [:active-count]]
+  =>
+  (insert-all! [[?e :task-list {:visible-todos ?visible-todos
+                                    :all-complete? (> ?active-count 0)}]]))
+(def-tuple-rule subs-todo-app
+  [[?e :component/todo-app]]
+  [?todos <- (acc/all) :from [(attr-ns "todo")]]
+  =>
+  (insert! [?e :todo-app (libx.util/tuples->maps ?todos)]))
 
 (def-tuple-session app-session 'libx.todomvc.rules)

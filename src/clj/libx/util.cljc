@@ -83,7 +83,6 @@
   [tups]
   (mapv (fn [m] [(:?e m) (:?a m) (:?v m)]) tups))
 
-
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn entity-tuples->entity-map
   "Takes list of tuples for a *single* entity and returns single map"
@@ -93,6 +92,10 @@
       (merge acc {:db/id e
                   a      v}))
     {} tups))
+
+(defn tuples->maps [tups]
+  "Returns vec of hydrated ms from tups"
+  (mapv #(entity-tuples->entity-map (second %)) (group-by first tups)))
 
 ;(defn entity-tuples->entity-map
 ;  "Takes list of tuples for a *single* entity and returns single map"

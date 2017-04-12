@@ -1,7 +1,6 @@
 (ns libx.listeners
   (:require [clara.rules.engine :as eng]
             [clara.rules.listener :as l]))
-  ;(:import clara.tools.tracing.TracingListener))
 
 (declare append-trace)
 (declare to-transient-fact-listener)
@@ -27,7 +26,6 @@
 
   (to-persistent! [listener]
     (PersistentFactListener. @trace))
-
   ;; no-ops
   (alpha-activate! [listener node facts])
   (alpha-retract! [listener node facts])
@@ -40,10 +38,10 @@
   (add-accum-reduced! [listener node join-bindings result fact-bindings])
   (remove-accum-reduced! [listener node join-bindings fact-bindings]))
 
+; Copied from clara.tools.tracing
 (defn to-transient-fact-listener [listener]
   (TransientFactListener. (atom (.-trace listener))))
 
-; Copied from clara.tools.tracing
 (defn append-trace
   "Appends a trace event and returns a new listener with it."
   [^TransientFactListener listener event]
@@ -118,3 +116,12 @@
         hashed-retracts (key-by-hashcode (list-facts (retractions by-type)))]
     {:added (into [] (vals (select-disjoint hashed-adds hashed-retracts)))
      :removed (into [] (vals hashed-retracts))}))
+
+(defn ops [session]
+  "Returns :added, :removed results for a single fact listener. Usually wrapped with `embed-ops`."
+  (split-ops (first (fact-events session))))
+
+(defn replace-listener [session]
+  (-> session
+    (remove-fact-listeners)
+    (add-listener)))

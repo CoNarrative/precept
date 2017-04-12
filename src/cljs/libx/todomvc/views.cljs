@@ -1,7 +1,6 @@
 (ns libx.todomvc.views
   (:require [reagent.core  :as reagent]
-            [re-frame.core :refer [subscribe dispatch]]
-            [libx.core :as libx]))
+            [libx.core :as libx :refer [subscribe send]]))
 
 
 (defn todo-input [{:keys [title on-save on-stop]}]
@@ -23,7 +22,6 @@
                                      27 (stop)
                                      nil)})])))
 
-
 (defn todo-item
   []
   (let [editing (reagent/atom false)]
@@ -34,46 +32,45 @@
           [:input.toggle
             {:type "checkbox"
              :checked done
-             :on-change #(dispatch [:toggle-done id])}]
+             :on-change #(send (if done
+                                 [:remove [id :todo/done]]
+                                 [id :toggle-done :tag]))}]
           [:label
             {:on-double-click #(reset! editing true)}
             title]
           [:button.destroy
-            {:on-click #(dispatch [:delete-todo id])}]]
+            {:on-click #(send :remove id)}]]
         (when @editing
           [todo-input
             {:class "edit"
              :title title
-             :on-save #(dispatch [:save id %])
+             :on-save #(send 'retract [id :todo/title title]
+                             'insert [id :todo/title %])
              :on-stop #(reset! editing false)}])])))
-
 
 (defn task-list
   []
-  (let [visible-todos @(subscribe [:visible-todos])
-        all-complete? @(subscribe [:all-complete?])]
+  (let [{:keys [visible-todos all-complete?]} @(libx/subscribe :component/task-list)]
        (prn "all visible in render" visible-todos)
       [:section#main
         [:input#toggle-all
           {:type "checkbox"
            :checked all-complete?
-           :on-change #(dispatch [:complete-all-toggle (not all-complete?)])}]
+           :on-change #(send :ui/toggle-complete)}]
         [:label
           {:for "toggle-all"}
           "Mark all as complete"]
         [:ul#todo-list
-          (for [todo  visible-todos]
+          (for [todo visible-todos]
             ^{:key (:db/id todo)} [todo-item todo])]]))
 
 
-(defn footer-controls
-  []
-  (let [[active] @(subscribe [:footer-counts])
-        {:keys [active-count done-count]} @(libx/subscribe [[:active-count] [:done-count]])
+(defn footer-controls []
+  (let [{:keys [active-count done-count ui/visibility-filter] :as props}
+        @(libx/subscribe [:component/footer-controls])
         _ (println "[sub] Active done in render" active-count done-count)
-        showing       @(subscribe [:showing])
         a-fn          (fn [filter-kw txt]
-                        [:a {:class (when (= filter-kw showing) "selected")
+                        [:a {:class (when (= filter-kw visibility-filter) "selected")
                              :href (str "#/" (name filter-kw))} txt])]
     [:footer#footer
      [:span#todo-count
@@ -94,7 +91,7 @@
     [todo-input
       {:id "new-todo"
        :placeholder "What needs to be done?"
-       :on-save #(dispatch [:add-todo %])}]])
+       :on-save #(send [:add-todo %])}]])
 
 
 (defn todo-app
@@ -102,7 +99,7 @@
   [:div
    [:section#todoapp
     [task-entry]
-    (when (seq @(subscribe [:todos]))
+    (when (seq @(libx/subscribe [:component/todo-app]))
       [task-list])
     [footer-controls]]
    [:footer#info

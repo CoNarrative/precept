@@ -11,8 +11,8 @@
             [libx.todomvc.views]
             [libx.todomvc.rules :refer [app-session]]
             [libx.todomvc.facts :refer [visibility-filter]]
-            [libx.core :refer [router changes-ch registry]]
-            [libx.util :refer [insert-fire]]
+            [libx.core :refer [start!]]
+            [libx.util :refer [insert insert-fire]]
             [libx.todomvc.add-me :as add-me])
   (:import [goog History]
            [goog.history EventType]))
@@ -24,7 +24,6 @@
 ;;   - https://github.com/juxt/bidi
 (defroute "/" [] (dispatch [:set-showing :all]))
 (defroute "/:filter" [filter] (dispatch [:set-showing (keyword filter)]))
-
 (def history
   (doto (History.)
     (events/listen EventType.NAVIGATE
@@ -34,19 +33,8 @@
 (defn mount-components []
   (reagent/render [libx.todomvc.views/todo-app] (.getElementById js/document "app")))
 
-(defn init-router! []
-  (let [r (router changes-ch registry)]
-    (println "Router initialized" r)
-    r))
-
-(init-router!)
-
-
 (defn ^:export main []
-  (let [initial-state (-> app-session
-                        (add-me/replace-listener)
-                        (insert-fire (visibility-filter (random-uuid) :all)))
-        changes (add-me/ops initial-state)
-        _ (println "Initial state" changes)]
-    (dispatch-sync [:initialise-db initial-state])
+  (let [initial-state (-> app-session (add-me/replace-listener)
+                                      (insert (visibility-filter (random-uuid) :all)))]
+    ;(start! {:session initial-state})
     (mount-components)))
