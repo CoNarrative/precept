@@ -80,7 +80,7 @@
       [:li (a-fn :active "Active")]
       [:li (a-fn :done   "Completed")]]
      (when (pos? done-count)
-       [:button#clear-completed {:on-click #(dispatch [:clear-completed])}
+       [:button#clear-completed {:on-click #(send [:clear-completed])}
         "Clear completed"])]))
 
 

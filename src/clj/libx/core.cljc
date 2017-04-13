@@ -2,10 +2,10 @@
     (:refer-clojure :exclude [send])
     (:require [libx.util :refer [entity-tuples->entity-map] :as util]
               [libx.listeners :refer [ops] :as l]
-              [clara.rules :refer [fire-rules insert! insert-all!]]
+              [clara.rules :refer [query fire-rules insert! insert-all!]]
               [clara.rules.accumulators :as acc]
               [libx.lang :as lang]
-              [libx.tuplerules :refer [def-tuple-session def-tuple-rule]]
+              [libx.tuplerules :refer [def-tuple-session def-tuple-rule def-tuple-query]]
               [clojure.spec :as s]
       #?(:clj [clojure.core.async :refer [<! >! put! take! chan go-loop]])
       #?(:clj [reagent.ratom :as rr])
@@ -19,15 +19,19 @@
 (defn mk-ratom [args]
   #?(:clj (atom args) :cljs (r/atom args)))
 
-(def current-session (atom nil))
+(defonce store (mk-ratom {}))
 
-(def store (mk-ratom {}))
+(defonce state (atom {:subscriptions {} :session nil}))
 
-(def subscriptions (atom {}))
+(def changes-ch (chan))
 
-(def changes-ch (chan 1))
+(def session-ch (chan))
 
-(def session-ch (chan 1))
+(defn swap-session!
+  "Mainly created for debugging"
+  [next]
+  (println "Updating session atom")
+  (swap! state update :session (fn [old] next)))
 
 (defn lens [a path]
   #?(:clj (atom (get-in @a path)) ;; for testing in clj only
@@ -37,18 +41,20 @@
   (keyword (str "sub/" (name (first path)))))
 
 (defn register
-  ([path] (register path subscriptions store current-session session-ch))
-  ([path _subscriptions _store _current-session _session-ch]
-   (println "Registering " path)
-   (if-let [existing (get @_subscriptions path)]
-      existing
-      (let [lens (lens _store path)
-            inserted-sub (-> @_current-session
-                           (l/replace-listener) ;; subs get written to store
-                           (util/insert [-1 (mark-as-sub path) :default]))
-            _ (println "Registration ops" (ops inserted-sub))]
-        (put! _session-ch inserted-sub)
-        (swap! _subscriptions assoc path lens)
+  ([path]
+   (if-let [existing (get (:subscriptions @state) path)]
+      (do
+        (println "Found existing subscription" existing)
+        existing)
+      (let [lens (lens store path)
+            inserted-sub (swap! state update :session
+                           (fn [old] (-> old (util/insert [-1 (mark-as-sub path) :default]))))
+            ;_ (println "Facts after register" inserted-sub)];;(query inserted-sub find-all-facts)
+            _ (println "inserted sub" inserted-sub)]
+        (println "Registering new" path)
+        ;(advance-session! inserted-sub)
+        (go (>! session-ch (:session inserted-sub)))
+        (swap! state update-in (into [:subscriptions] path) (fn [_] lens))
         lens))))
 
 
@@ -59,14 +65,16 @@
    * paths - vector containing sub requests, any of which may contain parameters.
              Examples: `[:kw]` `[:kw \"someval\"]` `[[:kw \"someval\"] [:kw2]]`
   Returned ratom will contain a single map for single subscription or vector of maps for multiple"
-  ([paths] (subscribe paths subscriptions store session-ch))
-  ([paths _subscriptions _store _session-ch]
-   (let [existing-subs (select-keys @_subscriptions paths)
+  ([paths]
+   (let [existing-subs (select-keys (:subscriptions @state) paths)
          new-paths (remove (set (keys existing-subs)) paths)
          requested-subs (reduce
                           (fn [acc path]
-                            (let [vector-path (if (vector? path) path (vector path))]
-                              (conj acc (register vector-path))))
+                            (let [vector-path (if (vector? path) path (vector path))
+                                  _ (println "Rec'd register req for" vector-path)
+                                  register-result (register vector-path)
+                                  _ (println "Register result" register-result)]
+                              (conj acc register-result)))
                           (or (vals existing-subs) [])
                           new-paths)]
       (mk-ratom (if (second requested-subs)
@@ -88,15 +96,16 @@
   "Removes :op, :db/id from change for an entity"
   (remove #(#{:op :db/id} (first %)) changes))
 
-(defn add [atom changes]
+(defn add [a changes]
   "Merges changes into atom"
-  (swap! atom merge (dissoc changes :op :db/id)))
+  (println "Adding" changes)
+  (swap! a merge (dissoc changes :op :db/id)))
 
-(defn del [atom changes]
+(defn del [a changes]
   "Removes keys in change from atom"
-  (swap! atom (fn [m] (apply dissoc m (keys (clean-changes changes))))))
+  (swap! a (fn [m] (apply dissoc m (keys (clean-changes changes))))))
 
-(defn create-change->store-router! [in-ch _store]
+(defn create-change->store-router! [in-ch]
   "Reads changes from in channel and updates store
    * `in-ch` - core.async channel
    * `store` - atom"
@@ -106,8 +115,8 @@
           op (:op change)
           _ (println "Change id op atom" change id op)]
       (condp = op
-        :add (do (add _store change) (recur))
-        :remove (do (del _store change) (recur))
+        :add (do (add store change) (recur))
+        :remove (do (del store change) (recur))
         (do (println "No match for" change) (recur))))))
 
 ;(defn create-session-ch!
@@ -134,7 +143,7 @@
   (println "Run query")
   (let [params (parse-query-params exprs)]
     (println "params")))
-    ;(clara.rules/query @current-session
+    ;(clara.rules/query @session-atom
     ;  (clara.rules.dsl/parse-query params exprs)))) ;TODO. Used in clara test but passed
     ; directly to mk-session
 
@@ -143,11 +152,12 @@
   (let [query (second exprs)
         query-result (run-query query)]
     (condp = op
-      :remove (reset! current-session (-> @current-session (util/retract query-result)))
-      :replace  (reset! current-session
-                 (-> @current-session
-                   (util/retract query-result)
-                   (util/insert (second double)))))))
+      :remove (swap! state update :session (fn [old] (-> old (util/retract query-result))))
+      :replace  (swap! state update :session
+                  (fn [old]
+                   (-> old
+                     (util/retract query-result)
+                     (util/insert (second double))))))))
 
 (defn send [& exprs]
   (let [msgs (reduce
@@ -159,24 +169,25 @@
     (for [msg msgs]
       (condp (first msg)
         :__query (send-with-query (second msg))
-        :add (reset! current-session (-> @current-session (util/insert (second msg))))
-        :remove (reset! current-session (-> @current-session (util/retract (second msg))))
-        :replace  (reset! current-session
-                   (-> @current-session
-                     (util/retract (second msg))
-                     (util/insert (second msg))))))))
+        :add (swap! state update :session (fn [old] (-> old (util/insert (second msg)))))
+        :remove (swap! state update :session (fn [old] (-> old (util/retract (second msg)))))
+        :replace  (swap! state update :session
+                    (fn [old] (-> old
+                                (util/retract (second msg))
+                                (util/insert (second msg)))))))))
 
 (defn create-session->change-router!
   "Reads changes from session channel, fires rules, and puts resultant changes
   on changes channel. Updates session state atom with new session."
-  [in-ch out-ch _current-session]
+  [in-ch out-ch]
   (go-loop []
     (let [session (<! in-ch)
+          _ (println "Rec'd new session!" session)
           next (fire-rules session)
           changes (embed-op (ops next))
           _ (println "Session changes" changes)]
       (do
-        (reset! _current-session (l/replace-listener next))
+        (swap-session! (l/replace-listener next))
         (doseq [change changes]
           (put! out-ch change)))
       (recur))))
@@ -184,11 +195,11 @@
 (defn start! [options]
   (let [opts (or options (hash-map))]
     (do
-      (reset! current-session (:session opts))
+      (swap! state update :session (:session opts))
       ;(create-session-ch! (or (:session-ch opts) (chan 1)))
       ;(create-changes-ch! (or (:changes-ch opts) (chan 1)))
-      (create-session->change-router! session-ch changes-ch current-session)
-      (create-change->store-router! changes-ch store))))
+      (create-session->change-router! session-ch changes-ch)
+      (create-change->store-router! changes-ch))))
 
 (defn put-session!
   "Returns session"
@@ -222,34 +233,41 @@
   (println "All todos" ?todos)
   (insert! [-1 :lens/todo-app (libx.util/tuples->maps (:todos ?todos))]))
 
+(def-tuple-query find-all-facts
+  []
+  [?facts <- (acc/all) :from [:all]])
+
 ;(comment
 (def-tuple-session my-sess 'libx.core)
 
-(def x23 (create-session->change-router! session-ch changes-ch current-session))
-(def y (create-change->store-router! changes-ch store))
-
 ;; Reset
-(reset! current-session my-sess)
 (reset! store {})
-(reset! subscriptions {})
-(reset! current-session (l/replace-listener my-sess))
+(swap! state update :subscriptions (fn [old] {}))
+(swap! state update :session (fn [old] nil))
+(swap-session! (l/replace-listener my-sess))
+(def session->change (create-session->change-router! session-ch changes-ch))
+(def change->store (create-change->store-router! changes-ch))
 
+(query (:session @state) find-all-facts)
 (def my-sub (subscribe [[:task-list] [:footer]]))
+(subscribe [[:task-list] [:footer]])
+store
+(:session @state)
+(:subscriptions @state)
 
 ; Repeatable ;;;;
-(def next-session (util/insert @current-session
+(def next-session (util/insert (:session @state)
                           [[-1 :active-count 7]
                            [-2 :done-count 1]
                            [-3 :todo/visible :tag]
                            [-4 :todo/title "Hi"]]))
 (put-session! next-session)
-@store
-@subscriptions
-@current-session
-(ops @current-session)
-(l/all-listeners @current-session)
-;;;;;;;;;;;;;;;;;
 
+
+;(swap! state update-in [:subscriptions :test] (fn [_] "foo"))
+@state
+
+;;;;;;;;;;;;;;;;;
 ;; Problems
 ;; * Subs that are registered afterMUST be registered before any rules fire. Otherwise they won't
 ;; be
