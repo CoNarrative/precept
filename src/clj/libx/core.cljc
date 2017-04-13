@@ -46,9 +46,9 @@
       (do
         (println "Found existing subscription" existing)
         existing)
-      (let [lens (lens store path)
+      (let [lens (lens store (vector path))
             inserted-sub (swap! state update :session
-                           (fn [old] (-> old (util/insert [-1 (mark-as-sub path) :default]))))
+                           (fn [old] (-> old (util/insert [(util/guid) :sub path]))))
             ;_ (println "Facts after register" inserted-sub)];;(query inserted-sub find-all-facts)
             _ (println "inserted sub" inserted-sub)]
         (println "Registering new" path)
@@ -212,12 +212,11 @@
 ;; test-area
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def-tuple-rule subs-footer-controls
-  [:exists [:sub/footer]]
+  [:exists [_ :sub [:footer]]]
   [[_ :done-count ?done-count]]
   [[_ :active-count ?active-count]]
   =>
-  (insert-all! [[-1 :lens/footer {:active-count ?active-count
-                                  :done-count ?done-count}]]))
+  (insert! [:lens [:footer] {:active-count ?active-count :done-count ?done-count}]))
 
 (def-tuple-rule subs-task-list
   [:exists [:sub/task-list]]
@@ -251,9 +250,10 @@
 (query (:session @state) find-all-facts)
 (def my-sub (subscribe [[:task-list] [:footer]]))
 (subscribe [[:task-list] [:footer]])
-store
+@store
 (:session @state)
 (:subscriptions @state)
+(r/cursor store [[:footer]])
 
 ; Repeatable ;;;;
 (def next-session (util/insert (:session @state)
