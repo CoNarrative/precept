@@ -5,13 +5,12 @@
             [reagent.core :as reagent]
             [re-frame.core :refer [dispatch dispatch-sync]]
             [secretary.core :as secretary]
-            [cljs.core.async :refer [put!]]
             [libx.todomvc.events]
             [libx.todomvc.subs]
             [libx.todomvc.views]
             [libx.todomvc.rules :refer [app-session]]
             [libx.todomvc.facts :refer [visibility-filter]]
-            [libx.core :refer [start!]]
+            [libx.core :refer [start! then]]
             [libx.util :refer [insert insert-fire]]
             [libx.todomvc.add-me :as add-me])
   (:import [goog History]
@@ -22,8 +21,10 @@
 ;; Instead of secretary consider:
 ;;   - https://github.com/DomKM/silk
 ;;   - https://github.com/juxt/bidi
-(defroute "/" [] (dispatch [:set-showing :all]))
-(defroute "/:filter" [filter] (dispatch [:set-showing (keyword filter)]))
+(defroute "/" [] (then [:ui/visibility-filter :all]))
+
+(defroute "/:filter" [filter] (then [:ui/visibility-filter (keyword filter)]))
+
 (def history
   (doto (History.)
     (events/listen EventType.NAVIGATE

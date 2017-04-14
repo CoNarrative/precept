@@ -2,7 +2,8 @@
     (:refer-clojure :exclude [send])
     (:require [libx.util :refer [entity-tuples->entity-map] :as util]
               [libx.listeners :refer [ops] :as l]
-              [clara.rules :refer [query fire-rules insert! insert-all!]]
+              [libx.schema :as schema]
+              [clara.rules :refer [query fire-rules insert! insert-all!] :as cr]
               [clara.rules.accumulators :as acc]
               [libx.lang :as lang]
               [libx.tuplerules :refer [def-tuple-session def-tuple-rule def-tuple-query]]
@@ -10,9 +11,11 @@
       #?(:clj [clojure.core.async :refer [<! >! put! take! chan go-loop]])
       #?(:clj [reagent.ratom :as rr])
       #?(:cljs [cljs.core.async :refer [put! take! chan <! >!]])
+      #?(:cljs [libx.todomvc.schema :refer [app-schema]])
       #?(:cljs [reagent.core :as r]))
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
+#(:cljs (enable-console-print!))
 ; TODO. keep vector of states if dev
 ;(def dev? true)
 
@@ -21,24 +24,29 @@
 
 (defonce store (mk-ratom {}))
 
-(defonce state (atom {:subscriptions {} :session nil}))
+(defonce state (atom {:subscriptions {}
+                      :session nil
+                      :schema nil}))
 
 (def changes-ch (chan))
 
 (def session-ch (chan))
 
+(defn put-session!
+  "Returns session"
+  [session]
+  (put! session-ch session)
+  session)
+
 (defn swap-session!
   "Mainly created for debugging"
   [next]
-  (println "Updating session atom")
+  ;(println "Updating session atom")
   (swap! state update :session (fn [old] next)))
 
 (defn lens [a path]
   #?(:clj (atom (get-in @a path)) ;; for testing in clj only
      :cljs (r/cursor a path)))
-
-(defn mark-as-sub [path]
-  (keyword (str "sub/" (name (first path)))))
 
 (defn register
   ([path]
@@ -54,7 +62,7 @@
         (println "Registering new" path)
         ;(advance-session! inserted-sub)
         (go (>! session-ch (:session inserted-sub)))
-        (swap! state update-in (into [:subscriptions] path) (fn [_] lens))
+        (swap! state update-in (into [:subscriptions] (vector path)) (fn [_] lens))
         lens))))
 
 
@@ -159,6 +167,36 @@
                      (util/retract query-result)
                      (util/insert (second double))))))))
 
+
+;; 1. Decide whether we require a schema
+;; If we do...
+;; 2. Check schema is not nil in state
+;; 3. For each attr in facts
+;;    * if unique,
+;;        remove all facts with unique attr and insert new fact
+;;        else insert new fact
+(defn schema-insert [facts]
+  (let [schema (:schema @state)
+        tuples (mapcat util/insertable facts)
+        unique-attrs (reduce (fn [acc cur]
+                               (if (schema/unique-attr? (:schema @state) (second cur))
+                                   (conj acc (second cur))
+                                   acc))
+                       [] tuples)
+        existing-unique-facts (mapcat #(util/facts-where (:session @state) %) unique-attrs)
+        next-session (-> (:session @state)
+                       (l/replace-listener)
+                       (util/retract existing-unique-facts)
+                       (cr/insert-all tuples))]
+      (put-session! next-session)))
+
+
+
+(defn then [facts]
+  (-> (:session @state)
+      (l/replace-listener)
+      (util/insert facts)))
+
 (defn send [& exprs]
   (let [msgs (reduce
                   (fn [acc cur]
@@ -201,11 +239,10 @@
       (create-session->change-router! session-ch changes-ch)
       (create-change->store-router! changes-ch))))
 
-(defn put-session!
-  "Returns session"
-  [session]
-  (put! session-ch session)
-  session)
+
+(defn init-schema [schema]
+  (swap! state update :schema (fn [_] (schema/by-ident schema)))
+  schema)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -215,15 +252,18 @@
   [:exists [_ :sub [:footer]]]
   [[_ :done-count ?done-count]]
   [[_ :active-count ?active-count]]
+  [[_ :ui/visibility-filter ?visibility-filter]]
   =>
-  (insert! [:lens [:footer] {:active-count ?active-count :done-count ?done-count}]))
+  (insert! [:lens [:footer] {:active-count ?active-count
+                             :done-count ?done-count
+                             :visibility-filter ?visibility-filter}]))
 
 (def-tuple-rule subs-task-list
-  [:exists [:sub/task-list]]
+  [:exists [_ :sub [:task-list]]]
   [?visible-todos <- (acc/all) :from [:todo/visible]]
   [[_ :active-count ?active-count]]
   =>
-  (insert-all! [[-1 :lens/task-list {:visible-todos (libx.util/tuples->maps ?visible-todos)
+  (insert-all! [[:lens [:task-list] {:visible-todos (libx.util/tuples->maps ?visible-todos)
                                      :all-complete? (> ?active-count 0)}]]))
 (def-tuple-rule subs-todo-app
   [:exists [:sub/todo-app]]
@@ -236,44 +276,48 @@
   []
   [?facts <- (acc/all) :from [:all]])
 
-;(comment
-(def-tuple-session my-sess 'libx.core)
+;; Init
+(def session->change (create-session->change-router! session-ch changes-ch))
+(def change->store (create-change->store-router! changes-ch))
 
 ;; Reset
 (reset! store {})
 (swap! state update :subscriptions (fn [old] {}))
 (swap! state update :session (fn [old] nil))
+(init-schema app-schema)
+(def-tuple-session my-sess 'libx.core)
 (swap-session! (l/replace-listener my-sess))
-(def session->change (create-session->change-router! session-ch changes-ch))
-(def change->store (create-change->store-router! changes-ch))
 
-(query (:session @state) find-all-facts)
-(def my-sub (subscribe [[:task-list] [:footer]]))
-(subscribe [[:task-list] [:footer]])
-@store
-(:session @state)
-(:subscriptions @state)
-(r/cursor store [[:footer]])
-
-; Repeatable ;;;;
-(def next-session (util/insert (:session @state)
-                          [[-1 :active-count 7]
-                           [-2 :done-count 1]
-                           [-3 :todo/visible :tag]
-                           [-4 :todo/title "Hi"]]))
+;; Write
+(def facts [[-1 :active-count 7]
+            [-2 :done-count 1]
+            [-3 :todo/visible :tag]
+            [-4 :todo/title "Hi"]
+            [-5 :ui/visibility-filter :done]])
+(def next-session (util/insert (:session @state) facts))
 (put-session! next-session)
 
+;; Schema
+(init-schema app-schema)
+(schema-insert facts)
 
-;(swap! state update-in [:subscriptions :test] (fn [_] "foo"))
-@state
+;(def my-sub (subscribe [[:task-list] [:footer]]))
+;(select-keys (:subscriptions @state) [[:task-list] [:footer]])
+;(mapv deref @my-sub)
+;(def my-single-sub (subscribe [[:task-list]]))
+;@@my-single-sub
+;; Read
+(:session @state)
+(query (:session @state) find-all-facts)
+@store
+(:subscriptions @state)
+(:schema @state)
 
 ;;;;;;;;;;;;;;;;;
 ;; Problems
 ;; * Subs that are registered afterMUST be registered before any rules fire. Otherwise they won't
-;; be
-;; notified of
-;; changes.
-;;   Not clear right now how to best solve this. Rules should fire once subscription is inserted.
+;; be notified of changes. Not clear right now how to best solve this. Rules should fire once subscription is
+;; inserted.
 
 ;; TODO.
 ;; * Key store by sub's vector form (to allow params). Subscriptions atom already uses this format.

@@ -19,7 +19,9 @@
   [m]
   (mapv (fn [[a v]] [(:db/id m) a v]) (dissoc m :db/id)))
 
-(defn insertable [x]
+(defn insertable
+  "Returns vector of tuples"
+  [x]
   (cond
     (map? x) (map->tuples x)
     (map? (first x)) (mapcat map->tuples x)
@@ -117,8 +119,7 @@
   [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
 
 (defn qav [session a v]
-  (clara-tups->maps
-    (query session qav- :?a a :?v v)))
+  (query session qav- :?a a :?v v))
 
 (defquery qave-
   "(Q)uery (A)ttribute (V)alue (E)ntity.
@@ -127,8 +128,7 @@
   [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
 
 (defn qave [session a v e]
-  (clara-tups->maps
-    (query session qav- :?a a :?v v :?e e)))
+  (query session qav- :?a a :?v v :?e e))
 
 (defquery entity-
   [:?e]
@@ -148,8 +148,7 @@
   [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
 
 (defn qa [session a]
-  (clara-tups->maps
-    (query session qa- :?a a)))
+  (query session qa- :?a a))
 
 (defn keyed-tup->vector-tup [m]
   (into [] (vals m)))
@@ -160,9 +159,9 @@
 
 (defn entities-where
   "Returns hydrated entities matching an attribute-only or an attribute-value query"
-  ([session a] (map #(entity session (:db/id %)) (qa session a)))
-  ([session a v] (map #(entity session (:db/id %)) (qav session a v)))
-  ([session a v e] (map #(entity session (:db/id %)) (qave session a v e))))
+  ([session a] (map #(entity session (:db/id %)) (clara-tups->maps (qa session a))))
+  ([session a v] (map #(entity session (:db/id %)) (clara-tups->maps (qav session a v))))
+  ([session a v e] (map #(entity session (:db/id %)) (clara-tups->maps (qave session a v e)))))
 
 (defn facts-where
   "Returns tuples matching a v e query where v, e optional"

@@ -1,6 +1,5 @@
 (ns libx.todomvc.schema)
 
-
 (defn attribute [ident type & {:as opts}]
   (merge {:db/id        (random-uuid)
           :db/ident     ident
@@ -22,17 +21,25 @@
    (attribute :todo/visible
      :db.type/boolean)
 
-   ; optional -- trying AI approach (if it doesn't exist it's false)
    (attribute :todo/done
      :db.type/keyword)
 
    ; UI
    (attribute :ui/toggle-complete
-     :db.type/boolean)
+     :db.type/enum ;;tag
+     :db/unique :db.unique/identity)
 
    (attribute :ui/visibility-filter
-     :db.type/enum)
-   (enum :all)
-   (enum :active)
-   (enum :done)])
+     :db.type/enum ;;tag
+     :db/unique :db.unique/identity)
 
+   (attribute :done-count
+     :db.type/enum ;;tag
+     :db/unique :db.unique/identity)
+
+   (attribute :active-count
+     :db.type/enum ;;tag
+     :db/unique :db.unique/identity)])
+
+
+(def app-schema (schema))
