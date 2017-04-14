@@ -46,4 +46,4 @@
 (.log js/console (:subscriptions @state))
 (.log js/console (:schema @state))
 (.log js/console @store)
-(cr/query (:session @state) find-all-facts)
+;(cr/query (:session @state) find-all-facts)

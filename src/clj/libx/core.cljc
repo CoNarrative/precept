@@ -237,21 +237,17 @@
 
 (defn init-schema [session schema]
   (swap! state update :schema (fn [_] (schema/by-ident schema)))
+  (println "Updating schema with" schema)
   session)
 
 (defn start! [options]
   (let [opts (or options (hash-map))
-        init-session (swap-session! (:session opts))
-        _ (println "Sessionnnn" (:session @state))]
+        init-session (swap-session! (:session opts))]
     (do
-      (swap-session! (:session opts))
-      (swap! state update :session
-        (fn [_]
-          (println "Session state" @state)
-          (-> (:session state)
-             ;(l/replace-listener)
+      (swap-session!
+          (-> init-session
              (init-schema (:schema opts))
-             (schema-insert (:facts opts)))))
+             (schema-insert (:facts opts))))
       (create-session->change-router! session-ch changes-ch)
       (create-change->store-router! changes-ch))))
 
