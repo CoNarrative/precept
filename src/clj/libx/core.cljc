@@ -12,6 +12,7 @@
       #?(:clj [reagent.ratom :as rr])
       #?(:cljs [cljs.core.async :refer [put! take! chan <! >!]])
       #?(:cljs [libx.todomvc.schema :refer [app-schema]])
+      #?(:cljs [libx.todomvc.rules :refer [find-all-facts]])
       #?(:cljs [reagent.core :as r]))
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
@@ -168,34 +169,38 @@
                      (util/insert (second double))))))))
 
 
-;; 1. Decide whether we require a schema
+;; 1. Decide whether we require a schema in defsession
 ;; If we do...
 ;; 2. Check schema is not nil in state
 ;; 3. For each attr in facts
 ;;    * if unique,
 ;;        remove all facts with unique attr and insert new fact
 ;;        else insert new fact
-(defn schema-insert [facts]
-  (let [schema (:schema @state)
-        tuples (mapcat util/insertable facts)
-        unique-attrs (reduce (fn [acc cur]
-                               (if (schema/unique-attr? (:schema @state) (second cur))
-                                   (conj acc (second cur))
-                                   acc))
-                       [] tuples)
-        existing-unique-facts (mapcat #(util/facts-where (:session @state) %) unique-attrs)
-        next-session (-> (:session @state)
-                       (l/replace-listener)
-                       (util/retract existing-unique-facts)
-                       (cr/insert-all tuples))]
-      (put-session! next-session)))
+(defn schema-insert
+  ([facts]
+   (let [schema (:schema @state)
+         facts-v (if (coll? (first facts)) facts (vector facts))
+         _ (println "factsvvv" facts-v)
+         tuples (mapcat util/insertable facts-v)
+         unique-attrs (reduce (fn [acc cur]
+                                (if (schema/unique-attr? (:schema @state) (second cur))
+                                    (conj acc (second cur))
+                                    acc))
+                         [] tuples)
+         existing-unique-facts (mapcat #(util/facts-where (:session @state) %) unique-attrs)
+         next-session (-> (:session @state)
+                         (l/replace-listener)
+                         (util/retract existing-unique-facts)
+                         (cr/insert-all tuples))]
+        (put-session! next-session)))
+  ([session facts] (schema-insert facts)))
 
-
-
-(defn then [facts]
-  (-> (:session @state)
-      (l/replace-listener)
-      (util/insert facts)))
+(defn then
+  ([op facts]
+   (condp = op
+     :add (schema-insert facts)
+     (println "Unsupported op keyword " op)))
+  ([facts] (then :add facts)))
 
 (defn send [& exprs]
   (let [msgs (reduce
@@ -230,88 +235,89 @@
           (put! out-ch change)))
       (recur))))
 
+(defn init-schema [session schema]
+  (swap! state update :schema (fn [_] (schema/by-ident schema)))
+  session)
+
 (defn start! [options]
-  (let [opts (or options (hash-map))]
+  (let [opts (or options (hash-map))
+        init-session (swap-session! (:session opts))
+        _ (println "Sessionnnn" (:session @state))]
     (do
-      (swap! state update :session (:session opts))
-      ;(create-session-ch! (or (:session-ch opts) (chan 1)))
-      ;(create-changes-ch! (or (:changes-ch opts) (chan 1)))
+      (swap-session! (:session opts))
+      (swap! state update :session
+        (fn [_]
+          (println "Session state" @state)
+          (-> (:session state)
+             ;(l/replace-listener)
+             (init-schema (:schema opts))
+             (schema-insert (:facts opts)))))
       (create-session->change-router! session-ch changes-ch)
       (create-change->store-router! changes-ch))))
 
-
-(defn init-schema [schema]
-  (swap! state update :schema (fn [_] (schema/by-ident schema)))
-  schema)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; test-area
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(def-tuple-rule subs-footer-controls
-  [:exists [_ :sub [:footer]]]
-  [[_ :done-count ?done-count]]
-  [[_ :active-count ?active-count]]
-  [[_ :ui/visibility-filter ?visibility-filter]]
-  =>
-  (insert! [:lens [:footer] {:active-count ?active-count
-                             :done-count ?done-count
-                             :visibility-filter ?visibility-filter}]))
+;(def-tuple-rule subs-footer-controls
+;  [:exists [_ :sub [:footer]]]
+;  [[_ :done-count ?done-count]]
+;  [[_ :active-count ?active-count]]
+;  [[_ :ui/visibility-filter ?visibility-filter]]
+;  =>
+;  (insert! [:lens [:footer] {:active-count ?active-count
+;                             :done-count ?done-count
+;                             :visibility-filter ?visibility-filter}]))
+;
+;(def-tuple-rule subs-task-list
+;  [:exists [_ :sub [:task-list]]]
+;  [?visible-todos <- (acc/all) :from [:todo/visible]]
+;  [[_ :active-count ?active-count]]
+;  =>
+;  (insert-all! [[:lens [:task-list] {:visible-todos (libx.util/tuples->maps ?visible-todos)
+;                                     :all-complete? (> ?active-count 0)}]]))
+;(def-tuple-rule subs-todo-app
+;  [:exists [:sub/todo-app]]
+;  [?todos <- (acc/all) :from [:todo/title]]
+;  =>
+;  (println "All todos" ?todos)
+;  (insert! [-1 :lens/todo-app (libx.util/tuples->maps (:todos ?todos))]))
 
-(def-tuple-rule subs-task-list
-  [:exists [_ :sub [:task-list]]]
-  [?visible-todos <- (acc/all) :from [:todo/visible]]
-  [[_ :active-count ?active-count]]
-  =>
-  (insert-all! [[:lens [:task-list] {:visible-todos (libx.util/tuples->maps ?visible-todos)
-                                     :all-complete? (> ?active-count 0)}]]))
-(def-tuple-rule subs-todo-app
-  [:exists [:sub/todo-app]]
-  [?todos <- (acc/all) :from [:todo/title]]
-  =>
-  (println "All todos" ?todos)
-  (insert! [-1 :lens/todo-app (libx.util/tuples->maps (:todos ?todos))]))
-
-(def-tuple-query find-all-facts
-  []
-  [?facts <- (acc/all) :from [:all]])
+;(def-tuple-query find-all-facts
+;  []
+;  [?facts <- (acc/all) :from [:all]])
 
 ;; Init
-(def session->change (create-session->change-router! session-ch changes-ch))
-(def change->store (create-change->store-router! changes-ch))
+;(def session->change (create-session->change-router! session-ch changes-ch))
+;(def change->store (create-change->store-router! changes-ch))
 
 ;; Reset
-(reset! store {})
-(swap! state update :subscriptions (fn [old] {}))
-(swap! state update :session (fn [old] nil))
-(init-schema app-schema)
-(def-tuple-session my-sess 'libx.core)
-(swap-session! (l/replace-listener my-sess))
+;(reset! store {})
+;(swap! state update :subscriptions (fn [old] {}))
+;(swap! state update :session (fn [old] nil))
+;(init-schema app-schema)
+;(def-tuple-session my-sess 'libx.core)
+;(swap-session! (l/replace-listener my-sess))
 
 ;; Write
-(def facts [[-1 :active-count 7]
-            [-2 :done-count 1]
-            [-3 :todo/visible :tag]
-            [-4 :todo/title "Hi"]
-            [-5 :ui/visibility-filter :done]])
-(def next-session (util/insert (:session @state) facts))
-(put-session! next-session)
+;(def facts [[-1 :active-count 7]
+;            [-2 :done-count 1]
+;            [-3 :todo/visible :tag]
+;            [-4 :todo/title "Hi"]
+;            [-5 :ui/visibility-filter :done]])
+;(def next-session (schema-insert facts))
+;(put-session! next-session)
 
 ;; Schema
-(init-schema app-schema)
-(schema-insert facts)
+;(init-schema app-schema)
+;(schema-insert facts)
 
-;(def my-sub (subscribe [[:task-list] [:footer]]))
-;(select-keys (:subscriptions @state) [[:task-list] [:footer]])
-;(mapv deref @my-sub)
-;(def my-single-sub (subscribe [[:task-list]]))
-;@@my-single-sub
 ;; Read
-(:session @state)
-(query (:session @state) find-all-facts)
-@store
-(:subscriptions @state)
-(:schema @state)
+;(:session @state)
+;@store
+;(:subscriptions @state)
+;(:schema @state)
 
 ;;;;;;;;;;;;;;;;;
 ;; Problems

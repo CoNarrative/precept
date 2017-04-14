@@ -32,9 +32,9 @@
           [:input.toggle
             {:type "checkbox"
              :checked done
-             :on-change #(then (if done
-                                 [:remove [id :todo/done]]
-                                 [id :toggle-done :tag]))}]
+             :on-change #(if done
+                           (then :remove [id :todo/done])
+                           (then :add [id :todo/done]))}]
           [:label
             {:on-double-click #(reset! editing true)}
             title]
@@ -44,8 +44,8 @@
           [todo-input
             {:class "edit"
              :title title
-             :on-save #(then 'retract [id :todo/title title]
-                             'insert [id :todo/title %])
+             :on-save #(do (then :remove [id :todo/title title])
+                           (then [id :todo/title %]))
              :on-stop #(reset! editing false)}])])))
 
 (defn task-list
@@ -80,7 +80,7 @@
       [:li (a-fn :active "Active")]
       [:li (a-fn :done   "Completed")]]
      (when (pos? done-count)
-       [:button#clear-completed {:on-click #(then [:clear-completed])}
+       [:button#clear-completed {:on-click #(then [-1 :clear-completed])}
         "Clear completed"])]))
 
 
@@ -91,7 +91,7 @@
     [todo-input
       {:id "new-todo"
        :placeholder "What needs to be done?"
-       :on-save #(then [:add-todo %])}]])
+       :on-save #(then [(random-uuid) :todo/title %])}]])
 
 (defn todo-app
   []

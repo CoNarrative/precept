@@ -1,17 +1,15 @@
 (ns libx.todomvc.core
   (:require-macros [secretary.core :refer [defroute]])
   (:require [goog.events :as events]
+            [libx.core :refer [start! then state store]]
+            [libx.util :refer [insert insert-fire]]
+            [clara.rules :as cr]
             [devtools.core :as devtools]
             [reagent.core :as reagent]
-            [re-frame.core :refer [dispatch dispatch-sync]]
             [secretary.core :as secretary]
-            [libx.todomvc.events]
-            [libx.todomvc.subs]
             [libx.todomvc.views]
-            [libx.todomvc.rules :refer [app-session]]
-            [libx.todomvc.facts :refer [visibility-filter]]
-            [libx.core :refer [start! then]]
-            [libx.util :refer [insert insert-fire]]
+            [libx.todomvc.schema :refer [app-schema]]
+            [libx.todomvc.rules :refer [app-session find-all-facts]]
             [libx.todomvc.add-me :as add-me])
   (:import [goog History]
            [goog.history EventType]))
@@ -21,10 +19,11 @@
 ;; Instead of secretary consider:
 ;;   - https://github.com/DomKM/silk
 ;;   - https://github.com/juxt/bidi
-(defroute "/" [] (then [:ui/visibility-filter :all]))
+(defroute "/" [] (println "Hey"));;(then [(random-uuid) :ui/visibility-filter :all])))
 
-(defroute "/:filter" [filter] (then [:ui/visibility-filter (keyword filter)]))
-
+(defroute "/:filter" [filter] (println "there"))
+;;(then [(random-uuid) :ui/visibility-filter ; (keyword)
+;                                                                                    filter)])
 (def history
   (doto (History.)
     (events/listen EventType.NAVIGATE
@@ -34,8 +33,17 @@
 (defn mount-components []
   (reagent/render [libx.todomvc.views/todo-app] (.getElementById js/document "app")))
 
+(def facts [[-1 :active-count 7]
+            [-2 :done-count 1]
+            [-3 :todo/visible :tag]
+            [-4 :todo/title "Hi"]
+            [-5 :ui/visibility-filter :done]])
+
 (defn ^:export main []
-  (let [initial-state (-> app-session (add-me/replace-listener)
-                                      (insert (visibility-filter (random-uuid) :all)))]
-    ;(start! {:session initial-state})
-    (mount-components)))
+    (start! {:session app-session :schema app-schema :facts facts})
+    (mount-components))
+(.log js/console (:session @state))
+(.log js/console (:subscriptions @state))
+(.log js/console (:schema @state))
+(.log js/console @store)
+(cr/query (:session @state) find-all-facts)

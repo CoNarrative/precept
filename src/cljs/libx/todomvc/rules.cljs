@@ -77,25 +77,37 @@
   (insert-all! [[-1 :done-count ?done]
                 [-1 :active-count (- ?total ?done)]]))
 
+(def-tuple-query find-all-facts
+  []
+  [?facts <- (acc/all) :from [:all]])
+
 (def-tuple-rule subs-footer-controls
-  [[?e :component/footer]]
-  [?done-count <- [:done-count]]
-  [?active-count <- [:active-count]]
+  [:exists [_ :sub [:footer]]]
+  [[_ :done-count ?done-count]]
+  [[_ :active-count ?active-count]]
+  [[_ :ui/visibility-filter ?visibility-filter]]
   =>
-  (insert-all! [[?e :footer {:active-count ?active-count
-                             :done-count ?done-count}]]))
+  (println "Inserting footer lens")
+  (insert! [:lens [:footer] {:active-count ?active-count
+                             :done-count ?done-count
+                             :visibility-filter ?visibility-filter}]))
 
 (def-tuple-rule subs-task-list
-  [[?e :component/task-list]]
+  [:exists [_ :sub [:task-list]]]
   [?visible-todos <- (acc/all) :from [:todo/visible]]
-  [?active-count <- [:active-count]]
+  [[_ :active-count ?active-count]]
   =>
-  (insert-all! [[?e :task-list {:visible-todos ?visible-todos
-                                    :all-complete? (> ?active-count 0)}]]))
+  (insert! [:lens [:task-list] {:visible-todos (libx.util/tuples->maps ?visible-todos)
+                                :all-complete? (> ?active-count 0)}]))
 (def-tuple-rule subs-todo-app
-  [[?e :component/todo-app]]
-  [?todos <- (acc/all) :from [(attr-ns "todo")]]
+  [:exists [_ :sub [:todo-app]]]
+  [?todos <- (acc/all) :from [:todo/title]]
   =>
-  (insert! [?e :todo-app (libx.util/tuples->maps ?todos)]))
+  (println "All todos" ?todos)
+  (insert! [:lens [:todo-app] (libx.util/tuples->maps (:todos ?todos))]))
+
+(def-tuple-query find-all-facts
+  []
+  [?facts <- (acc/all) :from [:all]])
 
 (def-tuple-session app-session 'libx.todomvc.rules)

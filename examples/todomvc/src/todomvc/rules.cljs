@@ -67,7 +67,7 @@
 (def-tuple-rule print-all-facts
   [?fact <- [?e ?a ?v]]
   =>
-  (println "FACT" ?fact))
+  (println "FACT!" ?fact))
 
 (def-tuple-query find-all-done []
   [[?e ?a ?v]]
@@ -77,5 +77,6 @@
   [?count <- (acc/count) :from [:todo/done]]
   =>
   (insert! [-1 :done-count ?count]))
+
 
 (def-tuple-session app-session 'todomvc.rules)
