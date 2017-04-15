@@ -22,8 +22,7 @@
                                      27 (stop)
                                      nil)})])))
 
-(defn todo-item
-  []
+(defn todo-item []
   (let [editing (reagent/atom false)]
     (fn [{:keys [db/id todo/title todo/done]}]
       [:li {:class (str (when done "completed ")
@@ -50,7 +49,7 @@
 
 (defn task-list
   []
-  (let [{:keys [visible-todos all-complete?]} @@(libx/subscribe :task-list)]
+  (let [{:keys [visible-todos all-complete?]} @@(subscribe [:task-list])]
        (prn "all visible in render" visible-todos)
       [:section#main
         [:input#toggle-all
@@ -67,8 +66,9 @@
 
 (defn footer-controls []
   (let [{:keys [active-count done-count visibility-filter] :as props}
-        @@(libx/subscribe [:footer])
-        _ (println "[sub] Active done in render" active-count done-count)
+        @@(subscribe [:footer])
+        _ (println "[sub] Done count / active count in render" active-count done-count)
+        _ (println "Test" @(subscribe [:footer]))
         a-fn          (fn [filter-kw txt]
                         [:a {:class (when (= filter-kw visibility-filter) "selected")
                              :href (str "#/" (name filter-kw))} txt])]
@@ -98,7 +98,7 @@
   [:div
    [:section#todoapp
     [task-entry]
-    (when (seq @@(libx/subscribe [:todo-app]))
+    (when (seq @@(subscribe [:todo-app]))
       [task-list])
     [footer-controls]]
    [:footer#info

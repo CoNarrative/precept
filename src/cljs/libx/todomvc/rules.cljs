@@ -77,10 +77,6 @@
   (insert-all! [[-1 :done-count ?done]
                 [-1 :active-count (- ?total ?done)]]))
 
-(def-tuple-query find-all-facts
-  []
-  [?facts <- (acc/all) :from [:all]])
-
 (def-tuple-rule subs-footer-controls
   [:exists [_ :sub [:footer]]]
   [[_ :done-count ?done-count]]

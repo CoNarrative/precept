@@ -25,6 +25,7 @@
   {:dev
    {:dependencies [[org.clojure/test.check "0.9.0"]
                    [org.clojure/tools.namespace "0.2.11"]
+                   [devcards "0.2.3"]
                    [com.cemerick/piggieback "0.2.2-SNAPSHOT"]
                    [figwheel-sidecar "0.5.10-SNAPSHOT"]
                    [binaryage/devtools "0.8.2"]
@@ -45,7 +46,20 @@
                       :preloads [devtools.preload]
                       :source-map true
                       :optimizations :none
-                      :pretty-print true}}}}
+                      :pretty-print true}}
+
+      :test
+       {:source-paths ["src/cljs" "test/cljs"]
+        :figwheel {:devcards true}
+        :compiler
+                      {:main "libx.runner"
+                       :asset-path "/js/tests/out"
+                       :output-to "target/cljsbuild/public/js/tests/main.js"
+                       :output-dir "target/cljsbuild/public/js/tests/out"
+                       :preloads [devtools.preload]
+                       :source-map true
+                       :optimizations :none
+                       :pretty-print true}}}}
 
     :repl-options {:init-ns user}
     :source-paths ["dev/clj"]}})

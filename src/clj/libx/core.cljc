@@ -8,7 +8,7 @@
               [libx.lang :as lang]
               [libx.tuplerules :refer [def-tuple-session def-tuple-rule def-tuple-query]]
               [clojure.spec :as s]
-      #?(:clj [clojure.core.async :refer [<! >! put! take! chan go-loop]])
+      #?(:clj [clojure.core.async :refer [<! >! put! take! chan go go-loop]])
       #?(:clj [reagent.ratom :as rr])
       #?(:cljs [cljs.core.async :refer [put! take! chan <! >!]])
       #?(:cljs [libx.todomvc.schema :refer [app-schema]])
@@ -16,7 +16,7 @@
       #?(:cljs [reagent.core :as r]))
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
-#(:cljs (enable-console-print!))
+;#(:cljs (enable-console-print!))
 ; TODO. keep vector of states if dev
 ;(def dev? true)
 
@@ -50,18 +50,14 @@
      :cljs (r/cursor a path)))
 
 (defn register
+  "Returns existing subscription if found in subscriptions. Otherwise returns"
   ([path]
    (if-let [existing (get (:subscriptions @state) path)]
-      (do
-        (println "Found existing subscription" existing)
-        existing)
-      (let [lens (lens store (vector path))
-            inserted-sub (swap! state update :session
+      (do (println "Found existing subscription" existing) existing)
+      (let [inserted-sub (swap! state update :session
                            (fn [old] (-> old (util/insert [(util/guid) :sub path]))))
-            ;_ (println "Facts after register" inserted-sub)];;(query inserted-sub find-all-facts)
-            _ (println "inserted sub" inserted-sub)]
+            lens (lens store (vector path))]
         (println "Registering new" path)
-        ;(advance-session! inserted-sub)
         (go (>! session-ch (:session inserted-sub)))
         (swap! state update-in (into [:subscriptions] (vector path)) (fn [_] lens))
         lens))))
@@ -85,10 +81,15 @@
                                   _ (println "Register result" register-result)]
                               (conj acc register-result)))
                           (or (vals existing-subs) [])
-                          new-paths)]
-      (mk-ratom (if (second requested-subs)
-                    requested-subs
-                    (first requested-subs))))))
+                          new-paths)
+         _ (println "Requested subs" requested-subs)]
+     (if (second requested-subs)
+       requested-subs
+       (first requested-subs)))))
+
+      ;(mk-ratom (if (second requested-subs)
+      ;              requested-subs
+      ;              (first requested-subs)))))))
 
 (defn with-op [change op-kw]
   (mapv (fn [ent] (conj ent (vector (ffirst ent) :op op-kw)))
