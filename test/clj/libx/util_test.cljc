@@ -5,7 +5,7 @@
               [clara.tools.tracing :as trace]
               [libx.util :refer :all]
               [clojure.spec :as s]
-              [clara.rules :refer [query defquery] :as cr]
+              [clara.rules :refer [query defquery fire-rules] :as cr]
               [clara.tools.tracing :as trace]))
 
 (defquery find-all []
@@ -45,16 +45,47 @@
     (is (every? is-tuple? (insertable (insertable m-facts))))))
 
 (deftest insert-test
-  (let [session @(def-tuple-session mysess)
-        numfacts 5
-        m-fact  #(todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
-        m-facts (into [] (repeatedly numfacts m-fact))
-        trace (trace/get-trace (-> session
-                                (trace/with-tracing)
-                                (insert-fire m-facts)))]
-    (is (= :add-facts (:type (first trace))))
-    (is (= (count (:facts (first trace)))
-           (* numfacts (dec (count (keys (m-fact)))))))))
+  (testing "Insert single tuple"
+    (let [session @(def-tuple-session mysess)
+          fact [-1 :foo "bar"]
+          trace (trace/get-trace (-> session
+                                   (trace/with-tracing)
+                                   (insert fact)
+                                   (fire-rules)))]
+      (is (= :add-facts (:type (first trace))))
+      (is (= 1 (count (:facts (first trace)))))))
+  (testing "Insert tuples"
+    (let [session @(def-tuple-session mysess)
+          facts [[-1 :foo "bar"]
+                 [-1 :bar "baz"]
+                 [-2 :foo "baz"]]
+          trace (trace/get-trace (-> session
+                                   (trace/with-tracing)
+                                   (insert facts)
+                                   (fire-rules)))]
+      (is (= :add-facts (:type (first trace))))
+      (is (= (count facts) (count (:facts (first trace)))))))
+  (testing "Insert single map"
+    (let [session @(def-tuple-session mysess)
+          fact  (todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
+          trace (trace/get-trace (-> session
+                                   (trace/with-tracing)
+                                   (insert fact)
+                                   (fire-rules)))]
+      (is (= :add-facts (:type (first trace))))
+      (is (= (dec (count (keys fact))) (count (:facts (first trace)))))))
+
+  (testing "Insert vector of maps"
+    (let [session @(def-tuple-session mysess)
+          numfacts 5
+          m-fact  #(todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
+          m-facts (into [] (repeatedly numfacts m-fact))
+          trace (trace/get-trace (-> session
+                                  (trace/with-tracing)
+                                  (insert-fire m-facts)))]
+      (is (= :add-facts (:type (first trace))))
+      (is (= (count (:facts (first trace)))
+             (* numfacts (dec (count (keys (m-fact))))))))))
 
 (deftest with-changes-test
   (let [changes-added (with-changes {:db/id 1 :foo "bar"})
