@@ -4,17 +4,17 @@
             [libx.tuplerules :refer [def-tuple-session]])
   (:require-macros [cljs.test :refer [async use-fixtures testing is]]
                    [devcards.core :refer [deftest]]))
+(enable-console-print!)
 (def-tuple-session my-session)
 
 (core/swap-session! my-session)
 (swap! core/state update :subscriptions (fn [_] {}))
 
-(use-fixtures :once
-  {:before (fn [_]
-               (core/swap-session! my-session)
-               (swap! core/state update :subscriptions (fn [_] {})))}
-  {:after (fn [_] nil)})
-(:subscriptions @core/state)
+;(use-fixtures :once
+;  {:before (fn [_]
+;               (core/swap-session! my-session)
+;               (swap! core/state update :subscriptions (fn [_] {}))
+;  {:after (fn [_] nil)})
 
 (defn clear-subs []
   (swap! core/state update :subscriptions (fn [_] {})))
@@ -27,14 +27,14 @@
 
 (def subdef [:foo])
 
-(def sub-update (fn [_] {:foo 1 :bar 2 :baz 3}))
+(def the-update {:foo 1 :bar 2 :baz 3})
 
 (defn do-update-for-sub [subdef]
-  (swap! core/store update subdef sub-update))
+  (swap! core/store update subdef (fn [_] the-update)))
 
 (defn lens-for-sub [subdef] (get (:subscriptions @core/state) subdef))
 
-(deftest subscribe-should-store-subscriptions-in-state
+(deftest subscribe-should-store-subscriptions-in-state-atom
   (async done
     (before-each)
     (is (= {} (:subscriptions @core/state)))
@@ -42,13 +42,13 @@
     (is (contains? (:subscriptions @core/state) subdef))
     (done)))
 
-(deftest subscriptions-should-update-on-state-change
+(deftest subscriptions-should-update-on-store-change
   (async done
     (before-each)
     (core/subscribe subdef)
     (is (= nil @(lens-for-sub subdef)))
     (do-update-for-sub subdef)
-    (is (= (sub-update nil) @(lens-for-sub subdef)))
+    (is (= the-update @(lens-for-sub subdef)))
     (done)))
 
 (deftest dereffed-subscribe-returns-map-when-sub-has-data

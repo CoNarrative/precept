@@ -12,7 +12,7 @@
 
   :source-paths ["src/clj"]
 
-  :target-path "target/%s/"
+  ;:target-path "target/%s/"
 
   :resource-paths ["resources" "target/cljsbuild"]
 
@@ -32,7 +32,10 @@
                    [secretary "1.2.3"]
                    [re-frame "0.9.2"]]
 
-    :plugins      [[lein-figwheel "0.5.10-SNAPSHOT"]]
+    :plugins      [[lein-figwheel "0.5.10-SNAPSHOT"]
+                   [lein-doo "0.1.7"]]
+
+    :doo {:paths {:karma "./node_modules/karma/bin/karma"}}
 
     :cljsbuild
     {:builds
@@ -50,12 +53,23 @@
 
       :test
        {:source-paths ["src/cljs" "test/cljs"]
+        :compiler
+                     {:main "libx.runner"
+                      :output-to "target/cljsbuild/public/js/test/test.js"
+                      :output-dir "target/cljsbuild/public/js/test/out"
+                      :asset-path "target/cljsbuild/public/js/tests/out"
+                      :optimizations :none
+                      :source-map true
+                      :pretty-print true}}
+
+      :devcards-test
+       {:source-paths ["src/cljs" "test/cljs"]
         :figwheel {:devcards true}
         :compiler
                       {:main "libx.runner"
                        :asset-path "/js/tests/out"
-                       :output-to "target/cljsbuild/public/js/tests/main.js"
-                       :output-dir "target/cljsbuild/public/js/tests/out"
+                       :output-to "target/cljsbuild/public/js/devcard-test/main.js"
+                       :output-dir "target/cljsbuild/public/js/devcard-test/out"
                        :preloads [devtools.preload]
                        :source-map true
                        :optimizations :none
