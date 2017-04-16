@@ -32,7 +32,7 @@
 (defn init-schema [schema]
   (swap! state assoc :schema (schema/by-ident schema)))
 
-(def session-ch (chan 20))
+(def session-ch (chan 1))
 
 ;; changes, update-session, update-history
 (defn advance-session!
@@ -51,20 +51,49 @@
   [in]
   (let [out (chan)]
     (go-loop []
-      (doseq [change (l/embed-op (ops (<! in)))]
-        (>! out change))
-      (recur))
+      (let [ops (l/ops (<! in))
+            _ (println "Ops!" ops)]
+        (>! out ops)
+        (recur)))
     out))
 
 (defn add [a change]
   "Merges change into atom"
-  (println "Adding" change)
+  (println "Adding" (l/change->av-map change))
   (swap! a update (:db/id change) (fn [ent] (merge ent (l/change->av-map change)))))
 
 (defn del [a change]
   "Removes keys in change from atom"
-  (println "Removing" (:db/id change) (l/change->attrs change))
+  (println "Removing" (l/change->attrs change))
   (swap! a update (:db/id change) dissoc (l/change->attrs change)))
+
+(defn apply-removals-to-store [in]
+  "Reads changes from in channel and updates store
+   * `in-ch` - core.async channel
+   * `store` - atom"
+  (let [out (chan)]
+    (go-loop []
+      (let [changes (<! in)
+            with-ops (l/embed-op {:removed changes})
+            _ (println "Removals!" changes)]
+       (doseq [change with-ops]
+          (del store change))
+       (>! out (:added changes))
+       (recur)))
+   out))
+
+(defn apply-additions-to-store [in]
+  "Reads changes from in channel and updates store
+   * `in-ch` - core.async channel
+   * `store` - atom"
+  (go-loop []
+    (let [changes (<! in)
+          with-ops (l/embed-op {:added changes})
+          _ (println "Additions!" (l/embed-op {:added changes}))]
+      (doseq [change with-ops]
+        (add store change))
+      (recur)))
+  nil)
 
 (defn write-changes-to-store [in]
   "Reads changes from in channel and updates store
@@ -77,9 +106,10 @@
         :add (do (add store change) (recur))
         :remove (do (del store change) (recur))
         (do (println "No match for" change) (recur))))))
-
+;; TODO. make go loop for removing changes and adding changes and pass through removals first
 (def changes-out (read-changes-from-session session-ch))
-(def changes-writer (write-changes-to-store changes-out))
+(def removals-out (apply-removals-to-store changes-out))
+(def addition-applier (apply-additions-to-store removals-out))
 
 (defn unique-identity-attrs [schema tuples]
   (reduce (fn [acc cur]
@@ -121,7 +151,7 @@
          existing-unique-identity-facts (mapcat #(util/facts-where (:session @state) %)
                                           unique-attrs)
          existing-unique-value-facts (unique-value-facts (:sesson @state) tuples unique-values)
-         existing-unique-facts (conj existing-unique-identity-facts existing-unique-value-facts)
+         existing-unique-facts (into existing-unique-identity-facts existing-unique-value-facts)
          _ (println "Schema-insert unique values " unique-values)
          _ (println "Schema-insert unique value facts " existing-unique-value-facts)
          _ (println "Schema-insert removing " existing-unique-facts)
