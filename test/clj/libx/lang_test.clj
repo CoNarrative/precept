@@ -1,6 +1,6 @@
 (ns libx.lang-test
     (:require [clojure.test :refer [deftest is testing run-tests]]
-              [libx.lang :as lang]
+              [libx.spec.lang :as lang]
               [clojure.spec :as s]
               [clojure.spec.gen :as gen]))
 

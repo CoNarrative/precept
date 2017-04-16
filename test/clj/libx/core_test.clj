@@ -16,8 +16,7 @@
          'libx.tuple-rule-test
          'libx.util-test
          'libx.defaction-test
-         '[libx.listeners-test]
-         '[libx.listeners-test]]]
+         'libx.listeners-test]]
     (dosync (-> ns (in-ns) (run-tests)))))
 
 (run)
