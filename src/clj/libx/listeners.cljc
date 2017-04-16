@@ -1,5 +1,6 @@
 (ns libx.listeners
   (:require [clara.rules.engine :as eng]
+            [libx.util :as util]
             [clara.rules.listener :as l]))
 
 (declare append-trace)
@@ -121,7 +122,26 @@
   "Returns :added, :removed results for a single fact listener. Usually wrapped with `embed-ops`."
   (split-ops (first (fact-events session))))
 
+(defn with-op [change op-kw]
+  (mapv (fn [ent] (conj ent (vector (ffirst ent) :op op-kw)))
+    (partition-by first change)))
+
+(defn embed-op [changes]
+  (let [added (:added changes)
+        removed (:removed changes)]
+    (mapv util/entity-tuples->entity-map
+      (into (with-op added :add)
+        (with-op removed :remove)))))
+
 (defn replace-listener [session]
   (-> session
     (remove-fact-listeners)
     (add-listener)))
+
+(defn change->attrs [change]
+  (first (remove #{:db/id :op} (keys change))))
+
+(defn change->av-map [changes]
+  "Removes :op, :db/id from change for an entity"
+  (remove #(#{:op :db/id} (first %)) changes))
+

@@ -1,14 +1,15 @@
-(ns libx.todomvc.schema)
+(ns libx.todomvc.schema
+  (:require [libx.util :refer [guid]]))
 
 (defn attribute [ident type & {:as opts}]
-  (merge {:db/id        (random-uuid)
+  (merge {:db/id        (guid)
           :db/ident     ident
           :db/valueType type}
     {:db/cardinality :db.cardinality/one}
     opts))
 
 (defn enum [ident & {:as fields}]
-  (merge {:db/id    (random-uuid)
+  (merge {:db/id    (guid)
           :db/ident ident}
     fields))
 

@@ -1,4 +1,6 @@
-(ns libx.schema)
+(ns libx.schema
+  (:require [libx.spec.sub :as sub]
+            [libx.util :refer [guid]]))
 
 (defn by-ident [schema]
   (reduce (fn [acc [k v]] (assoc acc k (first v)))
@@ -11,6 +13,10 @@
   (and (schema-attr? by-ident attr)
        (= :db.unique/identity (get-in by-ident [attr :db/unique]))))
 
+(defn unique-value? [by-ident attr]
+  (and (schema-attr? by-ident attr)
+    (= :db.unique/value (get-in by-ident [attr :db/unique]))))
+
 (defn one-to-one? [by-ident attr]
   (and (schema-attr? by-ident attr)
        (= :db.cardinality/one (get-in by-ident [attr :db/cardinality]))))
@@ -18,6 +24,28 @@
 (defn one-to-many? [by-ident attr]
   (and (schema-attr? by-ident attr)
        (= :db.cardinality/many (get-in by-ident [attr :db/cardinality]))))
+
+(defn attribute [ident type & {:as opts}]
+  (merge {:db/id        (guid)
+          :db/ident     ident
+          :db/valueType type}
+    {:db/cardinality :db.cardinality/one}
+    opts))
+
+(defn enum [ident & {:as fields}]
+  (merge {:db/id    (guid)
+          :db/ident ident}
+    fields))
+
+(def libx-schema
+  [
+   (attribute ::sub/request
+     :db.type/vector
+     :db/unique :db.unique/value)
+
+   (attribute ::sub/response
+     :db.type/any
+     :db/unique :db.unique/value)])
 
 
 

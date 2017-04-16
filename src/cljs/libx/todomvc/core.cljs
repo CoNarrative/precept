@@ -1,4 +1,4 @@
-(ns libx.todomvc.core
+(ns ^:figwheel-always libx.todomvc.core
   (:require-macros [secretary.core :refer [defroute]])
   (:require [goog.events :as events]
             [libx.core :refer [start! then state store]]
@@ -7,10 +7,11 @@
             [devtools.core :as devtools]
             [reagent.core :as reagent]
             [secretary.core :as secretary]
+            [libx.spec.sub :as sub]
             [libx.todomvc.views]
             [libx.todomvc.schema :refer [app-schema]]
             [libx.todomvc.rules :refer [app-session find-all-facts]]
-            [libx.todomvc.add-me :as add-me])
+            [libx.util :as util])
   (:import [goog History]
            [goog.history EventType]))
 
@@ -33,17 +34,25 @@
 (defn mount-components []
   (reagent/render [libx.todomvc.views/todo-app] (.getElementById js/document "app")))
 
-(def facts [[-1 :active-count 7]
-            [-2 :done-count 1]
-            [-3 :todo/visible :tag]
-            [-4 :todo/title "Hi"]
-            [-5 :ui/visibility-filter :done]])
+(def todo-id (random-uuid))
+(def facts [[todo-id :todo/visible :tag]
+            [todo-id :todo/title "Hi"]
+            [(random-uuid) :ui/visibility-filter :done]])
 
 (defn ^:export main []
     (start! {:session app-session :schema app-schema :facts facts})
     (mount-components))
-(.log js/console (:session @state))
-(.log js/console (:subscriptions @state))
-(.log js/console (:schema @state))
-(.log js/console @store)
-;(cr/query (:session @state) find-all-facts)
+
+;(main)
+(cljs.pprint/pprint (:session @state))
+(cljs.pprint/pprint (:subscriptions @state))
+(cljs.pprint/pprint (:session-history @state))
+
+;(.log js/console (:schema @state))
+(cljs.pprint/pprint @store)
+;(mapv #(cr/query % find-all-facts) (:session-history @state))
+
+(cr/query (:session @state) find-all-facts)
+;(select-keys (:subscriptions @state) (vector [:todo-app]))
+
+;(util/entities-where (:session @state) ::sub/request)

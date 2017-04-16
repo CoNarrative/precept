@@ -1,7 +1,8 @@
 (ns libx.todomvc.rules
   (:require [clara.rules :refer [insert! insert-all! insert-unconditional! retract!]]
             [clara.rules.accumulators :as acc]
-            [libx.util :refer [attr-ns]]
+            [libx.spec.sub :as sub]
+            [libx.util :refer [attr-ns guid]]
             [libx.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]))
 
 
@@ -65,7 +66,7 @@
   (retract! ?action))
 
 (def-tuple-rule print-all-facts
-  [?fact <- [?e ?a ?v]]
+  [?fact <- [?e]]
   =>
   (println "FACT" ?fact))
 
@@ -74,36 +75,42 @@
   [?total <- (acc/count) :from [:todo/title]]
   =>
   (println "done active count" ?done (- ?total ?done))
-  (insert-all! [[-1 :done-count ?done]
-                [-1 :active-count (- ?total ?done)]]))
+  (insert-all! [[(guid) :done-count ?done]
+                [(guid) :active-count (- ?total ?done)]]))
 
 (def-tuple-rule subs-footer-controls
-  [:exists [_ :sub [:footer]]]
+  [:exists [?e ::sub/request :footer]]
   [[_ :done-count ?done-count]]
   [[_ :active-count ?active-count]]
   [[_ :ui/visibility-filter ?visibility-filter]]
   =>
-  (println "Inserting footer lens")
-  (insert! [:lens [:footer] {:active-count ?active-count
-                             :done-count ?done-count
-                             :visibility-filter ?visibility-filter}]))
+  (println "Inserting footer response" ?e)
+  (insert!
+    [?e ::sub/response
+        {:active-count ?active-count
+         :done-count ?done-count
+         :visibility-filter ?visibility-filter}]))
 
 (def-tuple-rule subs-task-list
-  [:exists [_ :sub [:task-list]]]
+  [:exists [?e ::sub/request :task-list]]
   [?visible-todos <- (acc/all) :from [:todo/visible]]
   [[_ :active-count ?active-count]]
   =>
-  (insert! [:lens [:task-list] {:visible-todos (libx.util/tuples->maps ?visible-todos)
-                                :all-complete? (> ?active-count 0)}]))
+  (println "Inserting task list response")
+  (let [id (guid)]
+    (insert!
+      [(guid) ::sub/response
+            {:visible-todos (libx.util/tuples->maps ?visible-todos)
+             :all-complete? (> ?active-count 0)}])))
+
 (def-tuple-rule subs-todo-app
-  [:exists [_ :sub [:todo-app]]]
+  [:exists [?e ::sub/request :todo-app]]
   [?todos <- (acc/all) :from [:todo/title]]
   =>
-  (println "All todos" ?todos)
-  (insert! [:lens [:todo-app] (libx.util/tuples->maps (:todos ?todos))]))
+  (println "Inserting all-todos response" ?todos)
+  (insert! [(guid) ::sub/response (libx.util/tuples->maps ?todos)]))
 
-(def-tuple-query find-all-facts
-  []
+(def-tuple-query find-all-facts []
   [?facts <- (acc/all) :from [:all]])
 
 (def-tuple-session app-session 'libx.todomvc.rules)

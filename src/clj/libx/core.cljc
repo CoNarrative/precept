@@ -5,129 +5,173 @@
               [libx.schema :as schema]
               [clara.rules :refer [query fire-rules insert! insert-all!] :as cr]
               [clara.rules.accumulators :as acc]
-              [libx.lang :as lang]
+              [libx.spec.core :refer [validate]]
+              [libx.spec.sub :as sub]
+              [libx.spec.lang :as lang]
               [libx.tuplerules :refer [def-tuple-session def-tuple-rule def-tuple-query]]
-              [clojure.spec :as s]
       #?(:clj [clojure.core.async :refer [<! >! put! take! chan go go-loop]])
       #?(:clj [reagent.ratom :as rr])
       #?(:cljs [cljs.core.async :refer [put! take! chan <! >!]])
-      #?(:cljs [libx.todomvc.schema :refer [app-schema]])
       #?(:cljs [libx.todomvc.rules :refer [find-all-facts]])
       #?(:cljs [reagent.core :as r]))
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
-;#(:cljs (enable-console-print!))
-; TODO. keep vector of states if dev
-;(def dev? true)
+(defonce initial-state
+  {:subscriptions {}
+   :session nil
+   :schema nil
+   :session-history []})
+
+(defonce state (atom initial-state))
 
 (defn mk-ratom [args]
   #?(:clj (atom args) :cljs (r/atom args)))
 
 (defonce store (mk-ratom {}))
 
-(defonce state (atom {:subscriptions {}
-                      :session nil
-                      :schema nil}))
+(defn init-schema [schema]
+  (swap! state assoc :schema (schema/by-ident schema)))
 
-(def changes-ch (chan))
+(def session-ch (chan 20))
 
-(def session-ch (chan))
-
-(defn put-session!
-  "Returns session"
+;; changes, update-session, update-history
+(defn advance-session!
+  "Sole fn that should be used to advance session and state. Returns session"
   [session]
-  (put! session-ch session)
-  session)
-
-(defn swap-session!
-  "Mainly created for debugging"
-  [next]
-  ;(println "Updating session atom")
-  (swap! state update :session (fn [old] next)))
-
-(defn lens [a path]
-  #?(:clj (atom (get-in @a path)) ;; for testing in clj only
-     :cljs (r/cursor a path)))
-
-(defn register
-  "Returns existing subscription if found in subscriptions. Otherwise returns"
-  ([path]
-   (if-let [existing (get (:subscriptions @state) path)]
-      (do (println "Found existing subscription" existing) existing)
-      (let [inserted-sub (swap! state update :session
-                           (fn [old] (-> old (util/insert [(util/guid) :sub path]))))
-            lens (lens store (vector path))]
-        (println "Registering new" path)
-        (go (>! session-ch (:session inserted-sub)))
-        (swap! state update-in (into [:subscriptions] (vector path)) (fn [_] lens))
-        lens))))
+  (let [fired (fire-rules session)]
+    (println "Advancing...")
+    (go (>! session-ch fired))
+    (swap! state assoc :session (l/replace-listener fired))
+    (swap! state update :session-history (fn [prev] (conj prev fired)))))
 
 
-;TODO. Return vector of maps if multiple paths provided, otherwise single map
-; Verify cursors update on change to @state and that change propagates to component
-(defn subscribe
-  "Returns ratom of reagent cursors, one for each path in paths.
-   * paths - vector containing sub requests, any of which may contain parameters.
-             Examples: `[:kw]` `[:kw \"someval\"]` `[[:kw \"someval\"] [:kw2]]`
-  Returned ratom will contain a single map for single subscription or vector of maps for multiple"
-  ([paths]
-   (let [existing-subs (select-keys (:subscriptions @state) paths)
-         new-paths (remove (set (keys existing-subs)) paths)
-         requested-subs (reduce
-                          (fn [acc path]
-                            (let [vector-path (if (vector? path) path (vector path))
-                                  _ (println "Rec'd register req for" vector-path)
-                                  register-result (register vector-path)
-                                  _ (println "Register result" register-result)]
-                              (conj acc register-result)))
-                          (or (vals existing-subs) [])
-                          new-paths)
-         _ (println "Requested subs" requested-subs)]
-     (if (second requested-subs)
-       requested-subs
-       (first requested-subs)))))
+(defn read-changes-from-session
+  "Reads changes from session channel, fires rules, and puts resultant changes
+  on changes channel. Updates session state atom with new session."
+  [in]
+  (let [out (chan)]
+    (go-loop []
+      (doseq [change (l/embed-op (ops (<! in)))]
+        (>! out change))
+      (recur))
+    out))
 
-      ;(mk-ratom (if (second requested-subs)
-      ;              requested-subs
-      ;              (first requested-subs)))))))
+(defn add [a change]
+  "Merges change into atom"
+  (println "Adding" change)
+  (swap! a update (:db/id change) (fn [ent] (merge ent (l/change->av-map change)))))
 
-(defn with-op [change op-kw]
-  (mapv (fn [ent] (conj ent (vector (ffirst ent) :op op-kw)))
-    (partition-by first change)))
-
-(defn embed-op [changes]
-  (let [added (:added changes)
-        removed (:removed changes)]
-    (mapv entity-tuples->entity-map
-      (into (with-op added :add)
-        (with-op removed :remove)))))
-
-(defn clean-changes [changes]
-  "Removes :op, :db/id from change for an entity"
-  (remove #(#{:op :db/id} (first %)) changes))
-
-(defn add [a changes]
-  "Merges changes into atom"
-  (println "Adding" changes)
-  (swap! a merge (dissoc changes :op :db/id)))
-
-(defn del [a changes]
+(defn del [a change]
   "Removes keys in change from atom"
-  (swap! a (fn [m] (apply dissoc m (keys (clean-changes changes))))))
+  (println "Removing" (:db/id change) (l/change->attrs change))
+  (swap! a update (:db/id change) dissoc (l/change->attrs change)))
 
-(defn create-change->store-router! [in-ch]
+(defn write-changes-to-store [in]
   "Reads changes from in channel and updates store
    * `in-ch` - core.async channel
    * `store` - atom"
   (go-loop []
-    (let [change (<! in-ch)
-          id (:db/id change)
-          op (:op change)
-          _ (println "Change id op atom" change id op)]
+    (let [change (<! in)
+          op (:op change)]
       (condp = op
         :add (do (add store change) (recur))
         :remove (do (del store change) (recur))
         (do (println "No match for" change) (recur))))))
+
+(def changes-out (read-changes-from-session session-ch))
+(def changes-writer (write-changes-to-store changes-out))
+
+(defn unique-identity-attrs [schema tuples]
+  (reduce (fn [acc cur]
+           (if (schema/unique-attr? schema (second cur))
+             (conj acc (second cur))
+             acc))
+    [] tuples))
+
+(defn unique-value-attrs [schema tuples]
+  (reduce (fn [acc cur]
+            (if (schema/unique-value? schema (second cur))
+              (conj acc (second cur))
+              acc))
+    [] tuples))
+
+(defn unique-value-facts [session tups unique-attrs]
+  (let [unique-tups (filter #((set unique-attrs) (second %)) tups)
+        avs (map rest unique-tups)]
+    (mapcat (fn [[a v]] (util/facts-where (:session @state) a v))
+      avs)))
+
+;; 1. Decide whether we require a schema in defsession
+;; If we do...
+;; 2. Check schema is not nil in state
+;; 3. For each attr in facts
+;;    * if unique,
+;;        remove all facts with unique attr and insert new fact
+;;        else insert new fact
+;;TODO. Rename/move
+(defn schema-insert
+  "Inserts each fact according to conditions defined in schema.
+  Currently supports: db.unique/identity, db.unique/value"
+  ([facts]
+   (let [schema (:schema @state)
+         facts-v (if (coll? (first facts)) facts (vector facts))
+         tuples (mapcat util/insertable facts-v)
+         unique-attrs (unique-identity-attrs schema tuples)
+         unique-values (unique-value-attrs schema tuples)
+         existing-unique-identity-facts (mapcat #(util/facts-where (:session @state) %)
+                                          unique-attrs)
+         existing-unique-value-facts (unique-value-facts (:sesson @state) tuples unique-values)
+         existing-unique-facts (conj existing-unique-identity-facts existing-unique-value-facts)
+         _ (println "Schema-insert unique values " unique-values)
+         _ (println "Schema-insert unique value facts " existing-unique-value-facts)
+         _ (println "Schema-insert removing " existing-unique-facts)
+         _ (println "Schema-insert inserting " tuples)
+         next-session (if (empty? existing-unique-facts)
+                        (-> (:session @state)
+                          (cr/insert-all tuples))
+                        (-> (:session @state)
+                          (util/retract existing-unique-facts)
+                          (cr/insert-all tuples)))]
+     next-session))
+  ([session facts] (schema-insert facts)))
+
+(defn swap-session! [next]
+  (swap! state assoc :session next))
+
+;; TODO. Find equivalent in CLJ
+(defn lens [a path]
+  #?(:clj (atom (get-in @a path))
+     :cljs (r/cursor a path)))
+
+(defn register
+  [req]
+  (let [id (util/guid)
+        name (first req)
+        inserted-sub (-> (:session @state) (schema-insert [id ::sub/request name]))
+        lens (lens store [id ::sub/response])]
+    (advance-session! inserted-sub)
+    (swap! state assoc-in [:subscriptions id] {:id id :name name :lens lens})
+    lens))
+
+(defn find-sub-by-name [name]
+  (second
+    (first
+      (filter
+        (fn [[id sub]] (= name (:name sub)))
+        (:subscriptions @state)))))
+
+(defn subscribe
+  "Returns lens that points to a path in the store. Sub is handled by a rule."
+  ([req]
+   (let [_ (validate ::sub/request req) ;;TODO. move to :pre
+         name (first req)
+         existing (find-sub-by-name name)
+         _ (println "New sub name / existing if any" name existing)]
+         ;_ (println "Existing / all subs" existing (:subscriptions @state))]
+     (if existing
+       (:lens existing)
+       (register req)))))
+
 
 ;(defn create-session-ch!
 ;  ([] (binding [session-ch session-ch]
@@ -139,119 +183,65 @@
 ;        (set! changes-ch (chan 1)))
 ;  ([ch] (set! changes-ch ch)))
 
-(defn query? [x] (and (seq x) (= :where (first x))))
-
-(defn parse-query-params [exprs]
-  (println "Parsing query params" exprs)
-  (mapcat
-    (fn [expr]
-       (println "Expr" expr (s/valid? ::lang/variable-binding (second expr)))
-       (filter #(s/valid? ::lang/variable-binding %) expr))
-    exprs))
-
-(defn run-query [exprs]
-  (println "Run query")
-  (let [params (parse-query-params exprs)]
-    (println "params")))
-    ;(clara.rules/query @session-atom
-    ;  (clara.rules.dsl/parse-query params exprs)))) ;TODO. Used in clara test but passed
-    ; directly to mk-session
-
-(defn send-with-query [[op exprs]]
-  (println "Send with query" op exprs)
-  (let [query (second exprs)
-        query-result (run-query query)]
-    (condp = op
-      :remove (swap! state update :session (fn [old] (-> old (util/retract query-result))))
-      :replace  (swap! state update :session
-                  (fn [old]
-                   (-> old
-                     (util/retract query-result)
-                     (util/insert (second double))))))))
-
-
-;; 1. Decide whether we require a schema in defsession
-;; If we do...
-;; 2. Check schema is not nil in state
-;; 3. For each attr in facts
-;;    * if unique,
-;;        remove all facts with unique attr and insert new fact
-;;        else insert new fact
-(defn schema-insert
-  ([facts]
-   (let [schema (:schema @state)
-         facts-v (if (coll? (first facts)) facts (vector facts))
-         _ (println "factsvvv" facts-v)
-         tuples (mapcat util/insertable facts-v)
-         unique-attrs (reduce (fn [acc cur]
-                                (if (schema/unique-attr? (:schema @state) (second cur))
-                                    (conj acc (second cur))
-                                    acc))
-                         [] tuples)
-         existing-unique-facts (mapcat #(util/facts-where (:session @state) %) unique-attrs)
-         next-session (-> (:session @state)
-                         (l/replace-listener)
-                         (util/retract existing-unique-facts)
-                         (cr/insert-all tuples))]
-        (put-session! next-session)))
-  ([session facts] (schema-insert facts)))
+;(defn query? [x] (and (seq x) (= :where (first x))))
+;
+;(defn parse-query-params [exprs]
+;  (println "Parsing query params" exprs)
+;  (mapcat
+;    (fn [expr]
+;       (println "Expr" expr (s/valid? ::lang/variable-binding (second expr)))
+;       (filter #(s/valid? ::lang/variable-binding %) expr))
+;    exprs))
+;
+;(defn run-query [exprs]
+;  (println "Run query")
+;  (let [params (parse-query-params exprs)]
+;    (println "params")))
+;    ;(clara.rules/query @session-atom
+;    ;  (clara.rules.dsl/parse-query params exprs)))) ;TODO. Used in clara test but passed
+;    ; directly to mk-session
+;
+;(defn send-with-query [[op exprs]]
+;  (println "Send with query" op exprs)
+;  (let [query (second exprs)
+;        query-result (run-query query)]
+;    (condp = op
+;      :remove (swap! state update :session (fn [old] (-> old (util/retract query-result))))
+;      :replace  (swap! state update :session
+;                  (fn [old]
+;                   (-> old
+;                     (util/retract query-result)
+;                     (util/insert (second double))))))))
 
 (defn then
   ([op facts]
    (condp = op
-     :add (schema-insert facts)
+     :add (advance-session! (schema-insert facts))
      (println "Unsupported op keyword " op)))
   ([facts] (then :add facts)))
 
-(defn send [& exprs]
-  (let [msgs (reduce
-                  (fn [acc cur]
-                     (if (query? (second cur))
-                       (conj acc [:__query (vector (first cur) (second (second cur)))])
-                       acc))
-                 [] (partition 2 exprs))]
-    (for [msg msgs]
-      (condp (first msg)
-        :__query (send-with-query (second msg))
-        :add (swap! state update :session (fn [old] (-> old (util/insert (second msg)))))
-        :remove (swap! state update :session (fn [old] (-> old (util/retract (second msg)))))
-        :replace  (swap! state update :session
-                    (fn [old] (-> old
-                                (util/retract (second msg))
-                                (util/insert (second msg)))))))))
-
-(defn create-session->change-router!
-  "Reads changes from session channel, fires rules, and puts resultant changes
-  on changes channel. Updates session state atom with new session."
-  [in-ch out-ch]
-  (go-loop []
-    (let [session (<! in-ch)
-          _ (println "Rec'd new session!" session)
-          next (fire-rules session)
-          changes (embed-op (ops next))
-          _ (println "Session changes" changes)]
-      (do
-        (swap-session! (l/replace-listener next))
-        (doseq [change changes]
-          (put! out-ch change)))
-      (recur))))
-
-(defn init-schema [session schema]
-  (swap! state update :schema (fn [_] (schema/by-ident schema)))
-  (println "Updating schema with" schema)
-  session)
+;(defn send [& exprs]
+;  (let [msgs (reduce
+;                  (fn [acc cur]
+;                     (if (query? (second cur))
+;                       (conj acc [:__query (vector (first cur) (second (second cur)))])
+;                       acc))
+;                 [] (partition 2 exprs))]
+;    (for [msg msgs]
+;      (condp (first msg)
+;        :__query (send-with-query (second msg))
+;        :add (swap! state update :session (fn [old] (-> old (util/insert (second msg)))))
+;        :remove (swap! state update :session (fn [old] (-> old (util/retract (second msg)))))
+;        :replace  (swap! state update :session
+;                    (fn [old] (-> old
+;                                (util/retract (second msg))
+;                                (util/insert (second msg)))))))))
 
 (defn start! [options]
-  (let [opts (or options (hash-map))
-        init-session (swap-session! (:session opts))]
-    (do
-      (swap-session!
-          (-> init-session
-             (init-schema (:schema opts))
-             (schema-insert (:facts opts))))
-      (create-session->change-router! session-ch changes-ch)
-      (create-change->store-router! changes-ch))))
-
+  (let [opts (or options (hash-map))]
+    (swap-session! (l/replace-listener (:session opts)))
+    (init-schema (into schema/libx-schema (:schema opts)))
+    (advance-session! (schema-insert (:facts opts)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -304,7 +294,7 @@
 ;            [-4 :todo/title "Hi"]
 ;            [-5 :ui/visibility-filter :done]])
 ;(def next-session (schema-insert facts))
-;(put-session! next-session)
+;(advance-session! next-session)
 
 ;; Schema
 ;(init-schema app-schema)
@@ -316,18 +306,32 @@
 ;(:subscriptions @state)
 ;(:schema @state)
 
-;;;;;;;;;;;;;;;;;
-;; Problems
-;; * Subs that are registered afterMUST be registered before any rules fire. Otherwise they won't
-;; be notified of changes. Not clear right now how to best solve this. Rules should fire once subscription is
-;; inserted.
+;(def ch (chan))
+;(def ch2 (chan))
+;;
+;;(defn myfunc []
+;;  (do
+;;    (doseq [x (range 0 10)]
+;;      (go (>! ch x) (println "foo")))
+;      ;(put! ch x)
+;    ;(println "bar"))
+;(defn myfunc []
+;  (go
+;    (doseq [x (range 0 10)]
+;      ;(go (>! ch x) (println "foo"))
+;      (put! ch x))
+;    (<! ch2)
+;    (println "never")))
+;
+;(defn rec-loop []
+;  (go-loop []
+;    (let [x (<! ch)]
+;      (do (println x) (recur)))))
+;
+;(def rec (rec-loop))
+;(myfunc)
+;(put! ch "Hey")
+@store
 
-;; TODO.
-;; * Key store by sub's vector form (to allow params). Subscriptions atom already uses this format.
-;; * Decide whether store only keeps "lens"-prefixed changes, or whether we should
-;;   continue to maintain a record of the current state (regardless of whether there is a
-;;   subscription for it)
-;; * If a "lens" change is received, instead of putting it in the store, we could update the
-;;   subscription directly. However, this would prevent shared subscriptions because we would not
-;;   be maintaing a single source of truth accessible to multiple observers
-;; * Lenses should return maps where they currently return tuples
+(:subscriptions @state)
+(find-sub-by-name [:todo-app])

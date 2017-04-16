@@ -57,22 +57,23 @@
                      {:main "libx.runner"
                       :output-to "target/cljsbuild/public/js/test/test.js"
                       :output-dir "target/cljsbuild/public/js/test/out"
-                      :asset-path "target/cljsbuild/public/js/tests/out"
+                      :asset-path "target/cljsbuild/public/js/test/out"
                       :optimizations :none
                       :source-map true
                       :pretty-print true}}
 
       :devcards-test
        {:source-paths ["src/cljs" "test/cljs"]
-        :figwheel {:devcards true}
         :compiler
                       {:main "libx.runner"
-                       :asset-path "/js/tests/out"
-                       :output-to "target/cljsbuild/public/js/devcard-test/main.js"
-                       :output-dir "target/cljsbuild/public/js/devcard-test/out"
+                       :output-to "target/cljsbuild/public/js/devcards/main.js"
+                       :output-dir "target/cljsbuild/public/js/devcards/out"
+                       ;:asset-path "target/cljsbuild/public/js/devcards/out"
+                       :asset-path "/js/out"
                        :preloads [devtools.preload]
-                       :source-map true
                        :optimizations :none
+                       :devcards true
+                       :source-map true
                        :pretty-print true}}}}
 
     :repl-options {:init-ns user}
