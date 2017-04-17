@@ -44,15 +44,14 @@
     (mount-components))
 
 ;(main)
-(cljs.pprint/pprint (:session @state))
-(cljs.pprint/pprint (:subscriptions @state))
-(cljs.pprint/pprint (:session-history @state))
+;(cljs.pprint/pprint (:session @state))
+;(cljs.pprint/pprint (:subscriptions @state))
+;(cljs.pprint/pprint (:session-history @state))
 
-;(.log js/console (:schema @state))
-(cljs.pprint/pprint @store)
+;(cljs.pprint/pprint @store)
 ;(mapv #(cr/query % find-all-facts) (:session-history @state))
 
-(cr/query (:session @state) find-all-facts)
+;(cr/query (:session @state) find-all-facts)
 ;(select-keys (:subscriptions @state) (vector [:todo-app]))
 
 ;(util/entities-where (:session @state) ::sub/request)

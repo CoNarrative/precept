@@ -20,7 +20,9 @@
   {:subscriptions {}
    :session nil
    :schema nil
-   :session-history []})
+   :session-history []
+   :transitioning nil
+   :pending-updates []})
 
 (defonce state (atom initial-state))
 
@@ -32,18 +34,55 @@
 (defn init-schema [schema]
   (swap! state assoc :schema (schema/by-ident schema)))
 
-(def session-ch (chan 1))
+(def session-queue (chan 1))
+(def session->store (chan 1))
+(def transitioning? (chan 1))
+(def done-ch (chan 1))
 
-;; changes, update-session, update-history
-(defn advance-session!
-  "Sole fn that should be used to advance session and state. Returns session"
-  [session]
-  (let [fired (fire-rules session)]
-    (println "Advancing...")
-    (go (>! session-ch fired))
-    (swap! state assoc :session (l/replace-listener fired))
-    (swap! state update :session-history (fn [prev] (conj prev fired)))))
+;(defn transition-watcher [key watched old new])
 
+;(add-watch state :pending-updates transition-watcher)
+;(add-watch state :transitioning transition-watcher)
+
+(defn set-transition [bool]
+  (println "Transitioning state change" bool)
+  (swap! state assoc :transitioning bool))
+
+(defn swap-session! [next]
+  (println "Swapping session!")
+  (swap! state assoc :session next))
+
+(defn enqueue-update [f]
+  (swap! state update :pending-updates conj f))
+
+(defn dispatch! [f]
+  (enqueue-update f))
+
+;; Might have to use a channel for transitioning in a hacky-ish way instead of atom
+;; So go loop has something to take initially
+(defn process-updates []
+  (go-loop []
+   ;(let [transitioning (<! transitioning?)]
+      (if (:transitioning @state)
+        (<! done-ch)
+        (if (empty? (:pending-updates @state))
+            (recur)
+            (do (set-transition true)
+                (>! session->store (first (:pending-updates @state)))
+                (swap! state update :pending-updates (fn [old] (rest old)))
+                (recur))))))
+
+(defn apply-changes-to-session [in]
+  (let [out (chan)]
+    (go-loop []
+      (let [f (<! in)
+            applied (f (:session @state))
+            fired (fire-rules applied)
+            next-session (l/replace-listener fired)]
+        (swap-session! next-session)
+        (>! out next-session)
+        (recur)))
+    out))
 
 (defn read-changes-from-session
   "Reads changes from session channel, fires rules, and puts resultant changes
@@ -59,12 +98,12 @@
 
 (defn add [a change]
   "Merges change into atom"
-  (println "Adding" (l/change->av-map change))
+  (println "Adding" (l/change->av-map change) (.now js/Date))
   (swap! a update (:db/id change) (fn [ent] (merge ent (l/change->av-map change)))))
 
 (defn del [a change]
   "Removes keys in change from atom"
-  (println "Removing" (l/change->attrs change))
+  (println "Removing" change)
   (swap! a update (:db/id change) dissoc (l/change->attrs change)))
 
 (defn apply-removals-to-store [in]
@@ -75,7 +114,7 @@
     (go-loop []
       (let [changes (<! in)
             with-ops (l/embed-op {:removed changes})
-            _ (println "Removals!" changes)]
+            _ (println "Removals!" with-ops)]
        (doseq [change with-ops]
           (del store change))
        (>! out (:added changes))
@@ -89,9 +128,11 @@
   (go-loop []
     (let [changes (<! in)
           with-ops (l/embed-op {:added changes})
-          _ (println "Additions!" (l/embed-op {:added changes}))]
+          _ (println "Additions!" with-ops)]
       (doseq [change with-ops]
         (add store change))
+      (set-transition false)
+      (>! done-ch store)
       (recur)))
   nil)
 
@@ -106,8 +147,10 @@
         :add (do (add store change) (recur))
         :remove (do (del store change) (recur))
         (do (println "No match for" change) (recur))))))
-;; TODO. make go loop for removing changes and adding changes and pass through removals first
-(def changes-out (read-changes-from-session session-ch))
+
+(process-updates)
+(def realized-session (apply-changes-to-session session->store))
+(def changes-out (read-changes-from-session realized-session))
 (def removals-out (apply-removals-to-store changes-out))
 (def addition-applier (apply-additions-to-store removals-out))
 
@@ -131,6 +174,7 @@
     (mapcat (fn [[a v]] (util/facts-where (:session @state) a v))
       avs)))
 
+
 ;; 1. Decide whether we require a schema in defsession
 ;; If we do...
 ;; 2. Check schema is not nil in state
@@ -142,31 +186,31 @@
 (defn schema-insert
   "Inserts each fact according to conditions defined in schema.
   Currently supports: db.unique/identity, db.unique/value"
-  ([facts]
-   (let [schema (:schema @state)
-         facts-v (if (coll? (first facts)) facts (vector facts))
-         tuples (mapcat util/insertable facts-v)
-         unique-attrs (unique-identity-attrs schema tuples)
-         unique-values (unique-value-attrs schema tuples)
-         existing-unique-identity-facts (mapcat #(util/facts-where (:session @state) %)
-                                          unique-attrs)
-         existing-unique-value-facts (unique-value-facts (:sesson @state) tuples unique-values)
-         existing-unique-facts (into existing-unique-identity-facts existing-unique-value-facts)
-         _ (println "Schema-insert unique values " unique-values)
-         _ (println "Schema-insert unique value facts " existing-unique-value-facts)
-         _ (println "Schema-insert removing " existing-unique-facts)
-         _ (println "Schema-insert inserting " tuples)
-         next-session (if (empty? existing-unique-facts)
-                        (-> (:session @state)
-                          (cr/insert-all tuples))
-                        (-> (:session @state)
-                          (util/retract existing-unique-facts)
-                          (cr/insert-all tuples)))]
-     next-session))
-  ([session facts] (schema-insert facts)))
+  [session facts]
+  (let [schema (:schema @state)
+        facts-v (if (coll? (first facts)) facts (vector facts))
+        tuples (mapcat util/insertable facts-v)
+        unique-attrs (unique-identity-attrs schema tuples)
+        unique-values (unique-value-attrs schema tuples)
+        existing-unique-identity-facts (mapcat #(util/facts-where session %)
+                                         unique-attrs)
+        existing-unique-value-facts (unique-value-facts session tuples unique-values)
+        existing-unique-facts (into existing-unique-identity-facts existing-unique-value-facts)
+        _ (println "Schema-insert unique values " unique-values)
+        _ (println "Schema-insert unique value facts " existing-unique-value-facts)
+        _ (println "Schema-insert removing " existing-unique-facts)
+        _ (println "Schema-insert inserting " tuples)
+        next-session (if (empty? existing-unique-facts)
+                       (-> session
+                         (cr/insert-all tuples))
+                       (-> session
+                         (util/retract existing-unique-facts)
+                         (cr/insert-all tuples)))]
+    next-session))
 
-(defn swap-session! [next]
-  (swap! state assoc :session next))
+(defn insert-action [facts]
+  (fn [current-session]
+    (schema-insert current-session facts)))
 
 ;; TODO. Find equivalent in CLJ
 (defn lens [a path]
@@ -177,9 +221,8 @@
   [req]
   (let [id (util/guid)
         name (first req)
-        inserted-sub (-> (:session @state) (schema-insert [id ::sub/request name]))
         lens (lens store [id ::sub/response])]
-    (advance-session! inserted-sub)
+    (dispatch! (insert-action [id ::sub/request name]))
     (swap! state assoc-in [:subscriptions id] {:id id :name name :lens lens})
     lens))
 
@@ -246,7 +289,7 @@
 (defn then
   ([op facts]
    (condp = op
-     :add (advance-session! (schema-insert facts))
+     :add (dispatch! (insert-action facts))
      (println "Unsupported op keyword " op)))
   ([facts] (then :add facts)))
 
@@ -271,7 +314,7 @@
   (let [opts (or options (hash-map))]
     (swap-session! (l/replace-listener (:session opts)))
     (init-schema (into schema/libx-schema (:schema opts)))
-    (advance-session! (schema-insert (:facts opts)))))
+    (dispatch! (insert-action (:facts opts)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -353,15 +396,27 @@
 ;    (<! ch2)
 ;    (println "never")))
 ;
+;(def state (atom nil))
+;
 ;(defn rec-loop []
 ;  (go-loop []
 ;    (let [x (<! ch)]
-;      (do (println x) (recur)))))
+;      (do (println "State is" @state) (recur)))))
 ;
 ;(def rec (rec-loop))
 ;(myfunc)
+;(reset! state "Set")
 ;(put! ch "Hey")
-@store
+;@store
+;
+;(:subscriptions @state)
+;(find-sub-by-name [:todo-app])
 
-(:subscriptions @state)
-(find-sub-by-name [:todo-app])
+
+;; 1. Advance session returns session and does not use core async...?
+;; State update
+;; 1. Call advance-session. Args will be a new session generated from snapshot of current session
+;; (may be multiple calls)
+;; 2. Every advance session call should enqueue a session update fn that is called with the
+;; current session in the session update pipeline (ensures next state is a function of current
+;; state)
