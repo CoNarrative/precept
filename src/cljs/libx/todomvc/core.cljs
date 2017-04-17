@@ -47,6 +47,7 @@
 ;(cljs.pprint/pprint (:session @state))
 ;(cljs.pprint/pprint (:subscriptions @state))
 ;(cljs.pprint/pprint (:session-history @state))
+(cljs.pprint/pprint (:pending-updates @state))
 
 ;(cljs.pprint/pprint @store)
 ;(mapv #(cr/query % find-all-facts) (:session-history @state))

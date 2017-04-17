@@ -16,6 +16,8 @@
       #?(:cljs [reagent.core :as r]))
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
+(enable-console-print!)
+
 (defonce initial-state
   {:subscriptions {}
    :session nil
@@ -53,34 +55,46 @@
   (swap! state assoc :session next))
 
 (defn enqueue-update [f]
+  (println "Enqueueing update. Cur / all" f (:pending-updates @state))
   (swap! state update :pending-updates conj f))
 
-(defn dispatch! [f]
-  (enqueue-update f))
+(defn dequeue-update []
+  (println "Dequeueing update")
+  (swap! state update :pending-updates (fn [updates] (rest updates))))
 
-;; Might have to use a channel for transitioning in a hacky-ish way instead of atom
-;; So go loop has something to take initially
+(def processing (chan 1))
+
+(defn dispatch! [f]
+  (enqueue-update f)
+  (put! processing f))
+
+(defn debug-id []
+  (hash (first (:pending-updates @state))))
+
 (defn process-updates []
   (go-loop []
-   ;(let [transitioning (<! transitioning?)]
+   (let [processing (<! processing)]
       (if (:transitioning @state)
-        (<! done-ch)
+        (do (println "---> Looks like we're transitioning? I'll wait to process" (debug-id))
+            (do (<! done-ch)
+                (println "---> Hey, we're done! Check if we can process" (debug-id))
+                (recur)))
         (if (empty? (:pending-updates @state))
-            (recur)
-            (do (set-transition true)
+            (do (println "--->  No more pending updates.") (recur))
+            (do (println " ---> Kicking off!" (debug-id))
+                (set-transition true)
                 (>! session->store (first (:pending-updates @state)))
-                (swap! state update :pending-updates (fn [old] (rest old)))
-                (recur))))))
+                (dequeue-update)
+                (<! done-ch)
+                (recur)))))))
 
 (defn apply-changes-to-session [in]
   (let [out (chan)]
     (go-loop []
       (let [f (<! in)
             applied (f (:session @state))
-            fired (fire-rules applied)
-            next-session (l/replace-listener fired)]
-        (swap-session! next-session)
-        (>! out next-session)
+            fired (fire-rules applied)]
+        (>! out fired)
         (recur)))
     out))
 
@@ -90,8 +104,11 @@
   [in]
   (let [out (chan)]
     (go-loop []
-      (let [ops (l/ops (<! in))
+      (let [session (<! in)
+            ops (l/ops session)
+            next-session (l/replace-listener session)
             _ (println "Ops!" ops)]
+        (swap-session! next-session)
         (>! out ops)
         (recur)))
     out))
@@ -132,9 +149,10 @@
       (doseq [change with-ops]
         (add store change))
       (set-transition false)
-      (>! done-ch store)
+      (>! done-ch :hi)
       (recur)))
   nil)
+
 
 (defn write-changes-to-store [in]
   "Reads changes from in channel and updates store
