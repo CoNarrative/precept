@@ -36,9 +36,7 @@
 (defn init-schema [schema]
   (swap! state assoc :schema (schema/by-ident schema)))
 
-(def session-queue (chan 1))
 (def session->store (chan 1))
-(def transitioning? (chan 1))
 (def done-ch (chan 1))
 
 ;(defn transition-watcher [key watched old new])
@@ -115,12 +113,13 @@
 
 (defn add [a change]
   "Merges change into atom"
+  (println "About to add" change)
   (println "Adding" (l/change->av-map change) (.now js/Date))
   (swap! a update (:db/id change) (fn [ent] (merge ent (l/change->av-map change)))))
 
 (defn del [a change]
   "Removes keys in change from atom"
-  (println "Removing" change)
+  (println "Removing entity's keys" (:db/id change) change)
   (swap! a update (:db/id change) dissoc (l/change->attrs change)))
 
 (defn apply-removals-to-store [in]

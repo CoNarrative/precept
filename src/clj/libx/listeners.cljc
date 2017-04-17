@@ -141,7 +141,9 @@
 (defn change->attrs [change]
   (first (remove #{:db/id :op} (keys change))))
 
-(defn change->av-map [changes]
+(defn change->av-map [change]
   "Removes :op, :db/id from change for an entity"
-  (remove #(#{:op :db/id} (first %)) changes))
-
+  ;(remove #(#{:op :db/id} (first %)) changes))
+  (into {} (remove #(#{:op :db/id} (first %))
+             change)))
+;(into {} (first '([[:k 1] [:x 2]])))
