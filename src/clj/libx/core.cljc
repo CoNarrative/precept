@@ -47,7 +47,7 @@
 ;(add-watch state :transitioning transition-watcher)
 
 (defn set-transition [bool]
-  (println "Transitioning state change" bool)
+  (println "---> Transitioning state" bool)
   (swap! state assoc :transitioning bool))
 
 (defn swap-session! [next]
