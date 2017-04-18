@@ -103,7 +103,7 @@
 (defn key-by-hashcode [coll]
   "WILL remove duplicates"
   (zipmap (map hash-ordered-coll coll) coll))
-
+; TODO. Should find what both have in common and remove that from both, not just added
 (defn select-disjoint [added removed]
   "Takes m keyed by hashcode. Returns same with removals applied to additions"
   (let [a (set (keys added))
@@ -116,7 +116,8 @@
         hashed-adds (key-by-hashcode (list-facts (insertions by-type)))
         hashed-retracts (key-by-hashcode (list-facts (retractions by-type)))]
     {:added (into [] (vals (select-disjoint hashed-adds hashed-retracts)))
-     :removed (into [] (vals hashed-retracts))}))
+     :removed (into [] (vals (select-disjoint hashed-retracts hashed-adds)))}))
+     ;:removed (into [] (vals hashed-retracts))}))
 
 (defn ops [session]
   "Returns :added, :removed results for a single fact listener. Usually wrapped with `embed-ops`."

@@ -26,6 +26,7 @@
   [:not [?e :todo/done]]
   ;[:not [?e :todo/visible]]
   =>
+  (println "Active tag found! Marking incomplete todo visible")
   (insert! [?e :todo/visible :tag]))
 
 (def-tuple-rule toggle-all-complete
@@ -113,7 +114,7 @@
   (insert!
     [?e ::sub/response
           {:visible-todos (libx.util/tuples->maps (mapv last ?visible-todos))
-           :all-complete? (> ?active-count 0)}]))
+           :all-complete? (= ?active-count 0)}]))
 
 (def-tuple-rule subs-todo-app
   [:exists [?e ::sub/request :todo-app]]

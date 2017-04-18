@@ -22,7 +22,7 @@
   {:subscriptions {}
    :session nil
    :schema nil
-   :session-history []
+   :session-history (seq nil)
    :transitioning nil
    :pending-updates []})
 
@@ -39,10 +39,13 @@
 (def session->store (chan 1))
 (def done-ch (chan 1))
 
-;(defn transition-watcher [key watched old new])
-
-;(add-watch state :pending-updates transition-watcher)
-;(add-watch state :transitioning transition-watcher)
+(defn update-session-history
+  "First history entry is most recent"
+  [session]
+  (if (= 5 (count (:session-history @state)))
+    (swap! state update :session-history
+      (fn [sessions] (conj (butlast sessions) session)))
+    (swap! state update :session-history conj session)))
 
 (defn set-transition [bool]
   (println "---> Transitioning state" bool)
@@ -78,7 +81,7 @@
                 (println "---> Hey, we're done! Check if we can process" (debug-id))
                 (recur)))
         (if (empty? (:pending-updates @state))
-            (do (println "--->  No more pending updates.") (recur))
+            (do (println "--->  No more pending updates.") (recur)) ;;should be able to start here
             (do (println " ---> Kicking off!" (debug-id))
                 (set-transition true)
                 (>! session->store (first (:pending-updates @state)))
@@ -106,6 +109,7 @@
             ops (l/ops session)
             next-session (l/replace-listener session)
             _ (println "Ops!" ops)]
+        (update-session-history session)
         (swap-session! next-session)
         (>! out ops)
         (recur)))
@@ -113,8 +117,7 @@
 
 (defn add [a change]
   "Merges change into atom"
-  (println "About to add" change)
-  (println "Adding" (l/change->av-map change) (.now js/Date))
+  (println "Adding" (:db/id change) (l/change->av-map change))
   (swap! a update (:db/id change) (fn [ent] (merge ent (l/change->av-map change)))))
 
 (defn del [a change]
@@ -123,9 +126,7 @@
   (swap! a update (:db/id change) dissoc (l/change->attrs change)))
 
 (defn apply-removals-to-store [in]
-  "Reads changes from in channel and updates store
-   * `in-ch` - core.async channel
-   * `store` - atom"
+  "Reads ops from in channel and applies removals to store"
   (let [out (chan)]
     (go-loop []
       (let [ops (<! in)
@@ -138,9 +139,7 @@
    out))
 
 (defn apply-additions-to-store [in]
-  "Reads changes from in channel and updates store
-   * `in-ch` - core.async channel
-   * `store` - atom"
+  "Reads ops from channel and applies additions to store"
   (go-loop []
     (let [changes (<! in)
           additions (l/embed-op (:added changes) :add)
@@ -151,19 +150,6 @@
       (>! done-ch :hi)
       (recur)))
   nil)
-
-
-(defn write-changes-to-store [in]
-  "Reads changes from in channel and updates store
-   * `in-ch` - core.async channel
-   * `store` - atom"
-  (go-loop []
-    (let [change (<! in)
-          op (:op change)]
-      (condp = op
-        :add (do (add store change) (recur))
-        :remove (do (del store change) (recur))
-        (do (println "No match for" change) (recur))))))
 
 (process-updates)
 (def realized-session (apply-changes-to-session session->store))
@@ -236,6 +222,13 @@
 
 (defn register
   [req]
+  "Should only be called by `subscribe`. Will register a new subscription!
+  Generates a subscription id used to track the req and its response throughout the system.
+  Req is a vector of name and params (currently we just support a name).
+  The request is inserted as a fact into the rules session where a rule should handle the request
+  the request by matching on the request name and inserting a response in the RHS.
+  Writes subscription to state -> subscriptions. The lens is a reagent cursor that
+  observes changes to the subscription's response that is written to the store."
   (let [id (util/guid)
         name (first req)
         lens (lens store [id ::sub/response])]
@@ -430,10 +423,137 @@
 ;(find-sub-by-name [:todo-app])
 
 
-;; 1. Advance session returns session and does not use core async...?
-;; State update
-;; 1. Call advance-session. Args will be a new session generated from snapshot of current session
-;; (may be multiple calls)
-;; 2. Every advance session call should enqueue a session update fn that is called with the
-;; current session in the session update pipeline (ensures next state is a function of current
-;; state)
+;; NOTES
+
+
+
+
+;;; tracking 3b5b / task list response
+;;; (state change where visibility filter changed from :all to :active
+;;; There should be no net change to the truth of this fact (it is visible when :all or :active)
+;;; Overall -- 2 -'s and 2 +'s should result in no change. Clara gets this, we get - 1
+;;(def barbaz (first (:session-history @state)))
+;
+;;; all facts in session / target state
+;;; where task list response shows visible todos
+;;(cr/query barbaz libx.todomvc.rules/find-all-facts)
+;
+;;; current store, where 3b5b / sub for task list has :request but no :response
+;@store
+;
+;
+;;; Raw trace of all apparently fact related events
+;;; * IMPORTANT: Does not account for add-accum-reduced! or remove-accum-reduced! because
+;;; our tracer ignores those. May be the issue here; rule that inserts the task list
+;;; response uses an accumulator
+;;; Trace shows sub response was inserted twice and retracted twice.
+;;; one logical insertion & logicalretraction for new value (!?),
+;;; one insertion & retraction of old value (makes sense)
+;;; .... Algorithm appears to treat this situation correctly
+;;; .... Problem appears to be be further up
+;;; TODO. 1. Listen to accum events
+;;;       2. Consider adding timestamps to trace for debugging purposes
+;;;       3. If clara attempts to retract facts that have not been inserted
+;;;          then we need to revisit our algorithm
+;;;
+;;; Data at this point in the lifecycle (what our trace outputs):
+;;
+;;  [{:type :retract-facts,
+;;    :facts ([#uuid"663a0f5d-8f89-4548-8939-ff125240088e" :ui/visibility-filter :all])}
+;;   {:type :retract-facts-logical,
+;;    :facts [[#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/visible :tag]]}
+;;   {:type :retract-facts-logical,
+;;    :facts [[#uuid"26e89595-2ab2-49c3-ad63-7673d536e3db"
+;;             :libx.spec.sub/response
+;;             {:active-count 1, :done-count 0, :visibility-filter :all}]]}
+;;   {:type :retract-facts-logical,
+;;    :facts [[#uuid"4f7a80bd-9b6c-41aa-b2aa-cc4bd8c3fc3c"
+;;             :visible-todo
+;;             [#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/title "Hi"]]]}
+;;   {:type :retract-facts-logical,
+;;    :facts [[#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
+;;             :libx.spec.sub/response
+;;             {:visible-todos [{:db/id #uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8", :todo/title "Hi"}],
+;;              :all-complete? true}]]}
+;;   {:type :add-facts,
+;;    :facts ([#uuid"05e68f21-ab86-4772-bab9-d52a8cda8326" :ui/visibility-filter :active])}
+;;   {:type :add-facts-logical,
+;;    :facts ([#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
+;;             :libx.spec.sub/response
+;;             {:visible-todos [], :all-complete? true}])}
+;;   {:type :add-facts-logical,
+;;    :facts ([#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/visible :tag])}
+;;   {:type :add-facts-logical,
+;;    :facts ([#uuid"26e89595-2ab2-49c3-ad63-7673d536e3db"
+;;             :libx.spec.sub/response
+;;             {:active-count 1, :done-count 0, :visibility-filter :active}])}
+;;   {:type :add-facts-logical,
+;;    :facts ([#uuid"292c00e7-1042-46d0-93fe-e90f1421dad5"
+;;             :visible-todo
+;;             [#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/title "Hi"]])}
+;;   {:type :retract-facts-logical,
+;;    :facts [[#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
+;;             :libx.spec.sub/response
+;;             {:visible-todos [], :all-complete? true}]]}
+;;   {:type :add-facts-logical,
+;;    :facts ([#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
+;;             :libx.spec.sub/response
+;;             {:visible-todos [{:db/id #uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8", :todo/title "Hi"}],
+;;              :all-complete? true}])}]
+;
+;(def trace (first (l/fact-events barbaz)))
+;trace
+;
+;
+;;; inserted twice and retracted twice.
+;;; one insertion / retraction for new value (!?), one insertion & retraction of old value
+;(def list-inserts (l/list-facts (l/insertions (l/trace-by-type trace))))
+;(def list-retracts (l/list-facts (l/retractions (l/trace-by-type trace))))
+;list-inserts
+;list-retracts
+;
+;(def hashed-adds (l/key-by-hashcode (l/list-facts (l/insertions (l/trace-by-type trace)))))
+;(def hashed-retracts (l/key-by-hashcode (l/list-facts (l/retractions (l/trace-by-type trace)))))
+;hashed-adds
+;hashed-retracts
+;(set (keys hashed-adds))
+;(set (keys hashed-retracts))
+;(def to-add (l/select-disjoint hashed-adds hashed-retracts))
+;(def to-remove (l/select-disjoint hashed-retracts hashed-adds))
+;to-add
+;to-remove
+;
+;(l/ops barbaz)
+;{:to-add}
+;{1168885683 [#uuid"05e68f21-ab86-4772-bab9-d52a8cda8326" :ui/visibility-filter :active],
+; ;1115558512 [#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
+; ;            :libx.spec.sub/response
+; ;            {:visible-todos [], :all-complete? true}],
+; ;1852794671 [#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/visible :tag],
+; 272554223 [#uuid"26e89595-2ab2-49c3-ad63-7673d536e3db"
+;            :libx.spec.sub/response
+;            {:active-count 1, :done-count 0, :visibility-filter :active}],
+; 588301192 [#uuid"292c00e7-1042-46d0-93fe-e90f1421dad5"
+;            :visible-todo
+;            [#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/title "Hi"]],}
+; ;-869561420 [#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
+; ;            :libx.spec.sub/response
+; ;            {:visible-todos [{:db/id #uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8", :todo/title "Hi"}],
+; ;             :all-complete? true}]}
+;{:to-remove}
+;{1824746966 [#uuid"663a0f5d-8f89-4548-8939-ff125240088e" :ui/visibility-filter :all],
+; ;1852794671 [#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/visible :tag],
+; -1833545291 [#uuid"26e89595-2ab2-49c3-ad63-7673d536e3db"
+;              :libx.spec.sub/response
+;              {:active-count 1, :done-count 0, :visibility-filter :all}],
+; -448576415 [#uuid"4f7a80bd-9b6c-41aa-b2aa-cc4bd8c3fc3c"
+;             :visible-todo
+;             [#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/title "Hi"]],}
+; ;-869561420 [#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
+; ;            :libx.spec.sub/response
+; ;            {:visible-todos [{:db/id #uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8", :todo/title "Hi"}],
+; ;             :all-complete? true}],}
+; ;1115558512 [#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
+; ;            :libx.spec.sub/response
+; ;            {:visible-todos [], :all-complete? true}]}
+

@@ -55,7 +55,7 @@
 (def attr-first-store (group-by second (vals @store)))
 attr-first-store
 (select-keys attr-first-store [::sub/response])
-(:subscriptions @state)
+(vals (:subscriptions @state))
 ;(mapv #(cr/query % find-all-facts) (:session-history @state))
 
 ;(cr/query (:session @state) find-all-facts)
