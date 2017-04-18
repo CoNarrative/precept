@@ -9,14 +9,12 @@
 (def-tuple-rule todo-is-visible-when-filter-is-all
   [[_ :ui/visibility-filter :all]]
   [[?e :todo/title]]
-  ;[:not [?e :todo/visible]]
   =>
   (insert! [?e :todo/visible :tag]))
 
 (def-tuple-rule todo-is-visile-when-filter-is-done-and-todo-done
   [[_ :ui/visibility-filter :done]]
   [[?e :todo/done]]
-  ;[:not [?e :todo/visible]]
   =>
   (insert! [?e :todo/visible :tag]))
 
@@ -24,7 +22,6 @@
   [[_ :ui/visibility-filter :active]]
   [[?e :todo/title]]
   [:not [?e :todo/done]]
-  ;[:not [?e :todo/visible]]
   =>
   (println "Active tag found! Marking incomplete todo visible")
   (insert! [?e :todo/visible :tag]))
@@ -97,12 +94,11 @@
 
 (def-tuple-rule acc-todos-that-are-visible
   [[?e :todo/visible]]
-  ;[?todo <- [?e :todo/title]]
-  [?todo <- [?e :todo/title]]
+  [?entity <- (acc/all) :from [?e :all]]
   =>
   ;; warning! this is bad!
-  (println "Inserting visible todo")
-  (insert! [(guid) :visible-todo ?todo]))
+  (println "Inserting visible todo" ?entity)
+  (insert! [(guid) :visible-todo ?entity]))
 
 (def-tuple-rule subs-task-list
   [:exists [?e ::sub/request :task-list]]
@@ -110,10 +106,12 @@
   ;[?visible-todos <- (acc/all) :from [:todo/visible]]
   [[_ :active-count ?active-count]]
   =>
-  (println "Inserting task list response for " ?visible-todos)
+  (println "Inserting task list response " (libx.util/tuples->maps
+                                             (first
+                                               (mapv last ?visible-todos))))
   (insert!
     [?e ::sub/response
-          {:visible-todos (libx.util/tuples->maps (mapv last ?visible-todos))
+          {:visible-todos (libx.util/tuples->maps (first (mapv last ?visible-todos)))
            :all-complete? (= ?active-count 0)}]))
 
 (def-tuple-rule subs-todo-app

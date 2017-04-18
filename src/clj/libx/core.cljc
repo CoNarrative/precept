@@ -330,65 +330,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; test-area
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;(def-tuple-rule subs-footer-controls
-;  [:exists [_ :sub [:footer]]]
-;  [[_ :done-count ?done-count]]
-;  [[_ :active-count ?active-count]]
-;  [[_ :ui/visibility-filter ?visibility-filter]]
-;  =>
-;  (insert! [:lens [:footer] {:active-count ?active-count
-;                             :done-count ?done-count
-;                             :visibility-filter ?visibility-filter}]))
-;
-;(def-tuple-rule subs-task-list
-;  [:exists [_ :sub [:task-list]]]
-;  [?visible-todos <- (acc/all) :from [:todo/visible]]
-;  [[_ :active-count ?active-count]]
-;  =>
-;  (insert-all! [[:lens [:task-list] {:visible-todos (libx.util/tuples->maps ?visible-todos)
-;                                     :all-complete? (> ?active-count 0)}]]))
-;(def-tuple-rule subs-todo-app
-;  [:exists [:sub/todo-app]]
-;  [?todos <- (acc/all) :from [:todo/title]]
-;  =>
-;  (println "All todos" ?todos)
-;  (insert! [-1 :lens/todo-app (libx.util/tuples->maps (:todos ?todos))]))
-
-;(def-tuple-query find-all-facts
-;  []
-;  [?facts <- (acc/all) :from [:all]])
-
-;; Init
-;(def session->change (create-session->change-router! session-ch changes-ch))
-;(def change->store (create-change->store-router! changes-ch))
-
-;; Reset
-;(reset! store {})
-;(swap! state update :subscriptions (fn [old] {}))
-;(swap! state update :session (fn [old] nil))
-;(init-schema app-schema)
-;(def-tuple-session my-sess 'libx.core)
-;(swap-session! (l/replace-listener my-sess))
-
-;; Write
-;(def facts [[-1 :active-count 7]
-;            [-2 :done-count 1]
-;            [-3 :todo/visible :tag]
-;            [-4 :todo/title "Hi"]
-;            [-5 :ui/visibility-filter :done]])
-;(def next-session (schema-insert facts))
-;(advance-session! next-session)
-
-;; Schema
-;(init-schema app-schema)
-;(schema-insert facts)
-
-;; Read
-;(:session @state)
-;@store
-;(:subscriptions @state)
-;(:schema @state)
-
 ;(def ch (chan))
 ;(def ch2 (chan))
 ;;
@@ -423,10 +364,7 @@
 ;(find-sub-by-name [:todo-app])
 
 
-;; NOTES
-
-
-
+;; Notes from 6455b00b204e8bd90a99c4c931814700e41657f5
 
 ;;; tracking 3b5b / task list response
 ;;; (state change where visibility filter changed from :all to :active

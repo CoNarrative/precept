@@ -33,7 +33,7 @@
              :checked done
              :on-change #(if done
                            (then :remove [id :todo/done])
-                           (then :add [id :todo/done]))}]
+                           (then :add [id :todo/done :tag]))}]
           [:label
             {:on-double-click #(reset! editing true)}
             title]
