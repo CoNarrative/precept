@@ -50,7 +50,7 @@
 (defn task-list
   []
   (let [{:keys [visible-todos all-complete?]} @(subscribe [:task-list])]
-       (prn "all visible in render" visible-todos)
+       (prn "all visible in render" (map :visible-todo visible-todos))
       [:section#main
         [:input#toggle-all
           {:type "checkbox"

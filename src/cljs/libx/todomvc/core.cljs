@@ -20,7 +20,7 @@
 ;; Instead of secretary consider:
 ;;   - https://github.com/DomKM/silk
 ;;   - https://github.com/juxt/bidi
-(defroute "/" [] (println "Hey"));;(then [(random-uuid) :ui/visibility-filter :all])))
+(defroute "/" [] (then [(random-uuid) :ui/visibility-filter :all]))
 
 (defroute "/:filter" [filter]
   (then [(random-uuid) :ui/visibility-filter (keyword filter)]))
@@ -35,9 +35,10 @@
   (reagent/render [libx.todomvc.views/todo-app] (.getElementById js/document "app")))
 
 (def todo-id (random-uuid))
-(def facts [[todo-id :todo/visible :tag]
-            [todo-id :todo/title "Hi"]
-            [(random-uuid) :ui/visibility-filter :done]])
+(def facts [[todo-id :todo/title "Hi"]])
+            ;[todo-id :todo/visible :tag]]) ;; :todo/visible rule does not check for whether it's
+            ; visible already...
+            ;[(random-uuid) :ui/visibility-filter :done]])
 
 (defn ^:export main []
     (start! {:session app-session :schema app-schema :facts facts})
@@ -57,7 +58,7 @@ attr-first-store
 (:subscriptions @state)
 ;(mapv #(cr/query % find-all-facts) (:session-history @state))
 
-(cr/query (:session @state) find-all-facts)
+;(cr/query (:session @state) find-all-facts)
 ;(select-keys (:subscriptions @state) (vector [:todo-app]))
 
 ;(util/entities-where (:session @state) ::sub/request)
