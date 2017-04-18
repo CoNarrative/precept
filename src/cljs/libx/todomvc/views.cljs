@@ -40,7 +40,7 @@
             {:on-double-click #(reset! editing true)}
             title]
           [:button.destroy
-            {:on-click #(then :remove id)}]] ;; TODO. Allow this
+            {:on-click #(then :remove-entity id)}]]
         (when @editing
           [todo-input
             {:class "edit"
@@ -59,7 +59,7 @@
           {:type "checkbox"
            :checked (not all-complete?)
            ;:on-change #(then [:ui/toggle-complete])} ;; TODO. Allow this?
-           :on-change #(then [(guid) :ui/toggle-complete :tag])}] ;; TODO. Allow this?
+           :on-change #(then [(guid) :ui/toggle-complete :tag])}]
         [:label
           {:for "toggle-all"}
           "Mark all as complete"]

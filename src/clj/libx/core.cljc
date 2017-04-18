@@ -305,6 +305,7 @@
    (condp = op
      :add (dispatch! (insert-action facts))
      :remove (dispatch! (retract-action facts))
+     :remove-entity (dispatch! (insert-action [(util/guid) :remove-entity-request facts]))
      (println "Unsupported op keyword " op)))
   ([facts] (then :add facts)))
 

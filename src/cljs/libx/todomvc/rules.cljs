@@ -122,6 +122,20 @@
   (println "Inserting all-todos response" ?todos)
   (insert! [?e ::sub/response (libx.util/tuples->maps ?todos)]))
 
+;;TODO. Make part of lib
+(def-tuple-rule entity-doesnt-exist-when-removal-requested
+  [[?e :remove-entity-request ?eid]]
+  [?entity <- (acc/all) :from [?eid :all]]
+  =>
+  (println "Fulfilling remove entity request " ?entity)
+  (doseq [tuple ?entity] (retract! tuple)))
+
+;(def-tuple-rule no-entity-remove-request-if-no-entity
+;  [?req <- [_ :remove-entity-request ?eid]]
+;  [:not [?eid]]
+;  =>
+;  (retract! ?req))
+
 (def-tuple-query find-all-facts []
   [?facts <- (acc/all) :from [:all]])
 
