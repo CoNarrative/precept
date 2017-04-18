@@ -22,9 +22,9 @@
 ;;   - https://github.com/juxt/bidi
 (defroute "/" [] (println "Hey"));;(then [(random-uuid) :ui/visibility-filter :all])))
 
-(defroute "/:filter" [filter] (println "there"))
-;;(then [(random-uuid) :ui/visibility-filter ; (keyword)
-;                                                                                    filter)])
+(defroute "/:filter" [filter]
+  (then [(random-uuid) :ui/visibility-filter (keyword filter)]))
+
 (def history
   (doto (History.)
     (events/listen EventType.NAVIGATE
@@ -48,15 +48,16 @@
 ;(cljs.pprint/pprint (:subscriptions @state))
 ;(cljs.pprint/pprint (:session-history @state))
 (cljs.pprint/pprint (:pending-updates @state))
-
+@store
 (keys @store)
 (vals @store)
 (def attr-first-store (group-by second (vals @store)))
 attr-first-store
 (select-keys attr-first-store [::sub/response])
+(:subscriptions @state)
 ;(mapv #(cr/query % find-all-facts) (:session-history @state))
 
-;(cr/query (:session @state) find-all-facts)
+(cr/query (:session @state) find-all-facts)
 ;(select-keys (:subscriptions @state) (vector [:todo-app]))
 
 ;(util/entities-where (:session @state) ::sub/request)

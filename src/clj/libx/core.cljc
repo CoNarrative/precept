@@ -119,7 +119,7 @@
 
 (defn del [a change]
   "Removes keys in change from atom"
-  (println "Removing entity's keys" (:db/id change) change)
+  (println "Removing entity's keys" (:db/id change) (l/change->attrs change))
   (swap! a update (:db/id change) dissoc (l/change->attrs change)))
 
 (defn apply-removals-to-store [in]
@@ -128,12 +128,12 @@
    * `store` - atom"
   (let [out (chan)]
     (go-loop []
-      (let [changes (<! in)
-            with-ops (l/embed-op {:removed changes})
-            _ (println "Removals!" with-ops)]
-       (doseq [change with-ops]
-          (del store change))
-       (>! out (:added changes))
+      (let [ops (<! in)
+            removals (l/embed-op (:removed ops) :remove)
+            _ (println "Removals?" removals)]
+       (doseq [removal removals]
+          (del store removal))
+       (>! out ops)
        (recur)))
    out))
 
@@ -143,10 +143,10 @@
    * `store` - atom"
   (go-loop []
     (let [changes (<! in)
-          with-ops (l/embed-op {:added changes})
-          _ (println "Additions!" with-ops)]
-      (doseq [change with-ops]
-        (add store change))
+          additions (l/embed-op (:added changes) :add)
+          _ (println "Additions!" additions)]
+      (doseq [addition additions]
+        (add store addition))
       (set-transition false)
       (>! done-ch :hi)
       (recur)))

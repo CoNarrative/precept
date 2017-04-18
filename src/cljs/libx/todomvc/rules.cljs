@@ -93,13 +93,15 @@
 
 (def-tuple-rule subs-task-list
   [:exists [?e ::sub/request :task-list]]
-  [?visible-todos <- (acc/all) :from [:todo/visible]]
+  [[?e :todo/visible]]
+  [?visible-todos <- [?e :todo/title]]
+  ;[?visible-todos <- (acc/all) :from [:todo/visible]]
   [[_ :active-count ?active-count]]
   =>
   (println "Inserting task list response")
   (let [id (guid)]
     (insert!
-      [(guid) ::sub/response
+      [?e ::sub/response
             {:visible-todos (libx.util/tuples->maps ?visible-todos)
              :all-complete? (> ?active-count 0)}])))
 
@@ -108,7 +110,7 @@
   [?todos <- (acc/all) :from [:todo/title]]
   =>
   (println "Inserting all-todos response" ?todos)
-  (insert! [(guid) ::sub/response (libx.util/tuples->maps ?todos)]))
+  (insert! [?e ::sub/response (libx.util/tuples->maps ?todos)]))
 
 (def-tuple-query find-all-facts []
   [?facts <- (acc/all) :from [:all]])

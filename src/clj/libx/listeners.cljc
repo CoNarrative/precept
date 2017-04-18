@@ -126,12 +126,16 @@
   (mapv (fn [ent] (conj ent (vector (ffirst ent) :op op-kw)))
     (partition-by first change)))
 
-(defn embed-op [changes]
-  (let [added (:added changes)
-        removed (:removed changes)]
+;(defn embed-op [changes]
+;  (let [added (:added changes)
+;        removed (:removed changes)]
+;    (mapv util/entity-tuples->entity-map
+;      (into (with-op added :add)
+;        (with-op removed :remove)))))
+
+(defn embed-op [additions-or-removals op-kw]
     (mapv util/entity-tuples->entity-map
-      (into (with-op added :add)
-        (with-op removed :remove)))))
+      (with-op additions-or-removals op-kw)))
 
 (defn replace-listener [session]
   (-> session
