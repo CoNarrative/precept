@@ -83,7 +83,7 @@
       [:li (a-fn :active "Active")]
       [:li (a-fn :done   "Completed")]]
      (when (pos? done-count)
-       [:button#clear-completed {:on-click #(then [(guid) :clear-completed :tag])}
+       [:button#clear-completed {:on-click #(then [(guid) :ui/clear-completed :tag])}
         "Clear completed"])]))
 
 
