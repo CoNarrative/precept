@@ -215,6 +215,10 @@
   (fn [current-session]
     (schema-insert current-session facts)))
 
+(defn retract-action [facts]
+  (fn [current-session]
+    (util/retract current-session facts)))
+
 ;; TODO. Find equivalent in CLJ
 (defn lens [a path]
   #?(:clj (atom (get-in @a path))
@@ -300,6 +304,7 @@
   ([op facts]
    (condp = op
      :add (dispatch! (insert-action facts))
+     :remove (dispatch! (retract-action facts))
      (println "Unsupported op keyword " op)))
   ([facts] (then :add facts)))
 

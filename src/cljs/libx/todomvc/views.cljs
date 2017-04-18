@@ -25,20 +25,21 @@
 (defn todo-item []
   (let [editing (reagent/atom false)]
     (fn [{:keys [db/id todo/title todo/done]}]
+      (println "Todo item render " title done)
       [:li {:class (str (when done "completed ")
                         (when @editing "editing"))}
         [:div.view
           [:input.toggle
             {:type "checkbox"
-             :checked done
+             :checked (if done true false)
              :on-change #(if done
-                           (then :remove [id :todo/done])
+                           (then :remove [id :todo/done :tag])
                            (then :add [id :todo/done :tag]))}]
           [:label
             {:on-double-click #(reset! editing true)}
             title]
           [:button.destroy
-            {:on-click #(then :remove id)}]]
+            {:on-click #(then :remove id)}]] ;; TODO. Allow this
         (when @editing
           [todo-input
             {:class "edit"
