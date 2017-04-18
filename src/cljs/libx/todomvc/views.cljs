@@ -1,5 +1,6 @@
 (ns libx.todomvc.views
   (:require [reagent.core  :as reagent]
+            [libx.util :refer [guid]]
             [libx.core :as libx :refer [subscribe then]]))
 
 
@@ -51,12 +52,14 @@
 (defn task-list
   []
   (let [{:keys [visible-todos all-complete?]} @(subscribe [:task-list])]
-       (prn "all visible in render" visible-todos)
+       (prn "All visible in render" visible-todos)
+       (prn "All complete?" all-complete?)
       [:section#main
         [:input#toggle-all
           {:type "checkbox"
-           :checked all-complete?
-           :on-change #(then [:ui/toggle-complete])}]
+           :checked (not all-complete?)
+           ;:on-change #(then [:ui/toggle-complete])} ;; TODO. Allow this?
+           :on-change #(then [(guid) :ui/toggle-complete :tag])}] ;; TODO. Allow this?
         [:label
           {:for "toggle-all"}
           "Mark all as complete"]
@@ -80,7 +83,7 @@
       [:li (a-fn :active "Active")]
       [:li (a-fn :done   "Completed")]]
      (when (pos? done-count)
-       [:button#clear-completed {:on-click #(then [-1 :clear-completed])}
+       [:button#clear-completed {:on-click #(then [(guid) :clear-completed :tag])}
         "Clear completed"])]))
 
 

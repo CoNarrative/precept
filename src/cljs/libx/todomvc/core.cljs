@@ -58,7 +58,8 @@ attr-first-store
 (vals (:subscriptions @state))
 ;(mapv #(cr/query % find-all-facts) (:session-history @state))
 
-;(cr/query (:session @state) find-all-facts)
+;(cr/query (first (:session-history @state)) find-all-facts)
+;(cr/query (second (:session-history @state)) find-all-facts)
 ;(select-keys (:subscriptions @state) (vector [:todo-app]))
 
 ;(util/entities-where (:session @state) ::sub/request)

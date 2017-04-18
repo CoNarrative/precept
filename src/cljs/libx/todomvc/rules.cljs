@@ -3,7 +3,8 @@
             [clara.rules.accumulators :as acc]
             [libx.spec.sub :as sub]
             [libx.util :refer [attr-ns guid]]
-            [libx.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]))
+            [libx.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]
+            [libx.util :as util]))
 
 
 (def-tuple-rule todo-is-visible-when-filter-is-all
@@ -38,7 +39,7 @@
   [?toggle <- :ui/toggle-complete]
   [?total <- (acc/count) :from [:todo/title]]
   [?total-done <- (acc/count) :from [:todo/done]]
-  [:test (= ?total ?total-done)]
+  [:test (not (not (= ?total ?total-done)))]
   =>
   (println "Total todos: " ?total)
   (println "Total done: " ?total-done)
@@ -106,12 +107,12 @@
   ;[?visible-todos <- (acc/all) :from [:todo/visible]]
   [[_ :active-count ?active-count]]
   =>
-  (println "Inserting task list response " (libx.util/tuples->maps
-                                             (first
-                                               (mapv last ?visible-todos))))
+  (println "Inserting task list response " ;(map libx.util/entity-tuples->entity-map
+                                               (map (comp util/entity-tuples->entity-map last)
+                                                    ?visible-todos))
   (insert!
     [?e ::sub/response
-          {:visible-todos (libx.util/tuples->maps (first (mapv last ?visible-todos)))
+          {:visible-todos (map (comp util/entity-tuples->entity-map last) ?visible-todos)
            :all-complete? (= ?active-count 0)}]))
 
 (def-tuple-rule subs-todo-app
