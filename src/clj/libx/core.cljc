@@ -122,8 +122,10 @@
 
 (defn del [a change]
   "Removes keys in change from atom"
-  (println "Removing entity's keys" (:db/id change) (l/change->attrs change))
-  (swap! a update (:db/id change) dissoc (l/change->attrs change)))
+  (println "Removing in path" (:db/id change) (l/change->attr change))
+  (let [id (:db/id change)
+        attr (l/change->attr change)]
+    (swap! a util/dissoc-in [id attr])))
 
 (defn apply-removals-to-store [in]
   "Reads ops from in channel and applies removals to store"
@@ -336,6 +338,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; test-area
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;(def at (atom {"id" {:attr1 "val"
+;                     :attr2 "val2"}}))
+;(swap! at (fn [current]
+;            (reduce (fn [acc path] (util/dissoc-in acc path))
+;                current
+;                [["id" :attr2]])))
+;(def attrs [:one :two :three])
+;(def id "id")
 ;(def ch (chan))
 ;(def ch2 (chan))
 ;;

@@ -168,3 +168,18 @@
   ([session a] (mapv keyed-tup->vector-tup (qa session a)))
   ([session a v] (mapv keyed-tup->vector-tup (qav session a v)))
   ([session a v e] (mapv keyed-tup->vector-tup (qave session a v e))))
+
+;; From clojure.core.incubator
+(defn dissoc-in
+  "Dissociates an entry from a nested associative structure returning a new
+  nested structure. keys is a sequence of keys. Any empty maps that result
+  will not be present in the new structure."
+  [m [k & ks :as keys]]
+  (if ks
+    (if-let [nextmap (get m k)]
+      (let [newmap (dissoc-in nextmap ks)]
+        (if (seq newmap)
+          (assoc m k newmap)
+          (dissoc m k)))
+      m)
+    (dissoc m k)))
