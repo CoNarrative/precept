@@ -1,6 +1,7 @@
 # Roadmap
 
 In brief and no particular order at the moment:
+- [ ] Ensure values can be matched if collections
 - [x] `deflogical` - macro that reverses LHS and RHS of rule and
 will eventually provide truth maintenance functionality
 - [ ] `q` - Easier way to access query interface, accepts a tuple as an argument

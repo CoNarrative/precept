@@ -3,7 +3,7 @@
   <groupId>libx</groupId>
   <artifactId>libx</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.3</version>
+  <version>0.0.4</version>
   <name>libx</name>
   <description/>
   <url>https://github.com/CoNarrative/libx.git</url>
@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/CoNarrative/todomvc.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/CoNarrative/todomvc.git</developerConnection>
-    <tag>02cff534ea21cb4e8f40362a4650099399f9baa2
+    <tag>d32a75ab668befd7d5afb3c81e97c7321a42e8e9
 </tag>
     <url>https://github.com/CoNarrative/todomvc</url>
   </scm>
@@ -94,6 +94,16 @@
       <version>1.9.494</version>
     </dependency>
     <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>core.async</artifactId>
+      <version>0.3.442</version>
+    </dependency>
+    <dependency>
+      <groupId>reagent</groupId>
+      <artifactId>reagent</artifactId>
+      <version>0.6.1</version>
+    </dependency>
+    <dependency>
       <groupId>com.cerner</groupId>
       <artifactId>clara-rules</artifactId>
       <version>0.14.0</version>
@@ -102,6 +112,12 @@
       <groupId>org.clojure</groupId>
       <artifactId>test.check</artifactId>
       <version>0.9.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>tools.namespace</artifactId>
+      <version>0.2.11</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

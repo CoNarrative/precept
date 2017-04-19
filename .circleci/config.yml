@@ -5,8 +5,10 @@ jobs:
     docker:
       - image: openjdk:8
     environment:
-      # Suppress warnings by setting LEIN_ROOT.
-      LEIN_ROOT=nbd
+      # Suppresses warnings
+      LEIN_ROOT: nbd
+      # Allows tests to pass with snapshot lib versions used in project
+      LEIN_SNAPSHOTS_IN_RELEASE: true
     steps:
       - checkout
       - restore_cache:
@@ -17,7 +19,7 @@ jobs:
             - $HOME/.m2
             - $HOME/.lein
           key: << checksum "project.clj" >>
-      - run: bin/lein do test libx.core-test, uberjar
+      - run: bin/lein do test :only libx.core-test, uberjar
       - store_artifacts:
           path: target/libx.jar
           destination: uberjar

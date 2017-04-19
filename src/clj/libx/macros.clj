@@ -2,7 +2,7 @@
     (:require [clara.rules :refer [defrule insert! fire-rules]]
               [clara.rules.dsl :as dsl]
               [clara.macros :as cm]
-              [libx.lang :as lang]
+              [libx.spec.lang :as lang]
               [libx.util :refer [insert retract]]
               [clara.rules.compiler :as com]
               [clojure.spec :as s]))

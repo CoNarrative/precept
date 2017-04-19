@@ -11,3 +11,6 @@ resources/public/js
 /examples/todomvc/resources/public/js
 /examples/todomvc/target/
 /.lein-failures
+/node_modules/
+.DS_Store
+doo-index.html
