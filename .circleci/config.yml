@@ -5,8 +5,10 @@ jobs:
     docker:
       - image: openjdk:8
     environment:
-      # Suppress warnings by setting LEIN_ROOT.
+      # Suppresses warnings
       LEIN_ROOT=nbd
+      # Allows tests to pass with snapshot lib versions used in project
+      LEIN_SNAPSHOTS_IN_RELEASE=true
     steps:
       - checkout
       - restore_cache:
