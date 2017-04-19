@@ -16,7 +16,7 @@
       #?(:cljs [reagent.core :as r]))
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
-(enable-console-print!)
+#?(:cljs (enable-console-print!))
 
 (defonce initial-state
   {:subscriptions {}
@@ -72,7 +72,7 @@
 (defn debug-id []
   (hash (first (:pending-updates @state))))
 
-(defn process-updates []
+(defn transactor []
   (go-loop []
    (let [processing (<! processing)]
       (if (:transitioning @state)
@@ -81,7 +81,7 @@
                 (println "---> Hey, we're done! Check if we can process" (debug-id))
                 (recur)))
         (if (empty? (:pending-updates @state))
-            (do (println "--->  No more pending updates.") (recur)) ;;should be able to start here
+            (do (println "--->  No more pending updates.") (recur)) ;;should be able to start here?
             (do (println " ---> Kicking off!" (debug-id))
                 (set-transition true)
                 (>! session->store (first (:pending-updates @state)))
@@ -153,7 +153,7 @@
       (recur)))
   nil)
 
-(process-updates)
+(transactor)
 (def realized-session (apply-changes-to-session session->store))
 (def changes-out (read-changes-from-session realized-session))
 (def removals-out (apply-removals-to-store changes-out))
@@ -261,47 +261,6 @@
        (:lens existing)
        (register req)))))
 
-
-;(defn create-session-ch!
-;  ([] (binding [session-ch session-ch]
-;        (set! session-ch (chan 1)))
-;  ([ch] (set! session-ch ch)))
-;
-;(defn create-changes-ch! [ch]
-;  ([] (binding [changes-ch changes-ch]
-;        (set! changes-ch (chan 1)))
-;  ([ch] (set! changes-ch ch)))
-
-;(defn query? [x] (and (seq x) (= :where (first x))))
-;
-;(defn parse-query-params [exprs]
-;  (println "Parsing query params" exprs)
-;  (mapcat
-;    (fn [expr]
-;       (println "Expr" expr (s/valid? ::lang/variable-binding (second expr)))
-;       (filter #(s/valid? ::lang/variable-binding %) expr))
-;    exprs))
-;
-;(defn run-query [exprs]
-;  (println "Run query")
-;  (let [params (parse-query-params exprs)]
-;    (println "params")))
-;    ;(clara.rules/query @session-atom
-;    ;  (clara.rules.dsl/parse-query params exprs)))) ;TODO. Used in clara test but passed
-;    ; directly to mk-session
-;
-;(defn send-with-query [[op exprs]]
-;  (println "Send with query" op exprs)
-;  (let [query (second exprs)
-;        query-result (run-query query)]
-;    (condp = op
-;      :remove (swap! state update :session (fn [old] (-> old (util/retract query-result))))
-;      :replace  (swap! state update :session
-;                  (fn [old]
-;                   (-> old
-;                     (util/retract query-result)
-;                     (util/insert (second double))))))))
-
 (defn then
   ([op facts]
    (condp = op
@@ -311,203 +270,8 @@
      (println "Unsupported op keyword " op)))
   ([facts] (then :add facts)))
 
-;(defn send [& exprs]
-;  (let [msgs (reduce
-;                  (fn [acc cur]
-;                     (if (query? (second cur))
-;                       (conj acc [:__query (vector (first cur) (second (second cur)))])
-;                       acc))
-;                 [] (partition 2 exprs))]
-;    (for [msg msgs]
-;      (condp (first msg)
-;        :__query (send-with-query (second msg))
-;        :add (swap! state update :session (fn [old] (-> old (util/insert (second msg)))))
-;        :remove (swap! state update :session (fn [old] (-> old (util/retract (second msg)))))
-;        :replace  (swap! state update :session
-;                    (fn [old] (-> old
-;                                (util/retract (second msg))
-;                                (util/insert (second msg)))))))))
-
 (defn start! [options]
   (let [opts (or options (hash-map))]
     (swap-session! (l/replace-listener (:session opts)))
     (init-schema (into schema/libx-schema (:schema opts)))
     (dispatch! (insert-action (:facts opts)))))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; test-area
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;(def at (atom {"id" {:attr1 "val"
-;                     :attr2 "val2"}}))
-;(swap! at (fn [current]
-;            (reduce (fn [acc path] (util/dissoc-in acc path))
-;                current
-;                [["id" :attr2]])))
-;(def attrs [:one :two :three])
-;(def id "id")
-;(def ch (chan))
-;(def ch2 (chan))
-;;
-;;(defn myfunc []
-;;  (do
-;;    (doseq [x (range 0 10)]
-;;      (go (>! ch x) (println "foo")))
-;      ;(put! ch x)
-;    ;(println "bar"))
-;(defn myfunc []
-;  (go
-;    (doseq [x (range 0 10)]
-;      ;(go (>! ch x) (println "foo"))
-;      (put! ch x))
-;    (<! ch2)
-;    (println "never")))
-;
-;(def state (atom nil))
-;
-;(defn rec-loop []
-;  (go-loop []
-;    (let [x (<! ch)]
-;      (do (println "State is" @state) (recur)))))
-;
-;(def rec (rec-loop))
-;(myfunc)
-;(reset! state "Set")
-;(put! ch "Hey")
-;@store
-;
-;(:subscriptions @state)
-;(find-sub-by-name [:todo-app])
-
-
-;; Notes from 6455b00b204e8bd90a99c4c931814700e41657f5
-
-;;; tracking 3b5b / task list response
-;;; (state change where visibility filter changed from :all to :active
-;;; There should be no net change to the truth of this fact (it is visible when :all or :active)
-;;; Overall -- 2 -'s and 2 +'s should result in no change. Clara gets this, we get - 1
-;;(def barbaz (first (:session-history @state)))
-;
-;;; all facts in session / target state
-;;; where task list response shows visible todos
-;;(cr/query barbaz libx.todomvc.rules/find-all-facts)
-;
-;;; current store, where 3b5b / sub for task list has :request but no :response
-;@store
-;
-;
-;;; Raw trace of all apparently fact related events
-;;; * IMPORTANT: Does not account for add-accum-reduced! or remove-accum-reduced! because
-;;; our tracer ignores those. May be the issue here; rule that inserts the task list
-;;; response uses an accumulator
-;;; Trace shows sub response was inserted twice and retracted twice.
-;;; one logical insertion & logicalretraction for new value (!?),
-;;; one insertion & retraction of old value (makes sense)
-;;; .... Algorithm appears to treat this situation correctly
-;;; .... Problem appears to be be further up
-;;; TODO. 1. Listen to accum events
-;;;       2. Consider adding timestamps to trace for debugging purposes
-;;;       3. If clara attempts to retract facts that have not been inserted
-;;;          then we need to revisit our algorithm
-;;;
-;;; Data at this point in the lifecycle (what our trace outputs):
-;;
-;;  [{:type :retract-facts,
-;;    :facts ([#uuid"663a0f5d-8f89-4548-8939-ff125240088e" :ui/visibility-filter :all])}
-;;   {:type :retract-facts-logical,
-;;    :facts [[#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/visible :tag]]}
-;;   {:type :retract-facts-logical,
-;;    :facts [[#uuid"26e89595-2ab2-49c3-ad63-7673d536e3db"
-;;             :libx.spec.sub/response
-;;             {:active-count 1, :done-count 0, :visibility-filter :all}]]}
-;;   {:type :retract-facts-logical,
-;;    :facts [[#uuid"4f7a80bd-9b6c-41aa-b2aa-cc4bd8c3fc3c"
-;;             :visible-todo
-;;             [#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/title "Hi"]]]}
-;;   {:type :retract-facts-logical,
-;;    :facts [[#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
-;;             :libx.spec.sub/response
-;;             {:visible-todos [{:db/id #uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8", :todo/title "Hi"}],
-;;              :all-complete? true}]]}
-;;   {:type :add-facts,
-;;    :facts ([#uuid"05e68f21-ab86-4772-bab9-d52a8cda8326" :ui/visibility-filter :active])}
-;;   {:type :add-facts-logical,
-;;    :facts ([#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
-;;             :libx.spec.sub/response
-;;             {:visible-todos [], :all-complete? true}])}
-;;   {:type :add-facts-logical,
-;;    :facts ([#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/visible :tag])}
-;;   {:type :add-facts-logical,
-;;    :facts ([#uuid"26e89595-2ab2-49c3-ad63-7673d536e3db"
-;;             :libx.spec.sub/response
-;;             {:active-count 1, :done-count 0, :visibility-filter :active}])}
-;;   {:type :add-facts-logical,
-;;    :facts ([#uuid"292c00e7-1042-46d0-93fe-e90f1421dad5"
-;;             :visible-todo
-;;             [#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/title "Hi"]])}
-;;   {:type :retract-facts-logical,
-;;    :facts [[#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
-;;             :libx.spec.sub/response
-;;             {:visible-todos [], :all-complete? true}]]}
-;;   {:type :add-facts-logical,
-;;    :facts ([#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
-;;             :libx.spec.sub/response
-;;             {:visible-todos [{:db/id #uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8", :todo/title "Hi"}],
-;;              :all-complete? true}])}]
-;
-;(def trace (first (l/fact-events barbaz)))
-;trace
-;
-;
-;;; inserted twice and retracted twice.
-;;; one insertion / retraction for new value (!?), one insertion & retraction of old value
-;(def list-inserts (l/list-facts (l/insertions (l/trace-by-type trace))))
-;(def list-retracts (l/list-facts (l/retractions (l/trace-by-type trace))))
-;list-inserts
-;list-retracts
-;
-;(def hashed-adds (l/key-by-hashcode (l/list-facts (l/insertions (l/trace-by-type trace)))))
-;(def hashed-retracts (l/key-by-hashcode (l/list-facts (l/retractions (l/trace-by-type trace)))))
-;hashed-adds
-;hashed-retracts
-;(set (keys hashed-adds))
-;(set (keys hashed-retracts))
-;(def to-add (l/select-disjoint hashed-adds hashed-retracts))
-;(def to-remove (l/select-disjoint hashed-retracts hashed-adds))
-;to-add
-;to-remove
-;
-;(l/ops barbaz)
-;{:to-add}
-;{1168885683 [#uuid"05e68f21-ab86-4772-bab9-d52a8cda8326" :ui/visibility-filter :active],
-; ;1115558512 [#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
-; ;            :libx.spec.sub/response
-; ;            {:visible-todos [], :all-complete? true}],
-; ;1852794671 [#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/visible :tag],
-; 272554223 [#uuid"26e89595-2ab2-49c3-ad63-7673d536e3db"
-;            :libx.spec.sub/response
-;            {:active-count 1, :done-count 0, :visibility-filter :active}],
-; 588301192 [#uuid"292c00e7-1042-46d0-93fe-e90f1421dad5"
-;            :visible-todo
-;            [#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/title "Hi"]],}
-; ;-869561420 [#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
-; ;            :libx.spec.sub/response
-; ;            {:visible-todos [{:db/id #uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8", :todo/title "Hi"}],
-; ;             :all-complete? true}]}
-;{:to-remove}
-;{1824746966 [#uuid"663a0f5d-8f89-4548-8939-ff125240088e" :ui/visibility-filter :all],
-; ;1852794671 [#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/visible :tag],
-; -1833545291 [#uuid"26e89595-2ab2-49c3-ad63-7673d536e3db"
-;              :libx.spec.sub/response
-;              {:active-count 1, :done-count 0, :visibility-filter :all}],
-; -448576415 [#uuid"4f7a80bd-9b6c-41aa-b2aa-cc4bd8c3fc3c"
-;             :visible-todo
-;             [#uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8" :todo/title "Hi"]],}
-; ;-869561420 [#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
-; ;            :libx.spec.sub/response
-; ;            {:visible-todos [{:db/id #uuid"f9fb3d3b-db2b-4aec-a2c9-e11da48029c8", :todo/title "Hi"}],
-; ;             :all-complete? true}],}
-; ;1115558512 [#uuid"3b5b012d-a73b-4b53-84e0-2366aca352ed"
-; ;            :libx.spec.sub/response
-; ;            {:visible-todos [], :all-complete? true}]}
-

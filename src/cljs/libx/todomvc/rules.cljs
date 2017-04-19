@@ -39,7 +39,7 @@
   [?toggle <- :ui/toggle-complete]
   [?total <- (acc/count) :from [:todo/title]]
   [?total-done <- (acc/count) :from [:todo/done]]
-  [:test (not (not (= ?total ?total-done)))]
+  [:test (not (not (= ?total ?total-done)))] ;;TODO. '= won't work without not not...
   =>
   (println "Total todos: " ?total)
   (println "Total done: " ?total-done)
@@ -104,12 +104,9 @@
 (def-tuple-rule subs-task-list
   [:exists [?e ::sub/request :task-list]]
   [?visible-todos <- (acc/all) :from [:visible-todo]]
-  ;[?visible-todos <- (acc/all) :from [:todo/visible]]
   [[_ :active-count ?active-count]]
   =>
-  (println "Inserting task list response " ;(map libx.util/entity-tuples->entity-map
-                                               (map (comp util/entity-tuples->entity-map last)
-                                                    ?visible-todos))
+  (println "Inserting task list response")
   (insert!
     [?e ::sub/response
           {:visible-todos (map (comp util/entity-tuples->entity-map last) ?visible-todos)

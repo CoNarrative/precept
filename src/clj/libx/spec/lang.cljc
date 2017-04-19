@@ -50,10 +50,3 @@
     (s/and some? #(not (s/valid? ::s-expr %)))
     #{:db/change}
     ::tuple))
-
-(defn validate [spec value]
-  (let [msg (s/explain-str spec value)]
-    (condp = msg
-      "Success!\n" true
-      (ex-info msg {}))))
-

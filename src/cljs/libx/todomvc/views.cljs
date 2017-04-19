@@ -58,7 +58,6 @@
         [:input#toggle-all
           {:type "checkbox"
            :checked (not all-complete?)
-           ;:on-change #(then [:ui/toggle-complete])} ;; TODO. Allow this?
            :on-change #(then [(guid) :ui/toggle-complete :tag])}]
         [:label
           {:for "toggle-all"}
