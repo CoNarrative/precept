@@ -8,9 +8,6 @@
               [clara.rules :refer [query defquery fire-rules] :as cr]
               [clara.tools.tracing :as trace]))
 
-(defquery find-all []
-  [:all [[e a v]] (= ?e e) (= ?a a) (= ?v v)])
-
 (defn todo-tx [id title done]
   (merge
     {:db/id      id
