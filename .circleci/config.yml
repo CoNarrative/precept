@@ -6,9 +6,9 @@ jobs:
       - image: openjdk:8
     environment:
       # Suppresses warnings
-      LEIN_ROOT=nbd
+      LEIN_ROOT: nbd
       # Allows tests to pass with snapshot lib versions used in project
-      LEIN_SNAPSHOTS_IN_RELEASE=true
+      LEIN_SNAPSHOTS_IN_RELEASE: true
     steps:
       - checkout
       - restore_cache:
