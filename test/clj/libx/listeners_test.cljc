@@ -63,8 +63,9 @@
       (is (every? (into #{} ent-2)
                   (into #{} (:added ops-2)))))
     (testing "ops-0 :removed"
-      (is (= (:removed (l/ops state-0)) [[123 :attr/a "state-0"]
-                                         [123 :attr/logical-insert [123 :attr/a "state-0"]]])))
+      (is (= (:removed (l/ops state-0)) [])))
+      ;(is (= (:removed (l/ops state-0)) [[123 :attr/a "state-0"]
+      ;                                   [123 :attr/logical-insert [123 :attr/a "state-0"]]])))
     (testing "ops-0 :added"
       (is (= (set (:added (l/ops state-0)))
              (set (conj background-facts [123 :attr/b "state-0"])))))
