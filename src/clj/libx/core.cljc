@@ -176,7 +176,7 @@
 (defn unique-value-facts [session tups unique-attrs]
   (let [unique-tups (filter #((set unique-attrs) (second %)) tups)
         avs (map rest unique-tups)]
-    (mapcat (fn [[a v]] (util/facts-where (:session @state) a v))
+    (mapcat (fn [[a v]] (util/facts-where session a v))
       avs)))
 
 
