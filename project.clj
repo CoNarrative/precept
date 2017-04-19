@@ -28,8 +28,7 @@
                    [com.cemerick/piggieback "0.2.2-SNAPSHOT"]
                    [figwheel-sidecar "0.5.10-SNAPSHOT"]
                    [binaryage/devtools "0.8.2"]
-                   [secretary "1.2.3"]
-                   [re-frame "0.9.2"]]
+                   [secretary "1.2.3"]]
 
     :plugins      [[lein-figwheel "0.5.10-SNAPSHOT"]
                    [lein-doo "0.1.7"]]
