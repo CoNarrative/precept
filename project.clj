@@ -13,6 +13,8 @@
 
   :source-paths ["src/clj"]
 
+  :test-paths ["test/clj"]
+
   :resource-paths ["resources" "target/cljsbuild"]
 
   :figwheel
