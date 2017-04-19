@@ -8,11 +8,10 @@
                  [com.cerner/clara-rules "0.14.0"]
                  [reagent "0.6.0"]]
 
-  :plugins [[lein-cljsbuild "1.1.4"]]
+  :plugins [[lein-cljsbuild "1.1.4"]
+            [lein-codox "0.10.3"]]
 
   :source-paths ["src/clj"]
-
-  ;:target-path "target/%s/"
 
   :resource-paths ["resources" "target/cljsbuild"]
 
