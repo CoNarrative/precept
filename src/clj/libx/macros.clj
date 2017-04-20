@@ -160,8 +160,9 @@
         definition  (if properties (rest body) body)
         {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
         rw-lhs      (rewrite-lhs lhs)
+        passthrough (filter some? (list doc properties))
         unwrite-rhs (rest rhs)]
-    `(cm/defrule ~name ~@rw-lhs ~'=> ~@unwrite-rhs)))
+    `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@unwrite-rhs)))
 
 (defmacro def-tuple-query
   "For CLJS"
