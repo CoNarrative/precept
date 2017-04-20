@@ -39,3 +39,9 @@
 (defn ^:export main []
     (start! {:session app-session :schema app-schema :facts facts})
     (mount-components))
+
+@store
+
+(cr/query (:session @state) libx.todomvc.rules/find-all-facts)
+
+(:schema @state)

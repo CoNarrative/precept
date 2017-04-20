@@ -267,7 +267,8 @@
      :add (dispatch! (insert-action facts))
      :remove (dispatch! (retract-action facts))
      :remove-entity (dispatch! (insert-action [(util/guid) :remove-entity-request facts]))
-     (println "Unsupported op keyword " op)))
+     (println "Unsupported op keyword " op))
+   nil)
   ([facts] (then :add facts)))
 
 (defn start! [options]

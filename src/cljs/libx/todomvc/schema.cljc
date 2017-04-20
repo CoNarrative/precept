@@ -17,13 +17,30 @@
   [
    ; Todos
    (attribute :todo/title
-     :db.type/string)
+     :db.type/string
+     :db/unique :db.unique/value)
+
+   (attribute :todo/edit
+     :db.type/string
+     :db/unique :db.unique/identity)
 
    (attribute :todo/visible
-     :db.type/boolean)
+     :db.type/keyword)
 
    (attribute :todo/done
      :db.type/keyword)
+
+   (attribute :new-todo/title
+     :db.type/string
+     :db/unique :db.unique/identity)
+
+   (attribute :new-todo/save
+     :db.type/keyword
+     :db/unique :db.unique/identity)
+
+   (attribute :input/key-code
+     :db.type/long
+     :db/unique :db.unique/identity)
 
    ; UI
    (attribute :ui/toggle-complete

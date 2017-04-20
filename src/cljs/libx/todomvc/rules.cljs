@@ -1,5 +1,6 @@
 (ns libx.todomvc.rules
-  (:require [clara.rules :refer [insert! insert-all! insert-unconditional! retract!]]
+  (:require [clara.rules :refer [insert! insert-all! insert-unconditional! insert-all-unconditional!
+                                 retract!]]
             [clara.rules.accumulators :as acc]
             [libx.spec.sub :as sub]
             [libx.util :refer [attr-ns guid]]
@@ -119,6 +120,13 @@
   (println "Inserting all-todos response" ?todos)
   (insert! [?e ::sub/response (libx.util/tuples->maps ?todos)]))
 
+(def-tuple-rule subs-new-todo-title
+  [:exists [?e ::sub/request :new-todo/title]]
+  [[?eid :new-todo/title ?v]]
+  =>
+  (println "[sub-response] Inserting new-todo-title" ?v)
+  (insert! [?e ::sub/response {:db/id ?eid :new-todo/title ?v}]))
+
 ;;TODO. Make part of lib
 (def-tuple-rule entity-doesnt-exist-when-removal-requested
   [[?e :remove-entity-request ?eid]]
@@ -127,13 +135,89 @@
   (println "Fulfilling remove entity request " ?entity)
   (doseq [tuple ?entity] (retract! tuple)))
 
-;(def-tuple-rule no-entity-remove-request-if-no-entity
-;  [?req <- [_ :remove-entity-request ?eid]]
-;  [:not [?eid]]
-;  =>
-;  (retract! ?req))
+(def-tuple-rule save-new-todo-when-press-enter
+  [[_ :input/key-code 13]]
+  [[?e :new-todo/title]]
+  =>
+  (println "Inserting save action from RHS" ?e)
+  (insert! [?e :new-todo/save :action]))
+
+(def-tuple-rule save-edit-action-when-press-enter
+  [[_ :input/key-code 13]]
+  [[?e :todo/edit]]
+  =>
+  (println "Inserting save action from RHS" ?e)
+  (insert! [?e :todo/save-edit :action]))
+
+(def-tuple-rule new-todos-become-regular-todos-when-saved
+  [[?e :new-todo/save :action]]
+  [[?e :new-todo/title ?v]]
+  =>
+  (println "Saving todo " ?v)
+  (insert-unconditional! [?e :todo/title ?v]))
+
+(def-tuple-rule not-a-new-todo-if-regular-todo
+  [[?e :todo/title ?v]]
+  [?new-todo <- [?e :new-todo/title ?v]]
+  =>
+  (println "Retracting new-todo" ?new-todo)
+  (retract! ?new-todo))
+
+(def-tuple-rule process-edit-request
+  [[?e :todo/edit-request :action]]
+  [[?e :todo/title ?v]]
+  =>
+  (println "Responding to edit request" ?e ?v)
+  (insert-unconditional! [?e :todo/edit ?v]))
+
+(def-tuple-rule when-save-edit-requested
+  [[?e :todo/save-edit :action]]
+  [[?e :todo/edit ?v]]
+  [?edited <- [?e :todo/title]]
+  =>
+  (retract! ?edited)
+  (insert-all-unconditional!
+    [[?e :todo/title ?v]
+     [?e :todo/save-edit-complete :action]]))
+
+(def-tuple-rule when-save-edit-fulfilled
+  [[?e :todo/save-edit-complete :action]]
+  [?edit <- [?e :todo/edit]]
+  =>
+  (retract! ?edit))
+
+(def-tuple-rule actions-cleared-at-session-end
+  {:salience -100}
+  [?action <- [_ :new-todo/save :action]]
+  =>
+  (println "Removing action" ?action)
+  (retract! ?action))
+
+(def-tuple-rule keycode-cleared-at-session-end
+  {:salience -100}
+  [?fact <- :input/key-code]
+  =>
+  (println "Removing key-code " ?fact)
+  (retract! ?fact))
 
 (def-tuple-query find-all-facts []
   [?facts <- (acc/all) :from [:all]])
 
 (def-tuple-session app-session 'libx.todomvc.rules)
+
+
+;; Problem
+;; user types a new-todo
+;; one new todo exists in session
+;; user presses enter
+;; key code 13 is inserted
+;; new todo is saved
+;; user types a character and new-todo is inserted
+;; key-code 13 still exists!
+;; new-todo with single character is saved as a new todo
+;; key code 13 is replaced (from outside session) by next keycode
+;; user can now type a new todo with multiple characters
+
+;; Solution
+;; Limit key-code's existence to a single firing
+;; by retracting it at the end inside a rule,
