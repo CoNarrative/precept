@@ -30,11 +30,11 @@
    (attribute :todo/done
      :db.type/keyword)
 
-   (attribute :new-todo/title
+   (attribute :entry/title
      :db.type/string
      :db/unique :db.unique/identity)
 
-   (attribute :new-todo/save
+   (attribute :entry/save
      :db.type/keyword
      :db/unique :db.unique/identity)
 
