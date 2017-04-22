@@ -19,8 +19,37 @@
   [m]
   (mapv (fn [[a v]] [(:db/id m) a v]) (dissoc m :db/id)))
 
-(defn insertable
-  "Returns vector of tuples"
+(defn keyed-tup->vector-tup [m]
+  (into [] (vals m)))
+
+(defrecord Tuple [e a v])
+
+(defn third [xs]
+  (try (nth xs 2)
+       (catch java.lang.IndexOutOfBoundsException e
+         (throw (ex-info "Received tuple without third slot" {})))))
+
+(defn record->vec [r]
+  (let [v-pos (:v r)
+        v (if (and (record? v-pos)
+                (not (record? (first v-pos))))
+            (record->vec v-pos)
+            v-pos)]
+    (vector (:e r) (:a r) v)))
+
+(defn vec->record [vec]
+  (let [v-pos (third vec)
+        v (if (and (vector? v-pos)
+                   (not (record? (first v-pos))))
+            (vec->record v-pos)
+            v-pos)]
+    (->Tuple (first vec)
+             (second vec)
+             v)))
+
+(defn tuplize
+  "Returns [[]...] no matter what.
+  Arg may be {} [{}...] [] [[]...]"
   [x]
   (cond
     (map? x) (map->tuples x)
@@ -29,24 +58,47 @@
     :else (vector x)))
 
 (defn facts->changes [facts]
-  (insertable
+  (tuplize
     (mapv #(vector (guid) :db/change %)
-      (insertable facts))))
+      (tuplize facts))))
 
 (defn with-changes [facts]
   "Takes coll [{:db/id id :a v}...]. Returns then as tuples with
   a :db/change tuple for each"
-  (let [xs (insertable facts)]
-    (into xs (insertable (mapcat facts->changes xs)))))
+  (let [xs (tuplize facts)]
+    (into xs (tuplize (mapcat facts->changes xs)))))
+
+(defn insertable-facts [facts]
+  "Arguments can be any mixture of vectors and records
+  Ensures [], [[]...] conform to Tuple record instances."
+  (if (vector? facts)
+    (if (vector? (first facts))
+      (map vec->record facts)
+      (vector (vec->record facts)))
+    (vector facts)))
 
 (defn insert [session & facts]
-  "Inserts either: {} [{}...] [] [[]..]"
-  (let [insertables (mapcat insertable facts)]
+  "Inserts Tuples. Accepts {} [{}...] [] [[]...]"
+  (let [insertables (map vec->record (mapcat tuplize facts))]
     (insert-all session insertables)))
 
+(defn insert! [facts]
+  (let [insertables (map vec->record (mapcat tuplize (list facts)))]
+    (cr/insert-all! insertables)))
+
+(defn insert-unconditional! [facts]
+  (let [insertables (map vec->record (mapcat tuplize (list facts)))]
+    (cr/insert-all-unconditional! insertables)))
+
+(defn retract! [facts]
+  "Wrapper around Clara's `retract!`. To be used within RHS of rule only. "
+  (let [insertables (insertable-facts facts)]
+    (doseq [to-retract insertables]
+      (cr/retract! to-retract))))
+
 (defn retract [session & facts]
-  "Retracts either: {} [{}...] [] [[]..]"
-  (let [insertables (mapcat insertable facts)]
+  "Retracts either: Tuple, {} [{}...] [] [[]..]"
+  (let [insertables (map vec->record (mapcat tuplize facts))]
     (apply (partial cr/retract session) insertables)))
 
 (defn replace! [session this that]
@@ -99,75 +151,6 @@
   "Returns vec of hydrated ms from tups"
   (mapv #(entity-tuples->entity-map (second %)) (group-by first tups)))
 
-;(defn entity-tuples->entity-map
-;  "Takes list of tuples for a *single* entity and returns single map"
-;  [tups]
-;  (let [e (ffirst tups)
-;        _ (println e)]
-;    (reduce
-;      (fn [acc [_ a v]]
-;        (let [one-to-many (one-to-many? a)]
-;          (merge acc
-;            (if (and (one-to-many a) (contains? acc a))
-;              {a (conj (a acc) v)}
-;              (merge acc {a v})))))
-;      {} tups)))
-(defquery qav-
-  "(Q)uery (A)ttribute (V)alue.
-  Finds facts matching args attribute and value"
-  [:?a :?v]
-  [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
-
-(defn qav [session a v]
-  (query session qav- :?a a :?v v))
-
-(defquery qave-
-  "(Q)uery (A)ttribute (V)alue (E)ntity.
-  Finds facts matching args attribute, value and eid"
-  [:?a :?v :?e]
-  [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
-
-(defn qave [session a v e]
-  (query session qav- :?a a :?v v :?e e))
-
-(defquery entity-
-  [:?e]
-  [?entity <- :all [[e a v]] (= ?e e)])
-
-(defn entityv
-  [session e]
-  (mapv :?entity (query session entity- :?e e)))
-
-(defn entity
-  [session e]
-  (entity-tuples->entity-map
-    (entityv session e)))
-
-(defquery qa-
-  [:?a]
-  [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
-
-(defn qa [session a]
-  (query session qa- :?a a))
-
-(defn keyed-tup->vector-tup [m]
-  (into [] (vals m)))
-
-(defquery qe
- [:?e]
- [:all [[e a v]] (= e ?e) (= a ?a) (= v ?v)])
-
-(defn entities-where
-  "Returns hydrated entities matching an attribute-only or an attribute-value query"
-  ([session a] (map #(entity session (:db/id %)) (clara-tups->maps (qa session a))))
-  ([session a v] (map #(entity session (:db/id %)) (clara-tups->maps (qav session a v))))
-  ([session a v e] (map #(entity session (:db/id %)) (clara-tups->maps (qave session a v e)))))
-
-(defn facts-where
-  "Returns tuples matching a v e query where v, e optional"
-  ([session a] (mapv keyed-tup->vector-tup (qa session a)))
-  ([session a v] (mapv keyed-tup->vector-tup (qav session a v)))
-  ([session a v e] (mapv keyed-tup->vector-tup (qave session a v e))))
 
 ;; From clojure.core.incubator
 (defn dissoc-in

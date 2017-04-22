@@ -3,8 +3,7 @@
                                    retract!] :as cr]
               [clara.rules.accumulators :as acc]
               [libx.spec.sub :as sub]
-              [libx.util :refer [attr-ns guid]]
-              [libx.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]))
+              [libx.util :refer [guid]]))
 
 (defrecord Tuple [e a v])
 
@@ -57,17 +56,15 @@
   (-> cr-session
     (cr/insert-all (repeatedly n #(->Tuple (guid) :todo/title "foobar")))))
 
-(def sess (n-facts-session 100))
 (def state (atom (n-facts-session 100000)))
 
-(defn perf-loop []
-    (time
-     (dotimes [n 100]
-        (time
-          (reset! state
-            (-> @state
-              (cr/insert (->Tuple (guid) :add-todo-action "hey"))
-              (cr/fire-rules)))))))
+(defn perf-loop [iters]
+  (time
+    (dotimes [n iters]
+      (time
+        (reset! state
+          (-> @state
+            (cr/insert (->Tuple (guid) :add-todo-action "hey"))
+            (cr/fire-rules)))))))
 
-(perf-loop)
-
+(perf-loop 100)

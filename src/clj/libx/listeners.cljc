@@ -80,7 +80,7 @@
   (:listeners (eng/components session)))
 
 ; Copied from Clara and modified
-(defn fact-events
+(defn fact-traces
   "Returns [[]...]. List of fact events for each fact listener in the session."
   [session]
   (if-let [listeners (all-listeners session)]
@@ -103,7 +103,7 @@
 (defn key-by-hashcode [coll]
   "WILL remove duplicates"
   (zipmap (map hash-ordered-coll coll) coll))
-; TODO. Should find what both have in common and remove that from both, not just added
+
 (defn select-disjoint [added removed]
   "Takes m keyed by hashcode. Returns same with removals applied to additions"
   (let [a (set (keys added))
@@ -117,11 +117,19 @@
         hashed-retracts (key-by-hashcode (list-facts (retractions by-type)))]
     {:added (into [] (vals (select-disjoint hashed-adds hashed-retracts)))
      :removed (into [] (vals (select-disjoint hashed-retracts hashed-adds)))}))
-     ;:removed (into [] (vals hashed-retracts))}))
 
 (defn ops [session]
   "Returns :added, :removed results for a single fact listener. Usually wrapped with `embed-ops`."
-  (split-ops (first (fact-events session))))
+  (split-ops (first (fact-traces session))))
+
+(defn vectorize-trace [trace]
+  (mapv #(update % :facts
+          (fn [facts]
+            (map util/record->vec facts)))
+     trace))
+
+(defn vec-ops [session]
+  (split-ops (vectorize-trace (first (fact-traces session)))))
 
 (defn with-op [change op-kw]
   (mapv (fn [ent] (conj ent (vector (ffirst ent) :op op-kw)))

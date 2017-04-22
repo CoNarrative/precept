@@ -1,8 +1,9 @@
 (ns ^:figwheel-always libx.core
     (:refer-clojure :exclude [send])
     (:require [libx.util :refer [entity-tuples->entity-map] :as util]
-              [libx.listeners :refer [ops] :as l]
+              [libx.listeners :as l]
               [libx.schema :as schema]
+              [libx.query :as q]
               [clara.rules :refer [query fire-rules insert! insert-all!] :as cr]
               [clara.rules.accumulators :as acc]
               [libx.spec.core :refer [validate]]
@@ -106,7 +107,7 @@
   (let [out (chan)]
     (go-loop []
       (let [session (<! in)
-            ops (l/ops session)
+            ops (l/vec-ops session)
             next-session (l/replace-listener session)
             _ (println "Ops!" ops)]
         (update-session-history session)
@@ -176,7 +177,7 @@
 (defn unique-value-facts [session tups unique-attrs]
   (let [unique-tups (filter #((set unique-attrs) (second %)) tups)
         avs (map rest unique-tups)]
-    (mapcat (fn [[a v]] (util/facts-where session a v))
+    (mapcat (fn [[a v]] (q/facts-where session a v))
       avs)))
 
 
@@ -194,10 +195,10 @@
   [session facts]
   (let [schema (:schema @state)
         facts-v (if (coll? (first facts)) facts (vector facts))
-        tuples (mapcat util/insertable facts-v)
+        tuples (mapcat util/tuplize facts-v)
         unique-attrs (unique-identity-attrs schema tuples)
         unique-values (unique-value-attrs schema tuples)
-        existing-unique-identity-facts (mapcat #(util/facts-where session %)
+        existing-unique-identity-facts (mapcat #(q/facts-where session %)
                                          unique-attrs)
         existing-unique-value-facts (unique-value-facts session tuples unique-values)
         existing-unique-facts (into existing-unique-identity-facts existing-unique-value-facts)
@@ -207,10 +208,10 @@
         _ (println "Schema-insert inserting " tuples)
         next-session (if (empty? existing-unique-facts)
                        (-> session
-                         (cr/insert-all tuples))
+                         (util/insert tuples))
                        (-> session
                          (util/retract existing-unique-facts)
-                         (cr/insert-all tuples)))]
+                         (util/insert tuples)))]
     next-session))
 
 (defn insert-action [facts]

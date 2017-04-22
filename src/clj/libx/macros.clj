@@ -20,7 +20,7 @@
      ~name
      'libx.util
      ~@sources-and-options
-     :fact-type-fn ~'(fn [[e a v]] a)
+     :fact-type-fn ~':a
      :ancestors-fn ~'(fn [type] [:all])))
 
 (defn attr-only? [x]
@@ -60,9 +60,10 @@
        :v (last tuple)})))
 
 (defn positional-value [tuple]
-  (into {}
-    (filter (comp value-expr? second)
-      {:v (first (drop 2 tuple))})))
+ (let [v-position (first (drop 2 tuple))]
+  (if (not (value-expr? v-position))
+    {}
+    {:v (list '= v-position '(:v this))})))
 
 (defn parse-as-tuple [expr]
   "Parses rule expression as if it contains just a tuple.
@@ -72,11 +73,10 @@
         bindings-and-constraint-values (merge bindings
                                          (sexprs-with-bindings tuple)
                                          (positional-value tuple))
-        value-expressions              (positional-value tuple)
         attribute                      (if (keyword? (second tuple)) (second tuple) :all)]
     (printmac "Tuple: " tuple)
     (printmac "Variable bindings for form:" bindings)
-    (printmac "Value expressions for form" value-expressions)
+    (printmac "Value expressions for form" (positional-value tuple))
     (printmac "With s-exprs merged:" bindings-and-constraint-values)
     (reduce
       (fn [rule-expr [eav v]]
@@ -84,9 +84,9 @@
         (conj rule-expr
           (if (sexpr? v)
             v
-            (list '= v (symbol (name eav))))))
-      (vector attribute
-        (vector '[e a v]))
+            (list '= v
+              (list (keyword (name eav)) 'this)))))
+      (vector attribute)
       bindings-and-constraint-values)))
 
 (defn parse-with-fact-expression [expr]

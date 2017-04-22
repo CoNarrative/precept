@@ -1,9 +1,7 @@
 (ns libx.todomvc.rules
-  (:require [clara.rules :refer [insert! insert-all! insert-unconditional! insert-all-unconditional!
-                                 retract!]]
-            [clara.rules.accumulators :as acc]
+  (:require [clara.rules.accumulators :as acc]
             [libx.spec.sub :as sub]
-            [libx.util :refer [attr-ns guid]]
+            [libx.util :refer [insert! insert-unconditional! retract! attr-ns guid]]
             [libx.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]
             [libx.util :as util]))
 
@@ -78,8 +76,8 @@
   [?total <- (acc/count) :from [:todo/title]]
   =>
   (println "done active count" ?done (- ?total ?done))
-  (insert-all! [[(guid) :done-count ?done]
-                [(guid) :active-count (- ?total ?done)]]))
+  (insert! [[(guid) :done-count ?done]
+            [(guid) :active-count (- ?total ?done)]]))
 
 (def-tuple-rule subs-footer-controls
   [:exists [?e ::sub/request :footer]]
@@ -106,19 +104,25 @@
   [:exists [?e ::sub/request :task-list]]
   [?visible-todos <- (acc/all) :from [:visible-todo]]
   [[_ :active-count ?active-count]]
-  =>
-  (println "Inserting task list response")
-  (insert!
-    [?e ::sub/response
-          {:visible-todos (map (comp util/entity-tuples->entity-map last) ?visible-todos)
-           :all-complete? (= ?active-count 0)}]))
+  =>;(comp util/entity-tuples->entity-map
+  (let [res (map :v ?visible-todos)
+        ents (map #(map util/record->vec %) res)
+        ms (map util/entity-tuples->entity-map ents)]
+    (println "Inserting task list response " res)
+    (println "Inserting task list response " ents)
+    (println "Inserting task list response " ms)
+    (insert!
+      [?e ::sub/response
+            {:visible-todos ms
+             :all-complete? (= ?active-count 0)}])))
 
 (def-tuple-rule subs-todo-app
   [:exists [?e ::sub/request :todo-app]]
   [?todos <- (acc/all) :from [:todo/title]]
   =>
-  (println "Inserting all-todos response" ?todos)
-  (insert! [?e ::sub/response (libx.util/tuples->maps ?todos)]))
+  (println "Inserting all-todos response" (mapv libx.util/record->vec ?todos))
+  (insert! [?e ::sub/response (libx.util/tuples->maps
+                                (mapv libx.util/record->vec ?todos))]))
 
 (def-tuple-rule subs-new-todo-title
   [:exists [?e ::sub/request :new-todo/title]]
@@ -176,7 +180,7 @@
   [?edited <- [?e :todo/title]]
   =>
   (retract! ?edited)
-  (insert-all-unconditional!
+  (insert-unconditional!
     [[?e :todo/title ?v]
      [?e :todo/save-edit-complete :action]]))
 

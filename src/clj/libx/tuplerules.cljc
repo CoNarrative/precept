@@ -34,7 +34,7 @@
        `(libx.macros/def-tuple-session ~name ~@sources-and-options)
        `(def ~name (com/mk-session ~`['libx.util
                                       ~@sources-and-options
-                                      :fact-type-fn ~'(fn [[e a v]] a)
+                                      :fact-type-fn ~':a
                                       :ancestors-fn ~'(fn [type] [:all])])))))
 
 #?(:clj

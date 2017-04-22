@@ -1,12 +1,14 @@
 (ns libx.util-test
     (:require [clojure.test :refer [deftest testing is run-tests]]
+              [libx.util :refer :all]
+              [libx.query :as q]
               [libx.tuplerules :refer [def-tuple-session]]
               [clara.tools.inspect :as inspect]
               [clara.tools.tracing :as trace]
-              [libx.util :refer :all]
               [clojure.spec :as s]
               [clara.rules :refer [query defquery fire-rules] :as cr]
-              [clara.tools.tracing :as trace]))
+              [clara.tools.tracing :as trace])
+    (:import [libx.util Tuple]))
 
 (defn todo-tx [id title done]
   (merge
@@ -33,13 +35,33 @@
       (is (every? #(= (first %) (:db/id entity-map)) entity-vec)
         "Every entry should use the :db/id from the map for its eid"))))
 
-(deftest insertable-test
+(deftest tuplize-test
   (let [m-fact  (todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
         m-facts (into [] (repeat 5 m-fact))]
-    (is (every? is-tuple? (insertable m-fact)))
-    (is (every? is-tuple? (insertable m-facts)))
-    (is (every? is-tuple? (insertable (insertable m-fact))))
-    (is (every? is-tuple? (insertable (insertable m-facts))))))
+    (is (every? is-tuple? (tuplize m-fact)))
+    (is (every? is-tuple? (tuplize m-facts)))
+    (is (every? is-tuple? (tuplize (tuplize m-fact))))
+    (is (every? is-tuple? (tuplize (tuplize m-facts))))))
+
+(deftest vec->record-test
+  (testing "Tuple no nesting"
+    (is (= (vec->record [-1 :attr "foo"])
+           (->Tuple -1 :attr "foo"))))
+  (testing "Tuple with no value in 3rd slot "
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo
+            #"Received tuple without third slot"
+          (vec->record [-1 :attr]))))
+  (testing "Tuple with tuple in third slot"
+    (is (= (vec->record [-1 :attr [-2 :nested "foo"]])
+           (->Tuple -1 :attr (->Tuple -2 :nested "foo"))))))
+
+(deftest record->vec-test
+  (testing "With single record no nesting"
+    (is (= (record->vec (->Tuple -1 :attr "foo"))
+           [-1 :attr "foo"])))
+  (testing "Record with record in third slot"
+    (is (= (record->vec (->Tuple -1 :attr (->Tuple -2 :nested "foo")))
+           [-1 :attr [-2 :nested "foo"]]))))
 
 (deftest insert-test
   (testing "Insert single tuple"
@@ -51,6 +73,7 @@
                                    (fire-rules)))]
       (is (= :add-facts (:type (first trace))))
       (is (= 1 (count (:facts (first trace)))))))
+
   (testing "Insert tuples"
     (let [session @(def-tuple-session mysess)
           facts [[-1 :foo "bar"]
@@ -62,6 +85,7 @@
                                    (fire-rules)))]
       (is (= :add-facts (:type (first trace))))
       (is (= (count facts) (count (:facts (first trace)))))))
+
   (testing "Insert single map"
     (let [session @(def-tuple-session mysess)
           fact  (todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
