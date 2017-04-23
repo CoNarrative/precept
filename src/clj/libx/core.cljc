@@ -13,11 +13,13 @@
       #?(:clj [clojure.core.async :refer [<! >! put! take! chan go go-loop]])
       #?(:clj [reagent.ratom :as rr])
       #?(:cljs [cljs.core.async :refer [put! take! chan <! >!]])
-      #?(:cljs [libx.todomvc.rules :refer [find-all-facts]])
       #?(:cljs [reagent.core :as r]))
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
 #?(:cljs (enable-console-print!))
+
+(defn log [& args]
+  (comment (println args)))
 
 (defonce initial-state
   {:subscriptions {}
@@ -37,6 +39,7 @@
 (defn init-schema [schema]
   (swap! state assoc :schema (schema/by-ident schema)))
 
+(def processing (chan 1))
 (def session->store (chan 1))
 (def done-ch (chan 1))
 
@@ -49,22 +52,20 @@
     (swap! state update :session-history conj session)))
 
 (defn set-transition [bool]
-  (println "---> Transitioning state" bool)
+  (log "---> Transitioning state" bool)
   (swap! state assoc :transitioning bool))
 
 (defn swap-session! [next]
-  (println "Swapping session!")
+  (log "Swapping session!")
   (swap! state assoc :session next))
 
 (defn enqueue-update [f]
-  (println "Enqueueing update. Cur / all" f (:pending-updates @state))
+  (log "Enqueueing update. Cur / all" f (:pending-updates @state))
   (swap! state update :pending-updates conj f))
 
 (defn dequeue-update []
-  (println "Dequeueing update")
+  (log "Dequeueing update")
   (swap! state update :pending-updates (fn [updates] (rest updates))))
-
-(def processing (chan 1))
 
 (defn dispatch! [f]
   (enqueue-update f)
@@ -77,13 +78,13 @@
   (go-loop []
    (let [processing (<! processing)]
       (if (:transitioning @state)
-        (do (println "---> Looks like we're transitioning? I'll wait to process" (debug-id))
+        (do (log "---> Looks like we're transitioning? I'll wait to process" (debug-id))
             (do (<! done-ch)
-                (println "---> Hey, we're done! Check if we can process" (debug-id))
+                (log "---> Hey, we're done! Check if we can process" (debug-id))
                 (recur)))
         (if (empty? (:pending-updates @state))
-            (do (println "--->  No more pending updates.") (recur)) ;;should be able to start here?
-            (do (println " ---> Kicking off!" (debug-id))
+            (do (log "--->  No more pending updates.") (recur)) ;;should be able to start here?
+            (do (log " ---> Kicking off!" (debug-id))
                 (set-transition true)
                 (>! session->store (first (:pending-updates @state)))
                 (dequeue-update)
@@ -109,8 +110,8 @@
       (let [session (<! in)
             ops (l/vec-ops session)
             next-session (l/replace-listener session)
-            _ (println "Ops!" ops)]
-        (update-session-history session)
+            _ (log "Ops!" ops)]
+        ;(update-session-history session)
         (swap-session! next-session)
         (>! out ops)
         (recur)))
@@ -118,12 +119,12 @@
 
 (defn add [a change]
   "Merges change into atom"
-  (println "Adding" (:db/id change) (l/change->av-map change))
+  (log "Adding" (:db/id change) (l/change->av-map change))
   (swap! a update (:db/id change) (fn [ent] (merge ent (l/change->av-map change)))))
 
 (defn del [a change]
   "Removes keys in change from atom"
-  (println "Removing in path" (:db/id change) (l/change->attr change))
+  (log "Removing in path" (:db/id change) (l/change->attr change))
   (let [id (:db/id change)
         attr (l/change->attr change)]
     (swap! a util/dissoc-in [id attr])))
@@ -134,7 +135,7 @@
     (go-loop []
       (let [ops (<! in)
             removals (l/embed-op (:removed ops) :remove)
-            _ (println "Removals?" removals)]
+            _ (log "Removals?" removals)]
        (doseq [removal removals]
           (del store removal))
        (>! out ops)
@@ -146,7 +147,7 @@
   (go-loop []
     (let [changes (<! in)
           additions (l/embed-op (:added changes) :add)
-          _ (println "Additions!" additions)]
+          _ (log "Additions!" additions)]
       (doseq [addition additions]
         (add store addition))
       (set-transition false)
@@ -202,10 +203,10 @@
                                          unique-attrs)
         existing-unique-value-facts (unique-value-facts session tuples unique-values)
         existing-unique-facts (into existing-unique-identity-facts existing-unique-value-facts)
-        _ (println "Schema-insert unique values " unique-values)
-        _ (println "Schema-insert unique value facts " existing-unique-value-facts)
-        _ (println "Schema-insert removing " existing-unique-facts)
-        _ (println "Schema-insert inserting " tuples)
+        _ (log "Schema-insert unique values " unique-values)
+        _ (log "Schema-insert unique value facts " existing-unique-value-facts)
+        _ (log "Schema-insert removing " existing-unique-facts)
+        _ (log "Schema-insert inserting " tuples)
         next-session (if (empty? existing-unique-facts)
                        (-> session
                          (util/insert tuples))
@@ -256,8 +257,7 @@
    (let [_ (validate ::sub/request req) ;;TODO. move to :pre
          name (first req)
          existing (find-sub-by-name name)
-         _ (println "New sub name / existing if any" name existing)]
-         ;_ (println "Existing / all subs" existing (:subscriptions @state))]
+         _ (log "New sub name / existing if any" name existing)]
      (if existing
        (:lens existing)
        (register req)))))
@@ -268,7 +268,7 @@
      :add (dispatch! (insert-action facts))
      :remove (dispatch! (retract-action facts))
      :remove-entity (dispatch! (insert-action [(util/guid) :remove-entity-request facts]))
-     (println "Unsupported op keyword " op))
+     (log "Unsupported op keyword " op))
    nil)
   ([facts] (then :add facts)))
 
@@ -277,3 +277,4 @@
     (swap-session! (l/replace-listener (:session opts)))
     (init-schema (into schema/libx-schema (:schema opts)))
     (dispatch! (insert-action (:facts opts)))))
+

@@ -25,9 +25,10 @@
 (defrecord Tuple [e a v])
 
 (defn third [xs]
-  (try (nth xs 2)
-       (catch java.lang.IndexOutOfBoundsException e
-         (throw (ex-info "Received tuple without third slot" {})))))
+  #?(:cljs (nth xs 2)
+     :clj (try (nth xs 2)
+           (catch java.lang.IndexOutOfBoundsException e
+             (throw (ex-info "Received tuple without third slot" {}))))))
 
 (defn record->vec [r]
   (let [v-pos (:v r)

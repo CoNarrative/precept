@@ -5,6 +5,8 @@
             [libx.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]
             [libx.util :as util]))
 
+(defn log [& args]
+  (comment (println args)))
 
 (def-tuple-rule todo-is-visible-when-filter-is-all
   [[_ :ui/visibility-filter :all]]
@@ -23,7 +25,7 @@
   [[?e :todo/title]]
   [:not [?e :todo/done]]
   =>
-  (println "Active tag found! Marking incomplete todo visible")
+  (log "Active tag found! Marking incomplete todo visible")
   (insert! [?e :todo/visible :tag]))
 
 (def-tuple-rule toggle-all-complete
@@ -31,7 +33,7 @@
   [[?e :todo/title]]
   [:not [?e :todo/done]]
   =>
-  (println "Marked done via toggle complete:" ?e)
+  (log "Marked done via toggle complete:" ?e)
   (insert-unconditional! [?e :todo/done :tag]))
 
 (def-tuple-rule remove-toggle-complete-when-all-todos-done
@@ -40,9 +42,9 @@
   [?total-done <- (acc/count) :from [:todo/done]]
   [:test (not (not (= ?total ?total-done)))] ;;TODO. '= won't work without not not...
   =>
-  (println "Total todos: " ?total)
-  (println "Total done: " ?total-done)
-  (println "Retracting toggle-all-complete action: " ?toggle)
+  (log "Total todos: " ?total)
+  (log "Total done: " ?total-done)
+  (log "Retracting toggle-all-complete action: " ?toggle)
   (retract! ?toggle))
 
 (def-tuple-rule no-done-todos-when-clear-completed-action
@@ -51,7 +53,7 @@
   [[?e :todo/done]]
   [?entity <- (acc/all) :from [?e :all]]
   =>
-  (println "Retracting entity " ?entity)
+  (log "Retracting entity " ?entity)
   (doseq [tuple ?entity] (retract! tuple)))
 ; DSL notes on how we might handle retractions such as these.
 ; Follows convention for namespaced keyword destructuring slated for CLJ 1.9
@@ -63,19 +65,14 @@
   [?action <- :ui/clear-completed]
   [:not [:exists [:todo/done]]]
   =>
-  (println "Clear-completed action finished. Retracting " ?action)
+  (log "Clear-completed action finished. Retracting " ?action)
   (retract! ?action))
-
-(def-tuple-rule print-all-facts
-  [?fact <- [?e]]
-  =>
-  (println "FACT" ?fact))
 
 (def-tuple-rule find-done-count
   [?done <- (acc/count) :from [:todo/done]]
   [?total <- (acc/count) :from [:todo/title]]
   =>
-  (println "done active count" ?done (- ?total ?done))
+  (log "done active count" ?done (- ?total ?done))
   (insert! [[(guid) :done-count ?done]
             [(guid) :active-count (- ?total ?done)]]))
 
@@ -85,7 +82,7 @@
   [[_ :active-count ?active-count]]
   [[_ :ui/visibility-filter ?visibility-filter]]
   =>
-  (println "Inserting footer response" ?e)
+  (log "Inserting footer response" ?e)
   (insert!
     [?e ::sub/response
         {:active-count ?active-count
@@ -97,20 +94,17 @@
   [?entity <- (acc/all) :from [?e :all]]
   =>
   ;; warning! this is bad!
-  (println "Inserting visible todo" ?entity)
+  (log "Inserting visible todo" ?entity)
   (insert! [(guid) :visible-todo ?entity]))
 
 (def-tuple-rule subs-task-list
   [:exists [?e ::sub/request :task-list]]
   [?visible-todos <- (acc/all) :from [:visible-todo]]
   [[_ :active-count ?active-count]]
-  =>;(comp util/entity-tuples->entity-map
+  =>
   (let [res (map :v ?visible-todos)
         ents (map #(map util/record->vec %) res)
         ms (map util/entity-tuples->entity-map ents)]
-    (println "Inserting task list response " res)
-    (println "Inserting task list response " ents)
-    (println "Inserting task list response " ms)
     (insert!
       [?e ::sub/response
             {:visible-todos ms
@@ -120,15 +114,14 @@
   [:exists [?e ::sub/request :todo-app]]
   [?todos <- (acc/all) :from [:todo/title]]
   =>
-  (println "Inserting all-todos response" (mapv libx.util/record->vec ?todos))
-  (insert! [?e ::sub/response (libx.util/tuples->maps
-                                (mapv libx.util/record->vec ?todos))]))
+  ;(log "Inserting all-todos response" (mapv libx.util/record->vec ?todos))
+  (insert! [?e ::sub/response "HI"]));(libx.util/tuples->maps (mapv libx.util/record->vec ?todos))]))
 
 (def-tuple-rule subs-new-todo-title
   [:exists [?e ::sub/request :new-todo/title]]
   [[?eid :new-todo/title ?v]]
   =>
-  (println "[sub-response] Inserting new-todo-title" ?v)
+  (log "[sub-response] Inserting new-todo-title" ?v)
   (insert! [?e ::sub/response {:db/id ?eid :new-todo/title ?v}]))
 
 ;;TODO. Make part of lib
@@ -136,42 +129,42 @@
   [[?e :remove-entity-request ?eid]]
   [?entity <- (acc/all) :from [?eid :all]]
   =>
-  (println "Fulfilling remove entity request " ?entity)
+  (log "Fulfilling remove entity request " ?entity)
   (doseq [tuple ?entity] (retract! tuple)))
 
 (def-tuple-rule save-new-todo-when-press-enter
   [[_ :input/key-code 13]]
   [[?e :new-todo/title]]
   =>
-  (println "Inserting save action from RHS" ?e)
+  (log "Inserting save action from RHS" ?e)
   (insert! [?e :new-todo/save :action]))
 
 (def-tuple-rule save-edit-action-when-press-enter
   [[_ :input/key-code 13]]
   [[?e :todo/edit]]
   =>
-  (println "Inserting save action from RHS" ?e)
+  (log "Inserting save action from RHS" ?e)
   (insert! [?e :todo/save-edit :action]))
 
 (def-tuple-rule new-todos-become-regular-todos-when-saved
   [[?e :new-todo/save :action]]
   [[?e :new-todo/title ?v]]
   =>
-  (println "Saving todo " ?v)
+  (log "Saving todo " ?v)
   (insert-unconditional! [?e :todo/title ?v]))
 
 (def-tuple-rule not-a-new-todo-if-regular-todo
   [[?e :todo/title ?v]]
   [?new-todo <- [?e :new-todo/title ?v]]
   =>
-  (println "Retracting new-todo" ?new-todo)
+  (log "Retracting new-todo" ?new-todo)
   (retract! ?new-todo))
 
 (def-tuple-rule process-edit-request
   [[?e :todo/edit-request :action]]
   [[?e :todo/title ?v]]
   =>
-  (println "Responding to edit request" ?e ?v)
+  (log "Responding to edit request" ?e ?v)
   (insert-unconditional! [?e :todo/edit ?v]))
 
 (def-tuple-rule when-save-edit-requested
@@ -194,20 +187,18 @@
   {:salience -100}
   [?action <- [_ :new-todo/save :action]]
   =>
-  (println "Removing action" ?action)
+  (log "Removing action" ?action)
   (retract! ?action))
 
 (def-tuple-rule keycode-cleared-at-session-end
   {:salience -100}
   [?fact <- :input/key-code]
   =>
-  (println "Removing key-code " ?fact)
+  (log "Removing key-code " ?fact)
   (retract! ?fact))
 
-(def-tuple-query find-all-facts []
-  [?facts <- (acc/all) :from [:all]])
-
-(def-tuple-session app-session 'libx.todomvc.rules)
+(def-tuple-session app-session 'libx.todomvc.rules
+                               'libx.query)
 
 
 ;; Problem

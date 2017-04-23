@@ -10,7 +10,7 @@
             [libx.spec.sub :as sub]
             [libx.todomvc.views]
             [libx.todomvc.schema :refer [app-schema]]
-            [libx.todomvc.rules :refer [app-session find-all-facts]]
+            [libx.todomvc.rules :refer [app-session #_find-all-facts]]
             [libx.util :as util])
   (:import [goog History]
            [goog.history EventType]))
@@ -40,8 +40,7 @@
     (start! {:session app-session :schema app-schema :facts facts})
     (mount-components))
 
-@store
 
-(cr/query (:session @state) libx.todomvc.rules/find-all-facts)
-
+;; 637 = molasses
+;(count (:?facts (first (cr/query (:session @state) libx.todomvc.rules/find-all-facts))))
 (:schema @state)
