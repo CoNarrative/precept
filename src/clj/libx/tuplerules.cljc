@@ -32,7 +32,7 @@
      [name & sources-and-options]
      (if (compiling-cljs?)
        `(libx.macros/def-tuple-session ~name ~@sources-and-options)
-       `(def ~name (com/mk-session ~`['libx.util
+       `(def ~name (com/mk-session ~`[
                                       ~@sources-and-options
                                       :fact-type-fn ~':a
                                       :ancestors-fn ~'(fn [type] [:all])])))))

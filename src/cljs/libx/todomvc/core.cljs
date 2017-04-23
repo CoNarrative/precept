@@ -3,15 +3,13 @@
   (:require [goog.events :as events]
             [libx.core :refer [start! then state store]]
             [libx.util :refer [insert insert-fire]]
-            [clara.rules :as cr]
-            [devtools.core :as devtools]
-            [reagent.core :as reagent]
-            [secretary.core :as secretary]
             [libx.spec.sub :as sub]
             [libx.todomvc.views]
             [libx.todomvc.schema :refer [app-schema]]
-            [libx.todomvc.rules :refer [app-session #_find-all-facts]]
-            [libx.util :as util])
+            [libx.todomvc.rules :refer [app-session]]
+            [devtools.core :as devtools]
+            [reagent.core :as reagent]
+            [secretary.core :as secretary])
   (:import [goog History]
            [goog.history EventType]))
 

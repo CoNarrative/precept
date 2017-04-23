@@ -197,8 +197,8 @@
   (log "Removing key-code " ?fact)
   (retract! ?fact))
 
-(def-tuple-session app-session 'libx.todomvc.rules
-                               'libx.query)
+(def-tuple-session app-session 'libx.todomvc.rules)
+
 
 
 ;; Problem

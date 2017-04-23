@@ -18,7 +18,6 @@
   [name & sources-and-options]
   `(cm/defsession
      ~name
-     'libx.util
      ~@sources-and-options
      :fact-type-fn ~':a
      :ancestors-fn ~'(fn [type] [:all])))
