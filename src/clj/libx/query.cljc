@@ -23,19 +23,19 @@
 ; TODO. This doesn't return the whole entity, just tuples matching eid.
 ; Entity is constructed by other helpers
 ; When added perf test jumps to ~3800ms, ~12ms per iteration after initial
-;(cr/defquery entity-
-;  [:?e]
-;  [?entity <- :all (= ?e (:e this))])
+(cr/defquery entity-
+  [:?e]
+  [?entity <- :all (= ?e (:e this))])
 
-;(defn entityv
-;  [session e]
-;  (mapv (comp util/record->vec :?entity)
-;    (cr/query session entity- :?e e)))
+(defn entityv
+  [session e]
+  (mapv (comp util/record->vec :?entity)
+    (cr/query session entity- :?e e)))
 
-;(defn entity
-;  [session e]
-;  (util/entity-tuples->entity-map
-;    (entityv session e)))
+(defn entity
+  [session e]
+  (util/entity-tuples->entity-map
+    (entityv session e)))
 
 (cr/defquery qa-
   [:?a]
@@ -48,11 +48,11 @@
 ; [:?e]
 ; [:all (= (:e this) ?e) (= (:a this) ?a) (= (:v this) ?v)])
 
-;(defn entities-where
-;  "Returns hydrated entities matching an attribute-only or an attribute-value query"
-;  ([session a] (map #(entity session (:db/id %)) (util/clara-tups->maps (qa session a))))
-;  ([session a v] (map #(entity session (:db/id %)) (util/clara-tups->maps (qav session a v))))
-;  ([session a v e] (map #(entity session (:db/id %)) (util/clara-tups->maps (qave session a v e)))))
+(defn entities-where
+  "Returns hydrated entities matching an attribute-only or an attribute-value query"
+  ([session a] (map #(entity session (:db/id %)) (util/clara-tups->maps (qa session a))))
+  ([session a v] (map #(entity session (:db/id %)) (util/clara-tups->maps (qav session a v)))))
+  ;([session a v e] (map #(entity session (:db/id %)) (util/clara-tups->maps (qave session a v e)))))
 
 (defn facts-where
   "Returns tuples matching a v e query where v, e optional"
