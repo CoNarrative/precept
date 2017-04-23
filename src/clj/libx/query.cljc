@@ -20,7 +20,7 @@
 ;(defn qave [session a v e]
 ;  (cr/query session qav- :?a a :?v v :?e e))
 
-; TODO. This doesn't return the whole entity, just tuples matching eid.
+; TODO. This doesn't return the whole entity, just facts matching eid.
 ; Entity is constructed by other helpers
 ; When added perf test jumps to ~3800ms, ~12ms per iteration after initial
 (cr/defquery entity-
@@ -34,7 +34,7 @@
 
 (defn entity
   [session e]
-  (util/entity-tuples->entity-map
+  (util/tuple-entity->hash-map-entity
     (entityv session e)))
 
 (cr/defquery qa-
@@ -56,7 +56,7 @@
 
 (defn facts-where
   "Returns tuples matching a v e query where v, e optional"
-  ([session a] (mapv util/keyed-tup->vector-tup (qa session a)))
-  ([session a v] (mapv util/keyed-tup->vector-tup (qav session a v))))
-  ;([session a v e] (mapv util/keyed-tup->vector-tup (qave session a v e))))
+  ([session a] (mapv #(into [] (vals %)) (qa session a)))
+  ([session a v] (mapv #(into [] (vals %)) (qav session a v))))
+  ;([session a v e] (mapv #(into [] (vals %)) (qave session a v e))))
 

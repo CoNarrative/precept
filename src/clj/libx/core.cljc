@@ -163,7 +163,7 @@
   [session facts]
   (let [schema (:schema @state)
         facts-v (if (coll? (first facts)) facts (vector facts))
-        tuples (mapcat util/tuplize facts-v)
+        tuples (mapcat util/tuplize-into-vec facts-v)
         unique-attrs (unique-identity-attrs schema tuples)
         unique-values (unique-value-attrs schema tuples)
         existing-unique-identity-facts (mapcat #(q/facts-where session %)

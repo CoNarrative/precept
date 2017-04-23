@@ -1,10 +1,5 @@
 (ns libx.util
-    #?(:cljs
-       (:require [clara.rules :as cr
-                  :refer [query insert-all fire-rules]
-                  :refer-macros [defquery]]))
-    #?(:clj
-       (:require [clara.rules :as cr :refer [query defquery insert-all fire-rules]])))
+   (:require [clara.rules :as cr]))
 
 (defn guid []
   #?(:clj (java.util.UUID/randomUUID)
@@ -17,10 +12,8 @@
   "Transforms entity map to vector of tuples
   {a1 v1 a2 v2 :db/id eid} -> [ [eid a1 v1] ... ]"
   [m]
-  (mapv (fn [[a v]] [(:db/id m) a v]) (dissoc m :db/id)))
-
-(defn keyed-tup->vector-tup [m]
-  (into [] (vals m)))
+  (mapv (fn [[k v]] (vector (:db/id m) k v))
+    (dissoc m :db/id)))
 
 (defrecord Tuple [e a v])
 
@@ -33,7 +26,7 @@
 (defn record->vec [r]
   (let [v-pos (:v r)
         v (if (and (record? v-pos)
-                (not (record? (first v-pos))))
+                   (not (record? (first v-pos))))
             (record->vec v-pos)
             v-pos)]
     (vector (:e r) (:a r) v)))
@@ -48,7 +41,7 @@
              (second vec)
              v)))
 
-(defn tuplize
+(defn tuplize-into-vec
   "Returns [[]...].
   Arg may be {} [{}...] [] [[]...]"
   [x]
@@ -57,17 +50,6 @@
     (map? (first x)) (mapcat map->tuples x)
     (vector? (first x)) x
     :else (vector x)))
-
-(defn facts->changes [facts]
-  (tuplize
-    (mapv #(vector (guid) :db/change %)
-      (tuplize facts))))
-
-(defn with-changes [facts]
-  "Takes coll [{:db/id id :a v}...]. Returns then as tuples with
-  a :db/change tuple for each"
-  (let [xs (tuplize facts)]
-    (into xs (tuplize (mapcat facts->changes xs)))))
 
 (defn insertable [x]
   "Arguments can be any mixture of vectors and records
@@ -80,15 +62,15 @@
 
 (defn insert [session & facts]
   "Inserts Tuples. Accepts {} [{}...] [] [[]...]"
-  (let [insertables (map vec->record (mapcat tuplize facts))]
-    (insert-all session insertables)))
+  (let [insertables (map vec->record (mapcat tuplize-into-vec facts))]
+    (cr/insert-all session insertables)))
 
 (defn insert! [facts]
-  (let [insertables (map vec->record (mapcat tuplize (list facts)))]
+  (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
     (cr/insert-all! insertables)))
 
 (defn insert-unconditional! [facts]
-  (let [insertables (map vec->record (mapcat tuplize (list facts)))]
+  (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
     (cr/insert-all-unconditional! insertables)))
 
 (defn retract! [facts]
@@ -99,29 +81,13 @@
 
 (defn retract [session & facts]
   "Retracts either: Tuple, {} [{}...] [] [[]..]"
-  (let [insertables (map vec->record (mapcat tuplize facts))]
+  (let [insertables (map vec->record (mapcat tuplize-into-vec facts))]
     (apply (partial cr/retract session) insertables)))
 
 (defn replace! [session this that]
   (-> session
     (retract this)
     (insert that)))
-
-(defn insert-fire
-  "Inserts facts into session and fires rules
-    `facts` - vec of vecs `[ [] ... ]`"
-  [session facts]
-  (-> session
-    (insert facts)
-    (fire-rules)))
-
-(defn retract-fire
-  "Inserts facts into session and fires rules
-    `facts` - vec of vecs `[ [] ... ]`"
-  [session facts]
-  (-> session
-    (retract facts)
-    (fire-rules)))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn clara-tups->maps
@@ -134,23 +100,15 @@
               (reduce (fn [m tup] (assoc m (:?a tup) (:?v tup)))
                 {} ent))))))
 
-(defn clara-tups->tups
-  [tups]
-  (mapv (fn [m] [(:?e m) (:?a m) (:?v m)]) tups))
-
 ;TODO. Does not support one-to-many. Attributes will collide
-(defn entity-tuples->entity-map
+(defn tuple-entity->hash-map-entity
   "Takes list of tuples for a *single* entity and returns single map"
-  [tups]
+  [tuples]
   (reduce
     (fn [acc [e a v]]
       (merge acc {:db/id e
-                  a      v}))
-    {} tups))
-
-(defn tuples->maps [tups]
-  "Returns vec of hydrated ms from tups"
-  (mapv #(entity-tuples->entity-map (second %)) (group-by first tups)))
+                  a v}))
+    {} tuples))
 
 (defn get-index-of
   [coll x not-found-idx]

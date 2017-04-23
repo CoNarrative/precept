@@ -143,7 +143,7 @@
 ;        (with-op removed :remove)))))
 
 (defn embed-op [additions-or-removals op-kw]
-    (mapv util/entity-tuples->entity-map
+    (mapv util/tuple-entity->hash-map-entity
       (with-op additions-or-removals op-kw)))
 
 (defn replace-listener [session]

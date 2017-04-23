@@ -104,7 +104,7 @@
   =>
   (let [res (map :v ?visible-todos)
         ents (map #(map util/record->vec %) res)
-        ms (map util/entity-tuples->entity-map ents)]
+        ms (map util/tuple-entity->hash-map-entity ents)]
     (insert!
       [?e ::sub/response
             {:visible-todos ms

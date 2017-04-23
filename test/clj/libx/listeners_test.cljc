@@ -4,7 +4,7 @@
             [clara.rules :refer [query fire-rules]]
             [libx.listeners :as l]
             [libx.query :as q]
-            [libx.util :refer [guid clara-tups->tups ->Tuple] :as util]
+            [libx.util :refer [guid ->Tuple] :as util]
             [libx.tuplerules :refer [def-tuple-rule def-tuple-session]])
   (:import [libx.util Tuple]))
 
@@ -118,7 +118,6 @@
             (:removed ops-0))))
     (testing "ops-0 :removed"
       (is (= (:removed (l/vec-ops state-0)) [])))
-    ;(is (= (:removed (l/ops state-0)) [[123 :attr/a "state-0"][123 :attr/logical-insert [123 :attr/a "state-0"]])))
     (testing "ops-0 :added"
       (is (= (set (:added (l/vec-ops state-0)))
             (set (conj background-facts [123 :attr/b "state-0"])))))
@@ -141,29 +140,4 @@
     (testing "ops-2 :added"
       (is (= (:added (l/vec-ops state-2)) [[123 :attr/b "state-2"]])))))
 
-;(clojure.tools.namespace.repl/refresh)
 (run-tests)
-
-;; REPL
-;(def test-session
-;  (-> @(def-tuple-session the-session 'libx.listeners-test 'libx.query)
-;    (l/replace-listener)
-;    (util/insert
-;      (into
-;        [[123 :attr/a "state-0"]
-;         [123 :attr/b "state-0"]]
-;        background-facts))
-;    (fire-rules)))
-;(l/vec-ops test-session)
-;(q/entityv test-session 123)
-;(q/entity test-session 123)
-;(l/vectorize-trace
-;  (first (l/fact-traces test-session)))
-;(def myjavathing (Tuple. 1 2 3))
-;myjavathing
-;(util/vec->record [-1 :attr myjavathing])
-;
-;;(map util/vec->record
-;
-;(util/vec->record [-1 :attr (->Tuple 1 :attr2 "foo")])
-;(map util/vec->record (vector [-1 :attr (->Tuple 1 :attr2 "foo")]))

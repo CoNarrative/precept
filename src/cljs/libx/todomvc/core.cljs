@@ -2,7 +2,6 @@
   (:require-macros [secretary.core :refer [defroute]])
   (:require [goog.events :as events]
             [libx.core :refer [start! then state store]]
-            [libx.util :refer [insert insert-fire]]
             [libx.spec.sub :as sub]
             [libx.todomvc.views]
             [libx.todomvc.schema :refer [app-schema]]
