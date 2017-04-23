@@ -63,6 +63,20 @@
     (is (= (record->vec (->Tuple -1 :attr (->Tuple -2 :nested "foo")))
            [-1 :attr [-2 :nested "foo"]]))))
 
+(deftest insertable-test
+  (testing "Single vector"
+    (is (= (insertable [-1 :attr "foo"]) [(->Tuple -1 :attr "foo")])))
+  (testing "Vector of vectors"
+    (is (= (insertable [[-1 :attr "foo"] [-1 :attr "bar"]])
+          [(->Tuple -1 :attr "foo")
+           (->Tuple -1 :attr "bar")])))
+  (testing "Single record"
+   (is (= (insertable (->Tuple -1 :attr "foo"))
+          [(->Tuple -1 :attr "foo")])))
+  (testing "List of records"
+    (is (= (insertable (list (->Tuple -1 :attr "foo") (->Tuple -1 :attr "bar")))
+           [(->Tuple -1 :attr "foo") (->Tuple -1 :attr "bar")]))))
+
 (deftest insert-test
   (testing "Insert single tuple"
     (let [session @(def-tuple-session mysess)
@@ -72,7 +86,8 @@
                                    (insert fact)
                                    (fire-rules)))]
       (is (= :add-facts (:type (first trace))))
-      (is (= 1 (count (:facts (first trace)))))))
+      (is (= (list (->Tuple -1 :foo "bar")) (:facts (first trace)))
+        "Inserted fact should be a Tuple")))
 
   (testing "Insert tuples"
     (let [session @(def-tuple-session mysess)
@@ -84,7 +99,8 @@
                                    (insert facts)
                                    (fire-rules)))]
       (is (= :add-facts (:type (first trace))))
-      (is (= (count facts) (count (:facts (first trace)))))))
+      (is (= (map #(apply ->Tuple %) facts) (:facts (first trace)))
+          "Each inserted fact should be a Tuple")))
 
   (testing "Insert single map"
     (let [session @(def-tuple-session mysess)
@@ -94,7 +110,8 @@
                                    (insert fact)
                                    (fire-rules)))]
       (is (= :add-facts (:type (first trace))))
-      (is (= (dec (count (keys fact))) (count (:facts (first trace)))))))
+      (is (= (map #(apply ->Tuple %) (map->tuples fact)) (:facts (first trace)))
+          "Fact map should have been inserted as Tuples")))
 
   (testing "Insert vector of maps"
     (let [session @(def-tuple-session mysess)

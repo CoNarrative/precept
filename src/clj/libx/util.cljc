@@ -49,7 +49,7 @@
              v)))
 
 (defn tuplize
-  "Returns [[]...] no matter what.
+  "Returns [[]...].
   Arg may be {} [{}...] [] [[]...]"
   [x]
   (cond
@@ -69,14 +69,14 @@
   (let [xs (tuplize facts)]
     (into xs (tuplize (mapcat facts->changes xs)))))
 
-(defn insertable-facts [facts]
+(defn insertable [x]
   "Arguments can be any mixture of vectors and records
-  Ensures [], [[]...] conform to Tuple record instances."
-  (if (vector? facts)
-    (if (vector? (first facts))
-      (map vec->record facts)
-      (vector (vec->record facts)))
-    (vector facts)))
+  Ensures [], [[]...], Tuple, '(Tuple ...) conform to Tuple record instances."
+  (cond
+    (record? x) (vector x)
+    (and (list? x) (record? (first x))) (into [] x)
+    (and (vector? x) (vector? (first x))) (map vec->record x)
+    (vector? x) (vector (vec->record x))))
 
 (defn insert [session & facts]
   "Inserts Tuples. Accepts {} [{}...] [] [[]...]"
@@ -93,7 +93,7 @@
 
 (defn retract! [facts]
   "Wrapper around Clara's `retract!`. To be used within RHS of rule only. "
-  (let [insertables (insertable-facts facts)]
+  (let [insertables (insertable facts)]
     (doseq [to-retract insertables]
       (cr/retract! to-retract))))
 
