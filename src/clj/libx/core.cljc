@@ -1,15 +1,13 @@
 (ns ^:figwheel-always libx.core
     (:refer-clojure :exclude [send])
-    (:require [libx.util :refer [entity-tuples->entity-map] :as util]
+    (:require [libx.util :as util]
               [libx.listeners :as l]
               [libx.schema :as schema]
               [libx.query :as q]
-              [clara.rules :refer [query fire-rules insert! insert-all!] :as cr]
-              [clara.rules.accumulators :as acc]
+              [clara.rules :refer [fire-rules]]
               [libx.spec.core :refer [validate]]
               [libx.spec.sub :as sub]
               [libx.spec.lang :as lang]
-              [libx.tuplerules :refer [def-tuple-session def-tuple-rule def-tuple-query]]
       #?(:clj [clojure.core.async :refer [<! >! put! take! chan go go-loop]])
       #?(:clj [reagent.ratom :as rr])
       #?(:cljs [cljs.core.async :refer [put! take! chan <! >!]])
@@ -25,9 +23,7 @@
   {:subscriptions {}
    :session nil
    :schema nil
-   :session-history (seq nil)
-   :transitioning nil
-   :pending-updates []})
+   :session-history (seq nil)})
 
 (defonce state (atom initial-state))
 
@@ -39,7 +35,7 @@
 (defn init-schema [schema]
   (swap! state assoc :schema (schema/by-ident schema)))
 
-(def processing (chan 1))
+(def action-ch (chan 1))
 (def session->store (chan 1))
 (def done-ch (chan 1))
 
@@ -51,52 +47,26 @@
       (fn [sessions] (conj (butlast sessions) session)))
     (swap! state update :session-history conj session)))
 
-(defn set-transition [bool]
-  (log "---> Transitioning state" bool)
-  (swap! state assoc :transitioning bool))
-
 (defn swap-session! [next]
   (log "Swapping session!")
   (swap! state assoc :session next))
 
-(defn enqueue-update [f]
-  (log "Enqueueing update. Cur / all" f (:pending-updates @state))
-  (swap! state update :pending-updates conj f))
-
-(defn dequeue-update []
-  (log "Dequeueing update")
-  (swap! state update :pending-updates (fn [updates] (rest updates))))
-
-(defn dispatch! [f]
-  (enqueue-update f)
-  (put! processing f))
-
-(defn debug-id []
-  (hash (first (:pending-updates @state))))
+(defn dispatch! [f] (put! action-ch f))
 
 (defn transactor []
   (go-loop []
-   (let [processing (<! processing)]
-      (if (:transitioning @state)
-        (do (log "---> Looks like we're transitioning? I'll wait to process" (debug-id))
-            (do (<! done-ch)
-                (log "---> Hey, we're done! Check if we can process" (debug-id))
-                (recur)))
-        (if (empty? (:pending-updates @state))
-            (do (log "--->  No more pending updates.") (recur)) ;;should be able to start here?
-            (do (log " ---> Kicking off!" (debug-id))
-                (set-transition true)
-                (>! session->store (first (:pending-updates @state)))
-                (dequeue-update)
-                (<! done-ch)
-                (recur)))))))
+   (let [action (<! action-ch)]
+        (do (log " ---> Kicking off!" (hash action))
+            (>! session->store action)
+            (<! done-ch)
+            (recur)))))
 
 (defn apply-changes-to-session [in]
   (let [out (chan)]
     (go-loop []
       (let [f (<! in)
             applied (f (:session @state))
-            fired (fire-rules applied)]
+            fired (time (fire-rules applied))]
         (>! out fired)
         (recur)))
     out))
@@ -111,7 +81,6 @@
             ops (l/vec-ops session)
             next-session (l/replace-listener session)
             _ (log "Ops!" ops)]
-        ;(update-session-history session)
         (swap-session! next-session)
         (>! out ops)
         (recur)))
@@ -135,7 +104,7 @@
     (go-loop []
       (let [ops (<! in)
             removals (l/embed-op (:removed ops) :remove)
-            _ (log "Removals?" removals)]
+            _ (log "Removals" removals)]
        (doseq [removal removals]
           (del store removal))
        (>! out ops)
@@ -150,8 +119,7 @@
           _ (log "Additions!" additions)]
       (doseq [addition additions]
         (add store addition))
-      (set-transition false)
-      (>! done-ch :hi)
+      (>! done-ch :done)
       (recur)))
   nil)
 
@@ -159,7 +127,7 @@
 (def realized-session (apply-changes-to-session session->store))
 (def changes-out (read-changes-from-session realized-session))
 (def removals-out (apply-removals-to-store changes-out))
-(def addition-applier (apply-additions-to-store removals-out))
+(apply-additions-to-store removals-out)
 
 (defn unique-identity-attrs [schema tuples]
   (reduce (fn [acc cur]
@@ -180,7 +148,6 @@
         avs (map rest unique-tups)]
     (mapcat (fn [[a v]] (q/facts-where session a v))
       avs)))
-
 
 ;; 1. Decide whether we require a schema in defsession
 ;; If we do...
@@ -217,7 +184,7 @@
 
 (defn insert-action [facts]
   (fn [current-session]
-    (schema-insert current-session facts)))
+    (util/insert current-session facts)))
 
 (defn retract-action [facts]
   (fn [current-session]
@@ -254,13 +221,11 @@
 (defn subscribe
   "Returns lens that points to a path in the store. Sub is handled by a rule."
   ([req]
-   (let [_ (validate ::sub/request req) ;;TODO. move to :pre
+   (let [;_ (validate ::sub/request req) ;;TODO. move to :pre
          name (first req)
          existing (find-sub-by-name name)
          _ (log "New sub name / existing if any" name existing)]
-     (if existing
-       (:lens existing)
-       (register req)))))
+     (or (:lens existing) (register req)))))
 
 (defn then
   ([op facts]

@@ -34,13 +34,13 @@
 (defn mount-components []
   (reagent/render [libx.todomvc.views/todo-app] (.getElementById js/document "app")))
 
-(def facts [[(random-uuid):todo/title "Hi"]])
+(def facts [[(random-uuid) :todo/title "Hi"]])
 
 (defn ^:export main []
     (start! {:session app-session :schema app-schema :facts facts})
     (mount-components))
 
 
-;; 637 = molasses
-;(count (:?facts (first (cr/query (:session @state) libx.todomvc.rules/find-all-facts))))
+;; 637 facts = molasses
 (:schema @state)
+(count (keys @store))
