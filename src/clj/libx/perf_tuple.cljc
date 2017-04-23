@@ -63,16 +63,17 @@
 (def activation-group-fn (util/make-activation-group-fn :normal))
 (def activation-group-sort-fn (util/make-activation-group-sort-fn groups :normal))
 
-;; TODO. Test activation groups w/ our macro in CLJ, CLJS
-;(def-tuple-session tuple-session
-;  'libx.perf-tuple)
+(def-tuple-session tuple-session
+  'libx.perf-tuple
+  :activation-group-fn activation-group-fn
+  :activation-group-sort-fn activation-group-sort-fn)
 
-(def tuple-session
-  (cr/mk-session 'libx.perf-tuple
-   :fact-type-fn :a
-   :ancestors-fn (fn [type] [:all])
-   :activation-group-fn activation-group-fn
-   :activation-group-sort-fn activation-group-sort-fn))
+;(def tuple-session
+;  (cr/mk-session 'libx.perf-tuple
+;   :fact-type-fn :a
+;   :ancestors-fn (fn [type] [:all])
+;   :activation-group-fn activation-group-fn
+;   :activation-group-sort-fn activation-group-sort-fn))
 
 (defn n-facts-session [n]
   (-> tuple-session
@@ -108,12 +109,12 @@
 ;; ~~~~~~~~~~~~~~~~~~NO AGENDA GROUPS~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;; ~~~~~~~~~~~~~~~~~~add-item-cleanup NOT FIRING~~~~~~~~~~~~~~~
 ;; ~~~~No queries~~~~
-;; loop                47ms
+;; loop                 47ms
 ;; loading file       1776ms
 ;;
 ;; ~~~~Including queries in the session def~~~~
 ;; qav-
-;;     loop             47ms
+;;     loop              47ms
 ;;     loading file    2086ms
 ;;
 ;; entity-
@@ -123,4 +124,31 @@
 ;; ~~~~Tracing, new one every loop, no queries~~~~
 ;; loop                  74ms
 ;; loading file          22ms (wtf?)
+;;
+;; ~~~~~~~~~~~~~~~~~~AGENDA GROUPS~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; ~~~~~~~~~~~~~~~~~~add-item-cleanup NOT FIRING~~~~~~~~~~~~~~~
+;; ~~~~No queries~~~~
+;; loop                 42ms
+;; loading file       4359ms
+;;
+;; ~~~~~~~~~~~~~~~~~~add-item-cleanup FIRING~~~~~~~~~~~~~~~
+;; ~~~~No queries~~~~
+;; loop                 70ms
+;; loading file       4446ms
+;;
+;;
+;;*********************************************************
+;;*********************************************************
+;; ~~~~~~~~~~~~~~~~~~~~~~ CLJS ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;; ~~~~~~~~~~~~~~~~~~AGENDA GROUPS~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; ~~~~~~~~~~~~~~~~~~add-item-cleanup NOT FIRING~~~~~~~~~~~~~~~
+;; ~~~~No queries~~~~
+;; loop                137ms
+;; loading file      24388ms (bc :cache false in cljsbuild?)
+;
+;; ~~~~~~~~~~~~~~~~~~add-item-cleanup FIRING~~~~~~~~~~~~~~~
+;; ~~~~No queries~~~~
+;; loop                185ms
+;; loading file      21199ms (bc :cache false in cljsbuild?)
 
