@@ -3,13 +3,13 @@
                                  insert
                                  insert!
                                  insert-unconditional!
-                                 retract!]]
+                                 retract!] :as util]
               [clara.rules :as cr]
               [clara.rules.accumulators :as acc]
               [libx.spec.sub :as sub]
               [libx.tuplerules :refer [def-tuple-session def-tuple-rule def-tuple-query]]
               [libx.listeners :as l]))
-              ;[criterium.core :refer [bench]]))
+
 (def-tuple-rule todo-is-visible-when-filter-is-all
   [[_ :ui/visibility-filter :all]]
   [[?e :todo/title]]
@@ -39,25 +39,40 @@
 (def-tuple-rule add-item-handler
   [[_ :add-todo-action ?title]]
   =>
+  ;(println "FOOOOOOOOOOOOO")
   (insert-unconditional! [(guid) :todo/title ?title]))
 
+ ;;TODO. Doesn't work if [:attr]!!!!!!!!!!!!!!!!!!
+ ;; Affects benchmarking!!!!!!!!!!!!!1
 (def-tuple-rule add-item-cleanup
-  {:salience -100}
+  {:group :cleanup}
   [?action <- [:add-todo-action]]
   =>
+  ;(println "Action cleanup")
   (retract! ?action))
 
 (def-tuple-rule acc-all-visible
+  {:group :normal}
   [?count <- (acc/count) :from [?e :todo/title]]
   [:test (> ?count 0)]
   =>
+  ;(println "Report count")
   (insert! [-1 :todo/count ?count]))
 
-(def-tuple-session tuple-session 'libx.perf-tuple)
-;(cr/defsession tuple-session
-;  'libx.perf-tuple
-;   :fact-type-fn :a
-;   :ancestors-fn (fn [type] [:all]))
+(def groups [:schema :action :normal :cleanup])
+(def activation-group-fn (util/make-activation-group-fn :normal))
+(def activation-group-sort-fn (util/make-activation-group-sort-fn groups :normal))
+
+;; TODO. Test activation groups w/ our macro in CLJ, CLJS
+;(def-tuple-session tuple-session
+;  'libx.perf-tuple)
+
+(def tuple-session
+  (cr/mk-session 'libx.perf-tuple
+   :fact-type-fn :a
+   :ancestors-fn (fn [type] [:all])
+   :activation-group-fn activation-group-fn
+   :activation-group-sort-fn activation-group-sort-fn))
 
 (defn n-facts-session [n]
   (-> tuple-session
@@ -76,13 +91,22 @@
             (cr/fire-rules)))))))
 
 (perf-loop 100)
-;(clojure.tools.namespace.repl/refresh)
+
+;;TODO. Remove or move to test
+;(activation-group-fn {:props {:salience 100
+;                              :group :cleanup)
+;
+;(activation-group-sort-fn {:group :schema :salience -100}
+;                          {:group :cleanup :salience 100})
+                          ;{:group "cleanup"})
 
 
 ;; Timings - all our stuff
 ;; 100,000 facts
 ;; 100 iterations
 ;;
+;; ~~~~~~~~~~~~~~~~~~NO AGENDA GROUPS~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; ~~~~~~~~~~~~~~~~~~add-item-cleanup NOT FIRING~~~~~~~~~~~~~~~
 ;; ~~~~No queries~~~~
 ;; loop                47ms
 ;; loading file       1776ms
@@ -99,3 +123,4 @@
 ;; ~~~~Tracing, new one every loop, no queries~~~~
 ;; loop                  74ms
 ;; loading file          22ms (wtf?)
+

@@ -152,6 +152,25 @@
   "Returns vec of hydrated ms from tups"
   (mapv #(entity-tuples->entity-map (second %)) (group-by first tups)))
 
+(defn get-index-of
+  [coll x not-found-idx]
+  (let [idx (.indexOf coll x)]
+    (if (get coll idx) idx not-found-idx)))
+
+(defn make-activation-group-fn [default-group]
+  (fn [m] {:salience (or (:salience (:props m)) 0)
+           :group (or (:group (:props m)) default-group)}))
+
+(defn make-activation-group-sort-fn
+  [groups default-group]
+  (let [default-idx (.indexOf groups default-group)]
+    (fn [a b]
+      (let [group-a (get-index-of groups (:group a) default-idx)
+            group-b (get-index-of groups (:group b) default-idx)]
+        (cond
+          (< group-a group-b) true
+          (= group-a group-b) (> (:salience a) (:salience b))
+          :else false)))))
 
 ;; From clojure.core.incubator
 (defn dissoc-in

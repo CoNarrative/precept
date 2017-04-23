@@ -50,6 +50,8 @@
              lhs-detuplified (reverse (into '() (rewrite-lhs lhs)))]
          (printmac "LHS before" lhs)
          (printmac "LHS after" lhs-detuplified)
+         (printmac "Body was" body)
+         (printmac "Properties were" properties)
          (when-not rhs
            (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).")
                     {})))

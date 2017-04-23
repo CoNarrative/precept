@@ -50,7 +50,10 @@
   =>
   (insert! (->Tuple -1 :todo/count ?count)))
 
-(cr/defsession cr-session 'libx.perf)
+(cr/defsession cr-session
+  'libx.perf
+  :activation-group-fn :salience
+  :activation-group-sort-fn >)
 
 (defn n-facts-session [n]
   (-> cr-session
