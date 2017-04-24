@@ -7,10 +7,7 @@
               [clara.rules.compiler :as com]
               [clojure.spec :as s]))
 
-(defn printmac [x & args]
-  "Prevent printlns from seeping into compiled code.
-  Remove comment macro to see printlns in dev."
-  (comment (println x args)))
+(defn trace [& args] (comment (apply prn args)))
 
 (defmacro def-tuple-session
   "Wrapper around Clara's `defsession` macro.
@@ -23,11 +20,11 @@
      :ancestors-fn ~'(fn [type] [:all])))
 
 (defn attr-only? [x]
-  (printmac "Attr only?" x (s/valid? ::lang/attribute-matcher x))
+  (trace "Attr only?" x (s/valid? ::lang/attribute-matcher x))
   (s/valid? ::lang/attribute-matcher x))
 
 (defn binding? [x]
-  (printmac "Is a binding?" x (s/valid? ::lang/variable-binding x))
+  (trace "Is a binding?" x (s/valid? ::lang/variable-binding x))
   (s/valid? ::lang/variable-binding x))
 
 (defn sexpr? [x]
@@ -37,15 +34,15 @@
   (s/valid? ::lang/test-expr x))
 
 (defn value-expr? [x]
-  (printmac "Is a value-expr?" x (s/valid? ::lang/value-equals-matcher x))
+  (trace "Is a value-expr?" x (s/valid? ::lang/value-equals-matcher x))
   (s/valid? ::lang/value-equals-matcher x))
 
 (defn has-accumulator? [expr]
-  (printmac "Has accumulator?" expr (s/valid? ::lang/accum-expr expr))
+  (trace "Has accumulator?" expr (s/valid? ::lang/accum-expr expr))
   (s/valid? ::lang/accum-expr expr))
 
 (defn variable-bindings [tuple]
-  (printmac "Getting variable bindings for " tuple)
+  (trace "Getting variable bindings for " tuple)
   (into {}
     (filter (comp binding? second)
       {:e (first tuple)
@@ -64,6 +61,11 @@
     {}
     {:v (list '= v-position '(:v this))})))
 
+(defn fact-binding-with-type-only [expr]
+  (let [fact-binding (take 2 expr)
+        fact-type (if (keyword? (last expr)) (last expr) (first (last expr)))]
+    `(~@fact-binding ~fact-type)))
+
 (defn parse-as-tuple [expr]
   "Parses rule expression as if it contains just a tuple.
   Does not take tuple as input! [ [] ], not []"
@@ -73,13 +75,13 @@
                                          (sexprs-with-bindings tuple)
                                          (positional-value tuple))
         attribute                      (if (keyword? (second tuple)) (second tuple) :all)]
-    (printmac "Tuple: " tuple)
-    (printmac "Variable bindings for form:" bindings)
-    (printmac "Value expressions for form" (positional-value tuple))
-    (printmac "With s-exprs merged:" bindings-and-constraint-values)
+    (trace "Tuple: " tuple)
+    (trace "Variable bindings for form:" bindings)
+    (trace "Value expressions for form" (positional-value tuple))
+    (trace "With s-exprs merged:" bindings-and-constraint-values)
     (reduce
       (fn [rule-expr [eav v]]
-        (printmac "K V" eav v)
+        (trace "K V" eav v)
         (conj rule-expr
           (if (sexpr? v)
             v
@@ -101,7 +103,7 @@
   (let [fact-expression (take 2 expr)
         accumulator     (take 2 (drop 2 expr))
         expression      (drop 4 expr)]
-    (printmac "To parse as tuple expr" expression)
+    (trace "To parse as tuple expr" expression)
     (vector
       (first fact-expression)
       (second fact-expression)
@@ -131,18 +133,16 @@
           (let [leftmost        (first expr)
                 op              (keyword? (dsl/ops leftmost))
                 fact-expression (and (not (keyword? leftmost))
-                                  (not (vector? leftmost))
-                                  (binding? leftmost))
+                                     (not (vector? leftmost))
+                                     (binding? leftmost))
                 binding-to-type-only (and fact-expression
-                                       (attr-only? (first (drop 2 expr))))
-                has-accumulator (if (and (true? fact-expression)
-                                         (has-accumulator? (drop 2 expr)))
-                                    true
-                                    nil)
+                                          (attr-only? (first (drop 2 expr))))
+                has-accumulator (and (true? fact-expression)
+                                     (has-accumulator? (drop 2 expr)))
                 is-test-expr (is-test-expr? leftmost)]
             (cond
               is-test-expr expr
-              binding-to-type-only expr
+              binding-to-type-only (fact-binding-with-type-only expr)
               op (parse-with-op expr)
               has-accumulator (parse-with-accumulator expr)
               fact-expression (parse-with-fact-expression expr)
@@ -191,21 +191,3 @@
         lhs (rewrite-lhs condition)
         rhs (insert-each-logical facts)]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
-
-;(defn defaction-body [session]
-;  (-> session
-;    (insert fact)
-;    (fire-rules)
-;    (retract fact)
-;    (fire-rules)))
-
-
-(defmacro defaction
-  [name facts]
-  `(defn ~name
-     [~'session]
-     (-> ~'session
-       (insert ~facts)
-       (fire-rules)
-       (retract ~facts)
-       (fire-rules))))

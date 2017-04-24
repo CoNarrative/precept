@@ -63,7 +63,7 @@
     (is (= '[[?toggle <- :ui/toggle-complete]]
           (rewrite-lhs '[[?toggle <- :ui/toggle-complete]]))))
   (testing "Fact assignment: Attribute-only with brackets"
-    (is (= '[[?toggle <- [:ui/toggle-complete]]]
+    (is (= '[[?toggle <- :ui/toggle-complete]]
           (rewrite-lhs '[[?toggle <- [:ui/toggle-complete]]])))
     (is (= '[[:not [:ns/foo (= 3 (:v this))]]]
            (rewrite-lhs '[[:not [_ :ns/foo 3]]]))))
@@ -143,7 +143,7 @@
                 (println "RHS")))
           (macroexpand
             '(defrule my-rule
-               [?entity <- [:my-attribute]]
+               [?entity <- :my-attribute]
                =>
                (println "RHS"))))))
   (testing "Fact assignment no brackets around fact-type"
