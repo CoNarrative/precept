@@ -3,12 +3,31 @@
                                  insert
                                  insert!
                                  insert-unconditional!
+                                 ->Tuple
                                  retract!] :as util]
               [clara.rules :as cr]
               [clara.rules.accumulators :as acc]
               [libx.spec.sub :as sub]
               [libx.tuplerules :refer [def-tuple-session def-tuple-rule def-tuple-query]]
-              [libx.listeners :as l]))
+              [libx.listeners :as l])
+    (:import [libx.util Tuple]))
+
+(def fact-id (atom -1))
+
+(cr/defrule add-fact-id
+  {:group :every :salience 100}
+  [?fact <- :todo/count (= (:tx-id this) -1)]
+  =>
+  (println "Doing" (apply ->Tuple (conj (into [] (butlast (vals ?fact)))
+                                     (swap! fact-id inc))))
+  (cr/insert-all-unconditional! (apply ->Tuple (conj (into [] (butlast (vals ?fact)))
+                                                     (swap! fact-id inc)))))
+(def-tuple-rule report-two-facts-equal
+  [?fact1 <- :all]
+  [?fact2 <- :all]
+  [:test (= ?fact1 ?fact2)]
+  =>
+  (println "two facts eql" ?fact1))
 
 (def-tuple-rule todo-is-visible-when-filter-is-all
   [[_ :ui/visibility-filter :all]]
@@ -42,44 +61,44 @@
   ;(println "FOOOOOOOOOOOOO")
   (insert-unconditional! [(guid) :todo/title ?title]))
 
- ;;TODO. Doesn't work if [:attr]!!!!!!!!!!!!!!!!!!
- ;; Affects benchmarking!!!!!!!!!!!!!1
 (def-tuple-rule add-item-cleanup
   {:group :cleanup}
   [?action <- [:add-todo-action]]
   =>
-  ;(println "Action cleanup")
+  (println "Action cleanup")
   (retract! ?action))
 
 (def-tuple-rule acc-all-visible
-  {:group :normal}
+  {:group :report}
   [?count <- (acc/count) :from [?e :todo/title]]
-  [:test (> ?count 0)]
+  ;[:test (> ?count 0)]
   =>
-  ;(println "Report count")
+  ;(println "Report count" ?count)
   (insert! [-1 :todo/count ?count]))
 
-(def groups [:schema :action :normal :cleanup])
+(def groups [:schema :action :normal :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :normal))
 (def activation-group-sort-fn (util/make-activation-group-sort-fn groups :normal))
 
-(def-tuple-session tuple-session
-  'libx.perf-tuple
-  :activation-group-fn activation-group-fn
-  :activation-group-sort-fn activation-group-sort-fn)
-
-;(def tuple-session
-;  (cr/mk-session 'libx.perf-tuple
-;   :fact-type-fn :a
-;   :ancestors-fn (fn [type] [:all])
-;   :activation-group-fn activation-group-fn
-;   :activation-group-sort-fn activation-group-sort-fn))
+;(def-tuple-session tuple-session
+;  'libx.perf-tuple
+;  :activation-group-fn activation-group-fn
+;  :activation-group-sort-fn activation-group-sort-fn)
+(def tuple-session
+  (cr/mk-session 'libx.perf-tuple
+   :fact-type-fn (fn [fact]
+                   (println "Fact type fn" fact)
+                   ;(if (= Tuple (type fact)))
+                   :a)
+   :ancestors-fn (fn [type] [:all])
+   :activation-group-fn activation-group-fn
+   :activation-group-sort-fn activation-group-sort-fn))
 
 (defn n-facts-session [n]
   (-> tuple-session
     (insert (repeatedly n #(vector (guid) :todo/title "foobar")))))
 
-(def state (atom (n-facts-session 100000)))
+(def state (atom (n-facts-session 10#_0000)))
 
 (defn perf-loop [iters]
   (time
@@ -91,7 +110,14 @@
             (insert [(guid) :add-todo-action "hey"])
             (cr/fire-rules)))))))
 
-(perf-loop 100)
+(perf-loop 1#_00)
+
+;; agenda phases
+;; schema maintenance should be high salience and always available
+;; action
+;; compute
+;; report
+;; cleanup
 
 ;;TODO. Remove or move to test
 ;(activation-group-fn {:props {:salience 100

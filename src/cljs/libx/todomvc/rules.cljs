@@ -1,7 +1,10 @@
 (ns libx.todomvc.rules
   (:require [clara.rules.accumulators :as acc]
+            [clara.rules :as cr]
             [libx.spec.sub :as sub]
-            [libx.util :refer [insert! insert-unconditional! retract! attr-ns guid]]
+            [libx.util :refer [insert! insert-unconditional! retract! attr-ns guid
+                               Tuple
+                               Fact ->Fact]]
             [libx.tuplerules :refer-macros [def-tuple-session def-tuple-rule def-tuple-query]]
             [libx.util :as util]))
 
@@ -197,22 +200,4 @@
   (log "Removing key-code " ?fact)
   (retract! ?fact))
 
-(def-tuple-session app-session 'libx.todomvc.rules)
-
-
-
-;; Problem
-;; user types a new-todo
-;; one new todo exists in session
-;; user presses enter
-;; key code 13 is inserted
-;; new todo is saved
-;; user types a character and new-todo is inserted
-;; key-code 13 still exists!
-;; new-todo with single character is saved as a new todo
-;; key code 13 is replaced (from outside session) by next keycode
-;; user can now type a new todo with multiple characters
-
-;; Solution
-;; Limit key-code's existence to a single firing
-;; by retracting it at the end inside a rule,
+def-tuple-session app-session 'libx.todomvc.rules

@@ -41,9 +41,17 @@
     keyword?
     (s/and some? #(not (s/valid? ::s-expr %)))))
 
+(s/def ::tuple-4
+  (s/tuple
+    (s/and some? #(not (s/valid? ::s-expr %)))
+    keyword?
+    (s/and some? #(not (s/valid? ::s-expr %)))
+    (s/and some? number?)))
+
 (s/def ::tuple
   (s/or :tuple-2 ::tuple-2
-        :tuple-3 ::tuple-3))
+        :tuple-3 ::tuple-3
+        :tuple-4 ::tuple-4))
 
 (s/def :db/change
   (s/tuple

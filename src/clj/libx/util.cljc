@@ -15,7 +15,7 @@
   (mapv (fn [[k v]] (vector (:db/id m) k v))
     (dissoc m :db/id)))
 
-(defrecord Tuple [e a v])
+(defrecord Tuple [e a v tx-id])
 
 (defn third [xs]
   #?(:cljs (nth xs 2)
@@ -36,10 +36,13 @@
         v (if (and (vector? v-pos)
                    (not (record? (first v-pos))))
             (vec->record v-pos)
-            v-pos)]
+            v-pos)
+        tx-id (nth vec 4 -1)]
     (->Tuple (first vec)
              (second vec)
-             v)))
+             v
+             tx-id)))
+
 
 (defn tuplize-into-vec
   "Returns [[]...].
@@ -61,20 +64,25 @@
     (vector? x) (vector (vec->record x))))
 
 (defn insert [session & facts]
-  "Inserts Tuples. Accepts {} [{}...] [] [[]...]"
+  "Inserts Tuples from outside rule context.
+  Accepts {} [{}...] [] [[]...]"
   (let [insertables (map vec->record (mapcat tuplize-into-vec facts))]
     (cr/insert-all session insertables)))
 
 (defn insert! [facts]
+  "Inserts Facts within rule context"
   (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
+    (println "INSERTING!" insertables)
     (cr/insert-all! insertables)))
 
 (defn insert-unconditional! [facts]
-  (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
-    (cr/insert-all-unconditional! insertables)))
+  "Inserts uncondtinally Facts within rule context"
+    (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
+      (cr/insert-all-unconditional! insertables)))
 
 (defn retract! [facts]
-  "Wrapper around Clara's `retract!`. To be used within RHS of rule only. "
+  "Wrapper around Clara's `retract!`.
+  To be used within RHS of rule only. Converts all input to Facts"
   (let [insertables (insertable facts)]
     (doseq [to-retract insertables]
       (cr/retract! to-retract))))
@@ -133,16 +141,26 @@
     (if (get coll idx) idx not-found-idx)))
 
 (defn make-activation-group-fn [default-group]
+  "Reads from optional third argument to rule.
+  `super` boolean
+  `group` keyword
+  `salience` number
+  Rules marked super will be present in every agenda phase."
   (fn [m] {:salience (or (:salience (:props m)) 0)
-           :group (or (:group (:props m)) default-group)}))
+           :group (or (:group (:props m)) default-group)
+           :super (:super (:props m))}))
 
 (defn make-activation-group-sort-fn
   [groups default-group]
   (let [default-idx (.indexOf groups default-group)]
     (fn [a b]
       (let [group-a (get-index-of groups (:group a) default-idx)
-            group-b (get-index-of groups (:group b) default-idx)]
+            group-b (get-index-of groups (:group b) default-idx)
+            a-super? (:super a)
+            b-super? (:super b)]
         (cond
+          a-super? true
+          (and a-super? b-super?) (> (:salience a) (:salience b))
           (< group-a group-b) true
           (= group-a group-b) (> (:salience a) (:salience b))
           :else false)))))
