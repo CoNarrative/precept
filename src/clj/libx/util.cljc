@@ -67,17 +67,19 @@
   "Inserts Tuples from outside rule context.
   Accepts {} [{}...] [] [[]...]"
   (let [insertables (map vec->record (mapcat tuplize-into-vec facts))]
+        ;_ (println "Inserting raw" insertables)]
     (cr/insert-all session insertables)))
 
 (defn insert! [facts]
   "Inserts Facts within rule context"
   (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
-    (println "INSERTING!" insertables)
     (cr/insert-all! insertables)))
 
+;; FIXME. Causes loop when inserting single record
 (defn insert-unconditional! [facts]
   "Inserts uncondtinally Facts within rule context"
     (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
+      (println "INSERTING UNCONDTIONAL!" insertables)
       (cr/insert-all-unconditional! insertables)))
 
 (defn retract! [facts]
@@ -158,8 +160,10 @@
             group-b (get-index-of groups (:group b) default-idx)
             a-super? (:super a)
             b-super? (:super b)]
+        ;(println "Sort fn" a b-super?)
         (cond
           a-super? true
+          b-super? false
           (and a-super? b-super?) (> (:salience a) (:salience b))
           (< group-a group-b) true
           (= group-a group-b) (> (:salience a) (:salience b))

@@ -8,26 +8,37 @@
               [clara.rules :as cr]
               [clara.rules.accumulators :as acc]
               [libx.spec.sub :as sub]
-              [libx.tuplerules :refer [def-tuple-session def-tuple-rule def-tuple-query]]
+              [libx.core :refer [fact-id]]
+              [libx.tuplerules :refer [def-tuple-session
+                                       def-tuple-rule
+                                       def-tuple-query]]
               [libx.listeners :as l])
     (:import [libx.util Tuple]))
 
-(def fact-id (atom -1))
 
-(cr/defrule add-fact-id
-  {:group :every :salience 100}
-  [?fact <- :todo/count (= (:t this) -1)]
+;; TODO. Nice to use rules for this but probably faster to do this at creation time
+;; for each fact
+(def-tuple-rule add-fact-id
+  {:super true :salience 100}
+  [?fact <- [_ :all _ -1]]
   =>
-  (println "Doing" (apply ->Tuple (conj (into [] (butlast (vals ?fact)))
-                                     (swap! fact-id inc))))
-  (cr/insert-all-unconditional! (apply ->Tuple (conj (into [] (butlast (vals ?fact)))
-                                                     (swap! fact-id inc)))))
-(def-tuple-rule report-two-facts-equal
-  [?fact1 <- :all]
-  [?fact2 <- :all]
-  [:test (= ?fact1 ?fact2)]
+  (println "Adding id to fact" (inc @fact-id))
+  (retract! ?fact)
+  (cr/insert-unconditional!
+    (apply ->Tuple
+      (conj (into [] (butlast (vals ?fact)))
+        (swap! fact-id inc)))))
+
+(def-tuple-rule report-two-facts-different-tx
+  {:super true :salience 100}
+  [?fact1 <- [?e ?a ?v ?t1]]
+  [?fact2 <- [?e ?a ?v ?t2]]
+  [:test (not= ?t1 ?t2)]
   =>
-  (println "two facts eql" ?fact1))
+  (println "Two facts different tx"
+    ?t1 ?t2
+    ?fact1 ?fact2)
+  (retract! (if (> ?t1 ?t2) ?fact2 ?fact1)))
 
 (def-tuple-rule todo-is-visible-when-filter-is-all
   [[_ :ui/visibility-filter :all]]
@@ -58,7 +69,7 @@
 (def-tuple-rule add-item-handler
   [[_ :add-todo-action ?title]]
   =>
-  ;(println "FOOOOOOOOOOOOO")
+  (println "Inserting :todo/title")
   (insert-unconditional! [(guid) :todo/title ?title]))
 
 (def-tuple-rule add-item-cleanup
@@ -70,13 +81,13 @@
 
 (def-tuple-rule acc-all-visible
   {:group :report}
-  [?count <- (acc/count) :from [?e :todo/title]]
-  ;[:test (> ?count 0)]
+  [?count <- (acc/count) :from [:todo/title]]
+  [:test (> ?count 0)]
   =>
-  ;(println "Report count" ?count)
+  (println "Reporting count" ?count)
   (insert! [-1 :todo/count ?count]))
 
-(def groups [:schema :action :normal :report :cleanup])
+(def groups [:action :calculation :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :normal))
 (def activation-group-sort-fn (util/make-activation-group-sort-fn groups :normal))
 
@@ -87,10 +98,10 @@
 (def tuple-session
   (cr/mk-session 'libx.perf-tuple
    :fact-type-fn (fn [fact]
-                   (println "Fact type fn" fact)
-                   ;(if (= Tuple (type fact)))
-                   :a)
-   :ancestors-fn (fn [type] [:all])
+                   (:a fact))
+   :ancestors-fn (fn [type]
+                   (println "Ancestors fn" type)
+                   [:all])
    :activation-group-fn activation-group-fn
    :activation-group-sort-fn activation-group-sort-fn))
 

@@ -19,7 +19,9 @@
 (defn log [& args]
   (comment (println args)))
 
-(defonce initial-state
+(def fact-id (atom -1))
+
+(def initial-state
   {:subscriptions {}
    :session nil
    :schema nil

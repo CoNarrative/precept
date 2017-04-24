@@ -47,7 +47,11 @@
   (is (= '[:ns/attr (= ?e (:e this)) (= ?v (:v this))]
         (parse-as-tuple '[[?e :ns/attr ?v]])))
   (is (= '[:ns/attr (= ?e (:e this))]
-        (parse-as-tuple '[[?e :ns/attr]]))))
+        (parse-as-tuple '[[?e :ns/attr]])))
+  (is (= '[:ns/attr (= ?tx-id (:t this))]
+        (parse-as-tuple '[[_ :ns/attr _ ?tx-id]])))
+  (is (= '[:ns/attr (= -1 (:t this))]
+        (parse-as-tuple '[[_ :ns/attr _ -1]]))))
 
 (deftest rewrite-lhs-test
   (testing "Ops - :exists, :not, :and, :or"
@@ -155,6 +159,17 @@
           (macroexpand
             '(defrule my-rule
                [?entity <- :my-attribute]
+               =>
+               (println "RHS"))))))
+  (testing "Tx-id field - bind"
+    (is (= (macroexpand
+             '(def-tuple-rule my-rule
+                [[_ :my-attribute _ ?t]]
+                =>
+                (println "RHS")))
+          (macroexpand
+            '(defrule my-rule
+               [:my-attribute (= ?t (:t this))]
                =>
                (println "RHS")))))))
 
