@@ -4,12 +4,12 @@
               [clara.rules.accumulators :as acc]
               [libx.tuplerules :refer [def-tuple-rule def-tuple-query]]
               [libx.macros :refer [binding?
-                                      variable-bindings
-                                      positional-value
-                                      value-expr?
-                                      parse-as-tuple
-                                      parse-with-fact-expression
-                                      rewrite-lhs]]))
+                                   variable-bindings
+                                   positional-value
+                                   value-expr?
+                                   parse-as-tuple
+                                   parse-with-fact-expression
+                                   rewrite-lhs]]))
 
 (deftest tuple-bindings-test
   (let [e1    '[?e :ns/foo 42]
@@ -32,21 +32,21 @@
         e-a   '[?e ?a 42]
         e-a-v '[?e ?a ?v]
         _-a-v '[_ ?a ?v]]
-    (is (= {:v 42} (positional-value e1)))
+    (is (= {:v '(= 42 (:v this))} (positional-value e1)))
     (is (= {} (positional-value e2)))
     (is (= {} (positional-value e3)))
-    (is (= {:v 42} (positional-value e-a)))
+    (is (= {:v '(= 42 (:v this))} (positional-value e-a)))
     (is (= {} (positional-value e-a-v)))
     (is (= {} (positional-value _-a-v)))))
 
 (deftest parse-as-tuple-test
-  (is (= '[:ns/attr [[e a v]] (= ?e e)]
+  (is (= '[:ns/attr (= ?e (:e this))]
         (parse-as-tuple '[[?e :ns/attr _]])))
-  (is (= '[:ns/attr [[e a v]] (= ?e e)]
+  (is (= '[:ns/attr (= ?e (:e this))]
         (parse-as-tuple '[[?e :ns/attr _]])))
-  (is (= '[:ns/attr [[e a v]] (= ?e e) (= ?v v)]
+  (is (= '[:ns/attr (= ?e (:e this)) (= ?v (:v this))]
         (parse-as-tuple '[[?e :ns/attr ?v]])))
-  (is (= '[:ns/attr [[e a v]] (= ?e e)]
+  (is (= '[:ns/attr (= ?e (:e this))]
         (parse-as-tuple '[[?e :ns/attr]]))))
 
 (deftest rewrite-lhs-test
@@ -63,9 +63,9 @@
     (is (= '[[?toggle <- :ui/toggle-complete]]
           (rewrite-lhs '[[?toggle <- :ui/toggle-complete]]))))
   (testing "Fact assignment: Attribute-only with brackets"
-    (is (= '[[?toggle <- [:ui/toggle-complete]]]
+    (is (= '[[?toggle <- :ui/toggle-complete]]
           (rewrite-lhs '[[?toggle <- [:ui/toggle-complete]]])))
-    (is (= '[[:not [:ns/foo [[e a v]] (= 3 v)]]]
+    (is (= '[[:not [:ns/foo (= 3 (:v this))]]]
            (rewrite-lhs '[[:not [_ :ns/foo 3]]]))))
   (testing "Basic rule with exists"
     (is (= (macroexpand
@@ -76,7 +76,7 @@
                 (println "RHS")))
           (macroexpand
             '(defrule my-rule
-               [:todo/title [[e a v]] (= ?e e)]
+               [:todo/title (= ?e (:e this))]
                [:exists [:todo/done]]
                =>
                (println "RHS"))))))
@@ -88,7 +88,7 @@
                 (println "RHS")))
           (macroexpand
             '(defrule my-rule
-               [:todo/title [[e a v]] (= ?e e) (= "Hello" v)]
+               [:todo/title (= ?e (:e this)) (= "Hello" (:v this))]
                =>
                (println "RHS"))))))
   (testing "With accumulator, fact-type only"
@@ -110,7 +110,7 @@
               (println "RHS")))
           (macroexpand
            '(defrule my-rule
-             [:not [:todo/done [[e a v]] (= ?e e)]]
+             [:not [:todo/done (= ?e (:e this))]]
              =>
              (println "RHS"))))))
   (testing "With nested ops"
@@ -132,7 +132,7 @@
                 (println "RHS")))
           (macroexpand
             '(defrule my-rule
-               [?entity <- (acc/all) :from [:all [[e a v]] (= ?e e)]]
+               [?entity <- (acc/all) :from [:all (= ?e (:e this))]]
                =>
                (println "RHS"))))))
   (testing "Fact assignment with brackets around fact-type"
@@ -143,7 +143,7 @@
                 (println "RHS")))
           (macroexpand
             '(defrule my-rule
-               [?entity <- [:my-attribute]]
+               [?entity <- :my-attribute]
                =>
                (println "RHS"))))))
   (testing "Fact assignment no brackets around fact-type"
@@ -165,14 +165,15 @@
                 [[?e :foo ?v]]))
            (macroexpand
              '(defquery my-query []
-                [:foo [[e a v]] (= ?e e) (= ?v v)])))))
+                [:foo (= ?e (:e this)) (= ?v (:v this))])))))
   (testing "Query with args"
     (is (= (macroexpand
              '(def-tuple-query my-query [:?e]
                 [[?e :foo ?v]]))
           (macroexpand
             '(defquery my-query [:?e]
-               [:foo [[e a v]] (= ?e e) (= ?v v)]))))))
+               [:foo (= ?e (:e this)) (= ?v (:v this))]))))))
 
 
 (run-tests)
+

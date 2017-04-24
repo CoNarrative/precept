@@ -12,8 +12,8 @@
                 [[?e :quux]]))
           (macroexpand
             '(defrule my-logical
-               [:baz [[e a v]] (= ?e e)]
-               [:quux [[e a v]] (= ?e e)]
+               [:baz (= ?e (:e this))]
+               [:quux (= ?e (:e this))]
                =>
                (insert! [-1 :foo "bar"]))))))
   (testing "Multiple facts"
@@ -24,8 +24,8 @@
                         [[?e :quux]]))
           expected (macroexpand
                      '(defrule my-logical
-                        [:baz [[e a v]] (= ?e e)]
-                        [:quux [[e a v]] (= ?e e)]
+                        [:baz (= ?e (:e this))]
+                        [:quux (= ?e (:e this))]
                         =>
                         (insert-all! [[-1 :foo "bar"] [-2 :foo "baz"]])))]
       (is (= output expected)))))

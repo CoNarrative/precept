@@ -2,16 +2,13 @@
   (:require-macros [secretary.core :refer [defroute]])
   (:require [goog.events :as events]
             [libx.core :refer [start! then state store]]
-            [libx.util :refer [insert insert-fire]]
-            [clara.rules :as cr]
-            [devtools.core :as devtools]
-            [reagent.core :as reagent]
-            [secretary.core :as secretary]
             [libx.spec.sub :as sub]
             [libx.todomvc.views]
             [libx.todomvc.schema :refer [app-schema]]
-            [libx.todomvc.rules :refer [app-session find-all-facts]]
-            [libx.util :as util])
+            [libx.todomvc.rules :refer [app-session]]
+            [devtools.core :as devtools]
+            [reagent.core :as reagent]
+            [secretary.core :as secretary])
   (:import [goog History]
            [goog.history EventType]))
 
@@ -34,14 +31,13 @@
 (defn mount-components []
   (reagent/render [libx.todomvc.views/todo-app] (.getElementById js/document "app")))
 
-(def facts [[(random-uuid):todo/title "Hi"]])
+(def facts [[(random-uuid) :todo/title "Hi"]])
 
 (defn ^:export main []
     (start! {:session app-session :schema app-schema :facts facts})
     (mount-components))
 
-@store
 
-(cr/query (:session @state) libx.todomvc.rules/find-all-facts)
-
+;; 637 facts = molasses
 (:schema @state)
+(count (keys @store))

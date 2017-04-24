@@ -32,9 +32,9 @@
      [name & sources-and-options]
      (if (compiling-cljs?)
        `(libx.macros/def-tuple-session ~name ~@sources-and-options)
-       `(def ~name (com/mk-session ~`['libx.util
+       `(def ~name (com/mk-session ~`[
                                       ~@sources-and-options
-                                      :fact-type-fn ~'(fn [[e a v]] a)
+                                      :fact-type-fn ~':a
                                       :ancestors-fn ~'(fn [type] [:all])])))))
 
 #?(:clj
@@ -50,6 +50,8 @@
              lhs-detuplified (reverse (into '() (rewrite-lhs lhs)))]
          (printmac "LHS before" lhs)
          (printmac "LHS after" lhs-detuplified)
+         (printmac "Body was" body)
+         (printmac "Properties were" properties)
          (when-not rhs
            (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).")
                     {})))

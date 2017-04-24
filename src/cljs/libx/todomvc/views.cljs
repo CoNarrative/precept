@@ -74,7 +74,7 @@
 
 (defn task-entry []
   (let [{:keys [db/id new-todo/title]} @(subscribe [:new-todo/title])]
-    (prn "New todo title task entry" title)
+    ;(prn "New todo title task entry" title)
     [:header#header
       [:h1 "todos"]
       [input

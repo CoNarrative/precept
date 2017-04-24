@@ -1,12 +1,14 @@
 (ns libx.util-test
     (:require [clojure.test :refer [deftest testing is run-tests]]
+              [libx.util :refer :all]
+              [libx.query :as q]
               [libx.tuplerules :refer [def-tuple-session]]
               [clara.tools.inspect :as inspect]
               [clara.tools.tracing :as trace]
-              [libx.util :refer :all]
               [clojure.spec :as s]
               [clara.rules :refer [query defquery fire-rules] :as cr]
-              [clara.tools.tracing :as trace]))
+              [clara.tools.tracing :as trace])
+    (:import [libx.util Tuple]))
 
 (defn todo-tx [id title done]
   (merge
@@ -33,13 +35,55 @@
       (is (every? #(= (first %) (:db/id entity-map)) entity-vec)
         "Every entry should use the :db/id from the map for its eid"))))
 
-(deftest insertable-test
+(deftest tuplize-test
   (let [m-fact  (todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
         m-facts (into [] (repeat 5 m-fact))]
-    (is (every? is-tuple? (insertable m-fact)))
-    (is (every? is-tuple? (insertable m-facts)))
-    (is (every? is-tuple? (insertable (insertable m-fact))))
-    (is (every? is-tuple? (insertable (insertable m-facts))))))
+    (is (every? is-tuple? (tuplize-into-vec m-fact)))
+    (is (every? is-tuple? (tuplize-into-vec m-facts)))
+    (is (every? is-tuple? (tuplize-into-vec (tuplize-into-vec m-fact))))
+    (is (every? is-tuple? (tuplize-into-vec (tuplize-into-vec m-facts))))))
+
+(deftest vec->record-test
+  (testing "Tuple no nesting"
+    (is (= (vec->record [-1 :attr "foo"])
+           (->Tuple -1 :attr "foo"))))
+  (testing "Tuple with no value in 3rd slot "
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo
+            #"Received tuple without third slot"
+          (vec->record [-1 :attr]))))
+  (testing "Tuple with tuple in third slot"
+    (is (= (vec->record [-1 :attr [-2 :nested "foo"]])
+           (->Tuple -1 :attr (->Tuple -2 :nested "foo"))))))
+
+(deftest record->vec-test
+  (testing "With single record no nesting"
+    (is (= (record->vec (->Tuple -1 :attr "foo"))
+           [-1 :attr "foo"])))
+  (testing "Record with record in third slot"
+    (is (= (record->vec (->Tuple -1 :attr (->Tuple -2 :nested "foo")))
+           [-1 :attr [-2 :nested "foo"]]))))
+
+(deftest insertable-test
+  (testing "Single vector"
+    (is (= (insertable [-1 :attr "foo"]) [(->Tuple -1 :attr "foo")])))
+  (testing "Vector of vectors"
+    (is (= (insertable [[-1 :attr "foo"] [-1 :attr "bar"]])
+          [(->Tuple -1 :attr "foo")
+           (->Tuple -1 :attr "bar")])))
+  (testing "Single record"
+   (is (= (insertable (->Tuple -1 :attr "foo"))
+          [(->Tuple -1 :attr "foo")])))
+  (testing "List of records"
+    (is (= (insertable (list (->Tuple -1 :attr "foo") (->Tuple -1 :attr "bar")))
+           [(->Tuple -1 :attr "foo") (->Tuple -1 :attr "bar")])))
+  (testing "Record inside tuple"
+    (is (= (insertable [-1 :nested-v (->Tuple -1 :attr "foo")])
+           [(->Tuple -1 :nested-v (->Tuple -1 :attr "foo"))])))
+  (testing "Records inside tuples"
+    (is (= (insertable [[-1 :nested-v (->Tuple -1 :attr "foo")]
+                        [-2 :nested-v (->Tuple -2 :attr "foo")]])
+          [(->Tuple -1 :nested-v (->Tuple -1 :attr "foo"))
+           (->Tuple -2 :nested-v (->Tuple -2 :attr "foo"))]))))
 
 (deftest insert-test
   (testing "Insert single tuple"
@@ -50,7 +94,9 @@
                                    (insert fact)
                                    (fire-rules)))]
       (is (= :add-facts (:type (first trace))))
-      (is (= 1 (count (:facts (first trace)))))))
+      (is (= (list (->Tuple -1 :foo "bar")) (:facts (first trace)))
+        "Inserted fact should be a Tuple")))
+
   (testing "Insert tuples"
     (let [session @(def-tuple-session mysess)
           facts [[-1 :foo "bar"]
@@ -61,7 +107,9 @@
                                    (insert facts)
                                    (fire-rules)))]
       (is (= :add-facts (:type (first trace))))
-      (is (= (count facts) (count (:facts (first trace)))))))
+      (is (= (map #(apply ->Tuple %) facts) (:facts (first trace)))
+          "Each inserted fact should be a Tuple")))
+
   (testing "Insert single map"
     (let [session @(def-tuple-session mysess)
           fact  (todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
@@ -70,7 +118,8 @@
                                    (insert fact)
                                    (fire-rules)))]
       (is (= :add-facts (:type (first trace))))
-      (is (= (dec (count (keys fact))) (count (:facts (first trace)))))))
+      (is (= (map #(apply ->Tuple %) (map->tuples fact)) (:facts (first trace)))
+          "Fact map should have been inserted as Tuples")))
 
   (testing "Insert vector of maps"
     (let [session @(def-tuple-session mysess)
@@ -79,17 +128,18 @@
           m-facts (into [] (repeatedly numfacts m-fact))
           trace (trace/get-trace (-> session
                                   (trace/with-tracing)
-                                  (insert-fire m-facts)))]
+                                  (insert m-facts)
+                                  (fire-rules)))]
       (is (= :add-facts (:type (first trace))))
       (is (= (count (:facts (first trace)))
-             (* numfacts (dec (count (keys (m-fact))))))))))
+             (* numfacts (dec (count (keys (m-fact)))))))))
 
-(deftest with-changes-test
-  (let [changes-added (with-changes {:db/id 1 :foo "bar"})
-        [facts changes] (partition-by #(= :db/change (second %)) changes-added)
-        every-change-a-change (every? #(s/valid? :db/change  %) changes)
-        change-facts (map last changes)]
-     (is every-change-a-change)
-     (is (= change-facts facts))))
+  (testing "RHS insert (insert!)"
+    (is (= (list (->Tuple -1 :attr "foo"))
+           (map vec->record (mapcat tuplize-into-vec (list [-1 :attr "foo"])))))
+    (is (= (list (->Tuple -1 :attr "foo") (->Tuple -1 :attr "bar"))
+           (map vec->record (mapcat tuplize-into-vec (list [[-1 :attr "foo"] [-1 :attr "bar"]])))))
+    (is (= (list (->Tuple -1 :nested-v (->Tuple -1 :attr "bar")))
+           (map vec->record (mapcat tuplize-into-vec (list [-1 :nested-v (->Tuple -1 :attr "bar")])))))))
 
 (run-tests)

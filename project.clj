@@ -49,6 +49,7 @@
                       :preloads [devtools.preload]
                       :source-map true
                       :optimizations :none
+                      :cache-analysis false
                       :pretty-print true}}
 
       :test
