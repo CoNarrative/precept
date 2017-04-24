@@ -45,9 +45,16 @@
     (is (not (s/valid? ::lang/tuple-3 '[1 :foo])))
     (is (not (s/valid? ::lang/tuple-3 '["x" :foo])))
     (is (not (s/valid? ::lang/tuple-3 '[?e "foo"]))))
+  (testing "Tuple-4"
+    (is (s/valid? ::lang/tuple-4 '[?e :foo "bar" -1]))
+    (is (s/valid? ::lang/tuple-4 '[?e :foo "bar" ?tx-id]))
+    (is (s/valid? ::lang/tuple-4 '[_ :foo _ ?tx-id]))
+    (is (not (s/valid? ::lang/tuple-4 '[?e :foo "bar" _])))
+    (is (not (s/valid? ::lang/tuple-4 '[_ _ _ ?tx-id]))))
   (testing "Tuple"
-    (is (s/valid? ::lang/tuple ['?e :foo "bar"]))
-    (is (s/valid? ::lang/tuple ['?e :foo]))
+    (is (s/valid? ::lang/tuple '[?e :foo]))
+    (is (s/valid? ::lang/tuple '[?e :foo "bar"]))
+    (is (s/valid? ::lang/tuple '[?e :foo "bar" -1]))
     (is (not (s/valid? ::lang/tuple "foo")))
     (is (not (s/valid? ::lang/tuple '(?e "foo" bar))))))
 ;(gen/generate (s/gen ::lang/variable-binding))

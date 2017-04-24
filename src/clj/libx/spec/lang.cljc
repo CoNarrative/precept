@@ -46,7 +46,9 @@
     (s/and some? #(not (s/valid? ::s-expr %)))
     keyword?
     (s/and some? #(not (s/valid? ::s-expr %)))
-    (s/and some? number?)))
+    (s/and some?
+      (s/or :match-tx-id number?
+            :bind-to-tx-id ::variable-binding))))
 
 (s/def ::tuple
   (s/or :tuple-2 ::tuple-2
