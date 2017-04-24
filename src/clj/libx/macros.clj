@@ -47,7 +47,8 @@
     (filter (comp binding? second)
       {:e (first tuple)
        :a (second tuple)
-       :v (last tuple)})))
+       :v (nth tuple 2 nil)
+       :t (nth tuple 3 nil)})))
 
 (defn sexprs-with-bindings [tuple]
   (into {}
@@ -56,10 +57,15 @@
        :v (last tuple)})))
 
 (defn positional-value [tuple]
- (let [v-position (first (drop 2 tuple))]
-  (if (not (value-expr? v-position))
-    {}
-    {:v (list '= v-position '(:v this))})))
+ (let [match-v (first (drop 2 tuple))
+       match-tx (nth tuple 3 nil)]
+   (reduce
+     (fn [acc [k v]]
+       (if (value-expr? v)
+         (assoc acc k (list '= v `(~k ~'this)))
+         acc))
+     {}
+     {:v match-v :t match-tx})))
 
 (defn fact-binding-with-type-only [expr]
   (let [fact-binding (take 2 expr)

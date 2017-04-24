@@ -16,7 +16,7 @@
 
 (cr/defrule add-fact-id
   {:group :every :salience 100}
-  [?fact <- :todo/count (= (:tx-id this) -1)]
+  [?fact <- :todo/count (= (:t this) -1)]
   =>
   (println "Doing" (apply ->Tuple (conj (into [] (butlast (vals ?fact)))
                                      (swap! fact-id inc))))
