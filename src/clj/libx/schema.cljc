@@ -1,5 +1,6 @@
 (ns libx.schema
   (:require [libx.spec.sub :as sub]
+            [libx.query :as q]
             [libx.util :refer [guid]]))
 
 (defn by-ident [schema]
@@ -25,6 +26,29 @@
   (and (schema-attr? by-ident attr)
        (= :db.cardinality/many (get-in by-ident [attr :db/cardinality]))))
 
+(defn unique-identity-attrs [schema tuples]
+  (reduce (fn [acc cur]
+            (if (unique-attr? schema (second cur))
+              (conj acc (second cur))
+              acc))
+    [] tuples))
+
+(defn unique-value-attrs [schema tuples]
+  (reduce (fn [acc cur]
+            (if (unique-value? schema (second cur))
+              (conj acc (second cur))
+              acc))
+    [] tuples))
+
+(defn unique-identity-facts [session unique-attrs]
+  (mapcat #(q/facts-where session %) unique-attrs))
+
+(defn unique-value-facts [session tups unique-attrs]
+  (let [unique-tups (filter #((set unique-attrs) (second %)) tups)
+        avs (map rest unique-tups)]
+    (mapcat (fn [[a v]] (q/facts-where session a v))
+      avs)))
+
 (defn attribute [ident type & {:as opts}]
   (merge {:db/id        (guid)
           :db/ident     ident
@@ -46,74 +70,3 @@
    (attribute ::sub/response
      :db.type/any
      :db/unique :db.unique/value)])
-
-
-
-;
-;TODO. Add data readers stub
-;(def x)
-;[[ ;; stories
-;  {:db/id #db/id[:db.part/db]
-;   :db/ident :story/title
-;   :db/valueType :db.type/string
-;   :db/cardinality :db.cardinality/one
-;   :db/fulltext true
-;   :db/index true
-;   :db.install/_attribute :db.part/db}
-;  {:db/id #db/id[:db.part/db]
-;   :db/ident :story/url
-;   :db/valueType :db.type/string
-;   :db/cardinality :db.cardinality/one
-;   :db/unique :db.unique/identity
-;   :db.install/_attribute :db.part/db}
-;  {:db/id #db/id[:db.part/db]
-;   :db/ident :story/slug
-;   :db/valueType :db.type/string
-;   :db/cardinality :db.cardinality/one
-;   :db.install/_attribute :db.part/db}]
-;
-; ;; comments
-; [{:db/id #db/id[:db.part/db]
-;   :db/ident :comments
-;   :db/valueType :db.type/ref
-;   :db/cardinality :db.cardinality/many
-;   :db/isComponent true
-;   :db.install/_attribute :db.part/db}
-;  {:db/id #db/id[:db.part/db]
-;   :db/ident :comment/body
-;   :db/valueType :db.type/string
-;   :db/cardinality :db.cardinality/one
-;   :db.install/_attribute :db.part/db}
-;  {:db/id #db/id[:db.part/db]
-;   :db/ident :comment/author
-;   :db/valueType :db.type/ref
-;   :db/cardinality :db.cardinality/one
-;   :db.install/_attribute :db.part/db}]
-;
-; ;; users
-; [{:db/id #db/id[:db.part/db]
-;   :db/ident :user/firstName
-;   :db/index true
-;   :db/valueType :db.type/string
-;   :db/cardinality :db.cardinality/one
-;   :db.install/_attribute :db.part/db}
-;  {:db/id #db/id[:db.part/db]
-;   :db/ident :user/lastName
-;   :db/index true
-;   :db/valueType :db.type/string
-;   :db/cardinality :db.cardinality/one
-;   :db.install/_attribute :db.part/db}
-;  {:db/id #db/id[:db.part/db]
-;   :db/ident :user/email
-;   :db/index true
-;   :db/unique :db.unique/identity
-;   :db/valueType :db.type/string
-;   :db/cardinality :db.cardinality/one
-;   :db.install/_attribute :db.part/db}
-;  {:db/id #db/id[:db.part/db]
-;   :db/ident :user/upVotes
-;   :db/valueType :db.type/ref
-;   :db/cardinality :db.cardinality/many
-;   :db.install/_attribute :db.part/db}]]
-;
-;(defn validate [schema])

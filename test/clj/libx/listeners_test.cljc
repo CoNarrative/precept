@@ -16,7 +16,7 @@
 (def-tuple-rule retract-a-fact-that-caused-a-logical-insertion
   [[_ :attr/logical-insert ?f]]
   =>
-  (println "Found " ?f " Retracting its condition for existing")
+  ;(println "Found " ?f " Retracting its condition for existing")
   (util/retract! ?f))
 
 (def-tuple-rule accumulate-count
@@ -107,9 +107,6 @@
                   (fire-rules))
         ops-2 (l/vec-ops state-2)
         ent-2 (q/entityv state-2 123)]
-
-    (println "ent 0 " ent-0)
-    (println "ops 0 " ops-0)
 
     (testing "session-0"
       (is (= (into (set background-facts) ent-0)

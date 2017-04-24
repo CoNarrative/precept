@@ -4,12 +4,9 @@
                  [clara.macros :as cm]
                  [clara.rules.dsl :as dsl]
                  [clara.rules.compiler :as com]
-                 [clara.rules :as cr :refer [mk-session]])
+                 [clara.rules :as cr])
        :cljs
        (:require-macros libx.tuplerules)))
-
-(defn printmac [x & args]
-  (comment (println x args)))
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj
@@ -48,10 +45,6 @@
              definition      (if properties (rest body) body)
              {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
              lhs-detuplified (reverse (into '() (rewrite-lhs lhs)))]
-         (printmac "LHS before" lhs)
-         (printmac "LHS after" lhs-detuplified)
-         (printmac "Body was" body)
-         (printmac "Properties were" properties)
          (when-not rhs
            (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).")
                     {})))

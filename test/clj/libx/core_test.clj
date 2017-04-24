@@ -6,8 +6,8 @@
               [libx.tuple-rule-test]
               [libx.query-test]
               [libx.util-test]
-              [libx.listeners-test]
-              [libx.schema-test]))
+              [libx.listeners-test]))
+              ;[libx.schema-test]))
 
 (defn run []
   (for [ns ['libx.lang-test
@@ -16,8 +16,8 @@
             'libx.tuple-rule-test
             'libx.query-test
             'libx.util-test
-            'libx.listeners-test
-            'libx.schema-test]]
+            'libx.listeners-test]]
+            ;'libx.schema-test]]
     (dosync (-> ns (in-ns) (run-tests)))))
 
 (run)

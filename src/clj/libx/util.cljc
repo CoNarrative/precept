@@ -84,10 +84,27 @@
   (let [insertables (map vec->record (mapcat tuplize-into-vec facts))]
     (apply (partial cr/retract session) insertables)))
 
-(defn replace! [session this that]
-  (-> session
-    (retract this)
-    (insert that)))
+;;TODO. 1. Decide whether we require a schema in defsession
+;;      2. Deprecate pending schema validation performant in rules
+;;      3. If more performant, lookup facts to retract from the store
+;(defn schema-insert
+;  "Inserts each fact according to conditions defined in schema.
+;  Currently supports: db.unique/identity, db.unique/value"
+;  [session schema facts]
+;  (let [facts-v (if (coll? (first facts)) facts (vector facts))
+;        tuples (mapcat tuplize-into-vec facts-v)
+;        unique-attrs (schema/unique-identity-attrs schema tuples)
+;        unique-values (schema/unique-value-attrs schema tuples)
+;        unique-identity-facts (schema/unique-identity-facts session unique-attrs)
+;        unique-value-facts (schema/unique-value-facts session tuples unique-values)
+;        unique-facts (into unique-identity-facts unique-value-facts)
+;        next-session (if (empty? unique-facts)
+;                       (-> session
+;                         (insert tuples))
+;                       (-> session
+;                         (retract unique-facts)
+;                         (insert tuples)))]
+;    next-session))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn clara-tups->maps

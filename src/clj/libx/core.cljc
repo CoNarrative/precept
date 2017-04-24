@@ -129,59 +129,6 @@
 (def removals-out (apply-removals-to-store changes-out))
 (apply-additions-to-store removals-out)
 
-(defn unique-identity-attrs [schema tuples]
-  (reduce (fn [acc cur]
-           (if (schema/unique-attr? schema (second cur))
-             (conj acc (second cur))
-             acc))
-    [] tuples))
-
-(defn unique-value-attrs [schema tuples]
-  (reduce (fn [acc cur]
-            (if (schema/unique-value? schema (second cur))
-              (conj acc (second cur))
-              acc))
-    [] tuples))
-
-(defn unique-value-facts [session tups unique-attrs]
-  (let [unique-tups (filter #((set unique-attrs) (second %)) tups)
-        avs (map rest unique-tups)]
-    (mapcat (fn [[a v]] (q/facts-where session a v))
-      avs)))
-
-;; 1. Decide whether we require a schema in defsession
-;; If we do...
-;; 2. Check schema is not nil in state
-;; 3. For each attr in facts
-;;    * if unique,
-;;        remove all facts with unique attr and insert new fact
-;;        else insert new fact
-;;TODO. Rename/move
-(defn schema-insert
-  "Inserts each fact according to conditions defined in schema.
-  Currently supports: db.unique/identity, db.unique/value"
-  [session facts]
-  (let [schema (:schema @state)
-        facts-v (if (coll? (first facts)) facts (vector facts))
-        tuples (mapcat util/tuplize-into-vec facts-v)
-        unique-attrs (unique-identity-attrs schema tuples)
-        unique-values (unique-value-attrs schema tuples)
-        existing-unique-identity-facts (mapcat #(q/facts-where session %)
-                                         unique-attrs)
-        existing-unique-value-facts (unique-value-facts session tuples unique-values)
-        existing-unique-facts (into existing-unique-identity-facts existing-unique-value-facts)
-        _ (log "Schema-insert unique values " unique-values)
-        _ (log "Schema-insert unique value facts " existing-unique-value-facts)
-        _ (log "Schema-insert removing " existing-unique-facts)
-        _ (log "Schema-insert inserting " tuples)
-        next-session (if (empty? existing-unique-facts)
-                       (-> session
-                         (util/insert tuples))
-                       (-> session
-                         (util/retract existing-unique-facts)
-                         (util/insert tuples)))]
-    next-session))
-
 (defn insert-action [facts]
   (fn [current-session]
     (util/insert current-session facts)))
