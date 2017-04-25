@@ -43,7 +43,6 @@
              v
              tx-id)))
 
-
 (defn tuplize-into-vec
   "Returns [[]...].
   Arg may be {} [{}...] [] [[]...]"
@@ -54,67 +53,49 @@
     (vector? (first x)) x
     :else (vector x)))
 
-(defn insertable [x]
+(defn insertable
   "Arguments can be any mixture of vectors and records
   Ensures [], [[]...], Tuple, '(Tuple ...) conform to Tuple record instances."
+  [x]
   (cond
     (record? x) (vector x)
     (and (list? x) (record? (first x))) (into [] x)
     (and (vector? x) (vector? (first x))) (map vec->record x)
     (vector? x) (vector (vec->record x))))
 
-(defn insert [session & facts]
+(defn insert
   "Inserts Tuples from outside rule context.
   Accepts {} [{}...] [] [[]...]"
+  [session & facts]
   (let [insertables (map vec->record (mapcat tuplize-into-vec facts))]
-        ;_ (println "Inserting raw" insertables)]
     (cr/insert-all session insertables)))
 
-(defn insert! [facts]
+(defn insert!
   "Inserts Facts within rule context"
+  [facts]
   (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
     (cr/insert-all! insertables)))
 
 ;; FIXME. Causes loop when inserting single record
-(defn insert-unconditional! [facts]
+(defn insert-unconditional!
   "Inserts uncondtinally Facts within rule context"
-    (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
-      (println "INSERTING UNCONDTIONAL!" insertables)
-      (cr/insert-all-unconditional! insertables)))
+  [facts]
+  (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
+    (cr/insert-all-unconditional! insertables)))
 
-(defn retract! [facts]
+(defn retract!
   "Wrapper around Clara's `retract!`.
   To be used within RHS of rule only. Converts all input to Facts"
+  [facts]
   (let [insertables (insertable facts)]
     (doseq [to-retract insertables]
       (cr/retract! to-retract))))
 
-(defn retract [session & facts]
+(defn retract
   "Retracts either: Tuple, {} [{}...] [] [[]..]"
+  [session & facts]
   (let [insertables (map vec->record (mapcat tuplize-into-vec facts))]
     (apply (partial cr/retract session) insertables)))
-
-;;TODO. 1. Decide whether we require a schema in defsession
-;;      2. Deprecate pending schema validation performant in rules
-;;      3. If more performant, lookup facts to retract from the store
-;(defn schema-insert
-;  "Inserts each fact according to conditions defined in schema.
-;  Currently supports: db.unique/identity, db.unique/value"
-;  [session schema facts]
-;  (let [facts-v (if (coll? (first facts)) facts (vector facts))
-;        tuples (mapcat tuplize-into-vec facts-v)
-;        unique-attrs (schema/unique-identity-attrs schema tuples)
-;        unique-values (schema/unique-value-attrs schema tuples)
-;        unique-identity-facts (schema/unique-identity-facts session unique-attrs)
-;        unique-value-facts (schema/unique-value-facts session tuples unique-values)
-;        unique-facts (into unique-identity-facts unique-value-facts)
-;        next-session (if (empty? unique-facts)
-;                       (-> session
-;                         (insert tuples))
-;                       (-> session
-;                         (retract unique-facts)
-;                         (insert tuples)))]
-;    next-session))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn clara-tups->maps
@@ -142,12 +123,13 @@
   (let [idx (.indexOf coll x)]
     (if (get coll idx) idx not-found-idx)))
 
-(defn make-activation-group-fn [default-group]
+(defn make-activation-group-fn
   "Reads from optional third argument to rule.
   `super` boolean
   `group` keyword
   `salience` number
   Rules marked super will be present in every agenda phase."
+  [default-group]
   (fn [m] {:salience (or (:salience (:props m)) 0)
            :group (or (:group (:props m)) default-group)
            :super (:super (:props m))}))

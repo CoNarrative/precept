@@ -16,7 +16,7 @@
 
 #?(:cljs (enable-console-print!))
 
-(defn log [& args]
+(defn trace [& args]
   (comment (println args)))
 
 (def fact-id (atom -1))
@@ -50,7 +50,7 @@
     (swap! state update :session-history conj session)))
 
 (defn swap-session! [next]
-  (log "Swapping session!")
+  (trace "Swapping session!")
   (swap! state assoc :session next))
 
 (defn dispatch! [f] (put! action-ch f))
@@ -58,7 +58,7 @@
 (defn transactor []
   (go-loop []
    (let [action (<! action-ch)]
-        (do (log " ---> Kicking off!" (hash action))
+        (do (trace " ---> Kicking off!" (hash action))
             (>! session->store action)
             (<! done-ch)
             (recur)))))
@@ -82,43 +82,47 @@
       (let [session (<! in)
             ops (l/vec-ops session)
             next-session (l/replace-listener session)
-            _ (log "Ops!" ops)]
+            _ (trace "Ops!" ops)]
         (swap-session! next-session)
         (>! out ops)
         (recur)))
     out))
 
-(defn add [a change]
+(defn add
   "Merges change into atom"
-  (log "Adding" (:db/id change) (l/change->av-map change))
+  [a change]
+  (trace "Adding" (:db/id change) (l/change->av-map change))
   (swap! a update (:db/id change) (fn [ent] (merge ent (l/change->av-map change)))))
 
-(defn del [a change]
+(defn del
   "Removes keys in change from atom"
-  (log "Removing in path" (:db/id change) (l/change->attr change))
+  [a change]
+  (trace "Removing in path" (:db/id change) (l/change->attr change))
   (let [id (:db/id change)
         attr (l/change->attr change)]
     (swap! a util/dissoc-in [id attr])))
 
-(defn apply-removals-to-store [in]
+(defn apply-removals-to-store
   "Reads ops from in channel and applies removals to store"
+  [in]
   (let [out (chan)]
     (go-loop []
       (let [ops (<! in)
             removals (l/embed-op (:removed ops) :remove)
-            _ (log "Removals" removals)]
+            _ (trace "Removals" removals)]
        (doseq [removal removals]
           (del store removal))
        (>! out ops)
        (recur)))
    out))
 
-(defn apply-additions-to-store [in]
+(defn apply-additions-to-store
   "Reads ops from channel and applies additions to store"
+  [in]
   (go-loop []
     (let [changes (<! in)
           additions (l/embed-op (:added changes) :add)
-          _ (log "Additions!" additions)]
+          _ (trace "Additions!" additions)]
       (doseq [addition additions]
         (add store addition))
       (>! done-ch :done)
@@ -145,7 +149,6 @@
      :cljs (r/cursor a path)))
 
 (defn register
-  [req]
   "Should only be called by `subscribe`. Will register a new subscription!
   Generates a subscription id used to track the req and its response throughout the system.
   Req is a vector of name and params (currently we just support a name).
@@ -153,6 +156,7 @@
   the request by matching on the request name and inserting a response in the RHS.
   Writes subscription to state -> subscriptions. The lens is a reagent cursor that
   observes changes to the subscription's response that is written to the store."
+  [req]
   (let [id (util/guid)
         name (first req)
         lens (lens store [id ::sub/response])]
@@ -173,7 +177,7 @@
    (let [;_ (validate ::sub/request req) ;;TODO. move to :pre
          name (first req)
          existing (find-sub-by-name name)
-         _ (log "New sub name / existing if any" name existing)]
+         _ (trace "New sub name / existing if any" name existing)]
      (or (:lens existing) (register req)))))
 
 (defn then
@@ -182,7 +186,7 @@
      :add (dispatch! (insert-action facts))
      :remove (dispatch! (retract-action facts))
      :remove-entity (dispatch! (insert-action [(util/guid) :remove-entity-request facts]))
-     (log "Unsupported op keyword " op))
+     (trace "Unsupported op keyword " op))
    nil)
   ([facts] (then :add facts)))
 

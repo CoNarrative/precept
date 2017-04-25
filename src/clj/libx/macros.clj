@@ -72,9 +72,10 @@
         fact-type (if (keyword? (last expr)) (last expr) (first (last expr)))]
     `(~@fact-binding ~fact-type)))
 
-(defn parse-as-tuple [expr]
+(defn parse-as-tuple
   "Parses rule expression as if it contains just a tuple.
   Does not take tuple as input! [ [] ], not []"
+  [expr]
   (let [tuple                          (first expr)
         bindings                       (variable-bindings tuple)
         bindings-and-constraint-values (merge bindings
@@ -96,8 +97,9 @@
       (vector attribute)
       bindings-and-constraint-values)))
 
-(defn parse-with-fact-expression [expr]
+(defn parse-with-fact-expression
   "Returns Clara DSL for `?binding <- [tuple]`"
+  [expr]
   (let [fact-expression (take 2 expr)
         expression      (drop 2 expr)]
     (conj (lazy-seq (parse-as-tuple expression))
@@ -119,9 +121,10 @@
           (first expression)
           (parse-as-tuple expression)))))
 
-(defn parse-with-op [expr]
+(defn parse-with-op
   "Returns Clara DSL for `[:op x]`, [:op [:op x] where x is
   :keyword, [:keyword] or [tuple]"
+  [expr]
   (let [outer-op (dsl/ops (first expr))
         inner-op (dsl/ops (first (second expr)))]
     (if inner-op
@@ -133,8 +136,9 @@
                          (second expr)
                          (parse-as-tuple (vector (second expr))))))))
 
-(defn rewrite-lhs [exprs]
+(defn rewrite-lhs
   "Returns Clara DSL"
+  [exprs]
   (map (fn [expr]
           (let [leftmost        (first expr)
                 op              (keyword? (dsl/ops leftmost))
@@ -179,9 +183,9 @@
         passthrough (filter #(not (nil? %)) (list doc binding))]
     `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
 
-(defn insert-each-logical [facts]
+(defn insert-each-logical
   "Returns sequence of facts with insert! if seq of one or insert-all! if multiple"
-  (println "facts" facts)
+  [facts]
   (if (= (count facts) 1)
     `(do (~'insert! ~(first facts)))
     `(do (~'insert-all! ~facts))))
