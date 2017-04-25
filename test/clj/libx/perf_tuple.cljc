@@ -115,11 +115,12 @@
 (def activation-group-sort-fn (util/make-activation-group-sort-fn groups :normal))
 (def hierarchy (util/schema->hierarchy test-schema))
 (def ancestors-fn (util/make-ancestors-fn hierarchy))
-(ancestors-fn :add-todo-action)
+
 ;(def-tuple-session tuple-session
 ;  'libx.perf-tuple
 ;  :activation-group-fn activation-group-fn
 ;  :activation-group-sort-fn activation-group-sort-fn)
+
 (def tuple-session
   (cr/mk-session 'libx.perf-tuple
    :fact-type-fn (fn [fact] (:a fact))
