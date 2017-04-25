@@ -87,7 +87,7 @@
   [?fact2 <- [?e ?a _ ?t2]]
   [:test (> ?t1 ?t2)]
   =>
-  (println (str ?t1 " is greater than " ?t2))
+  (println (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
   (retract! ?fact2))
 
 (def-tuple-rule acc-all-visible
@@ -108,24 +108,24 @@
   {:group :report}
   [?fact <- [_ :action]]
   =>
-  (println "Found an action" ?fact))
+  (println "REPORTING action" ?fact))
 
-(def groups [:action :calculation :report :cleanup])
-(def activation-group-fn (util/make-activation-group-fn :normal))
-(def activation-group-sort-fn (util/make-activation-group-sort-fn groups :normal))
+(def groups [:action :calc :report :cleanup])
+(def activation-group-fn (util/make-activation-group-fn :calc))
+(def activation-group-sort-fn (util/make-activation-group-sort-fn groups :calc))
 (def hierarchy (util/schema->hierarchy test-schema))
 (def ancestors-fn (util/make-ancestors-fn hierarchy))
 
-;(def-tuple-session tuple-session
-;  'libx.perf-tuple
-;  :activation-group-fn activation-group-fn
-;  :activation-group-sort-fn activation-group-sort-fn)
+(def-tuple-session tuple-session
+  'libx.perf-tuple
+  :activation-group-fn activation-group-fn
+  :activation-group-sort-fn activation-group-sort-fn)
 
 (def tuple-session
   (cr/mk-session 'libx.perf-tuple
-   :fact-type-fn (fn [fact] (:a fact))
+   :fact-type-fn :a
    :ancestors-fn ancestors-fn
-   :activation-group-fn (fn [x] #_(println "Activation group fn" x) (activation-group-fn x))
+   :activation-group-fn activation-group-fn
    :activation-group-sort-fn activation-group-sort-fn))
 
 (defn n-facts-session [n]
