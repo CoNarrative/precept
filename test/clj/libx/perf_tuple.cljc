@@ -5,6 +5,8 @@
                                  insert-unconditional!
                                  ->Tuple
                                  retract!] :as util]
+              [libx.schema-fixture :refer [test-schema]]
+              [libx.schema :as schema]
               [clara.rules :as cr]
               [clara.rules.accumulators :as acc]
               [libx.spec.sub :as sub]
@@ -12,14 +14,14 @@
               [libx.tuplerules :refer [def-tuple-session
                                        def-tuple-rule
                                        def-tuple-query]]
-              [libx.listeners :as l])
+              [libx.listeners :as l]
+              [libx.schema :as schema])
     (:import [libx.util Tuple]))
 
 
 ;; TODO. Nice to use rules for this but probably faster to do this at creation time
 ;; for each fact
-(def-tuple-rule add-fact-id
-  {:super true :salience 100}
+(def-tuple-rule add-fact-id {:super true :salience 100}
   [?fact <- [_ :all _ -1]]
   =>
   (println "Adding id to fact" (inc @fact-id))
@@ -29,8 +31,7 @@
       (conj (into [] (butlast (vals ?fact)))
         (swap! fact-id inc)))))
 
-(def-tuple-rule report-two-facts-different-tx
-  {:super true :salience 100}
+(def-tuple-rule report-two-facts-different-tx {:super true :salience 100}
   [?fact1 <- [?e ?a ?v ?t1]]
   [?fact2 <- [?e ?a ?v ?t2]]
   [:test (not= ?t1 ?t2)]
@@ -79,6 +80,11 @@
   (println "Action cleanup")
   (retract! ?action))
 
+(def-tuple-rule print-a-schema-fact
+  [?fact <- :unique-identity]
+  =>
+  (println "Unique identity fact " ?fact))
+
 (def-tuple-rule acc-all-visible
   {:group :report}
   [?count <- (acc/count) :from [:todo/title]]
@@ -90,7 +96,9 @@
 (def groups [:action :calculation :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :normal))
 (def activation-group-sort-fn (util/make-activation-group-sort-fn groups :normal))
-
+(def hierarchy (util/make-ancestors-fn test-schema))
+(:ancestors hierarchy)
+;(ancestors-fn :todo/title)
 ;(def-tuple-session tuple-session
 ;  'libx.perf-tuple
 ;  :activation-group-fn activation-group-fn
@@ -99,11 +107,13 @@
   (cr/mk-session 'libx.perf-tuple
    :fact-type-fn (fn [fact]
                    (:a fact))
-   :ancestors-fn (fn [type]
-                   (println "Ancestors fn" type)
-                   [:all])
+   :ancestors-fn (fn [a]
+                   (println "Ancestors fn" a)
+                   (or ((:ancestors hierarchy) a) [:all]))
    :activation-group-fn activation-group-fn
    :activation-group-sort-fn activation-group-sort-fn))
+
+;(ancestors-fn :done-count)
 
 (defn n-facts-session [n]
   (-> tuple-session
@@ -119,6 +129,7 @@
           (-> @state
             ;(l/replace-listener)
             (insert [(guid) :add-todo-action "hey"])
+            (insert [(guid) :done-count 7])
             (cr/fire-rules)))))))
 
 (perf-loop 1#_00)

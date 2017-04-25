@@ -160,7 +160,6 @@
             group-b (get-index-of groups (:group b) default-idx)
             a-super? (:super a)
             b-super? (:super b)]
-        ;(println "Sort fn" a b-super?)
         (cond
           a-super? true
           b-super? false
@@ -168,6 +167,22 @@
           (< group-a group-b) true
           (= group-a group-b) (> (:salience a) (:salience b))
           :else false)))))
+
+(defn make-ancestors-fn [schema]
+  (let [h (atom (make-hierarchy))
+        unique (group-by :db/unique schema)
+        cardinality (group-by :db/cardinality schema)
+        unique-attrs (map :db/ident (:db.unique/identity unique))
+        unique-vals (map :db/ident (:db.unique/value unique))
+        one-to-manys (map :db/ident (:db.cardinality/many cardinality))]
+    (doseq [x one-to-manys] (swap! h derive x :one-to-many))
+    (doseq [x unique-vals] (swap! h derive x :unique-value))
+    (doseq [x unique-attrs] (swap! h derive x :unique-identity))
+    (swap! h derive :one-to-many :all)
+    (swap! h derive :unique-value :all)
+    (swap! h derive :unique-identity :all)
+    @h))
+    ;(fn [a] (or (ancestors @h a) :all))))
 
 ;; From clojure.core.incubator
 (defn dissoc-in
