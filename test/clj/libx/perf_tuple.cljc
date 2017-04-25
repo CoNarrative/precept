@@ -80,7 +80,7 @@
   (println "Action cleanup")
   (retract! ?action))
 
-(def-tuple-rule print-a-schema-fact
+(def-tuple-rule remove-older-unique-identity-facts
   {:super true :salience 100}
   [[?e :unique-identity]]
   [[?e ?a _ ?t1]]
@@ -104,22 +104,26 @@
   =>
   (println "REPORTING Unique identity fact " ?fact))
 
+(def-tuple-rule report-actions
+  {:group :report}
+  [?fact <- [_ :action]]
+  =>
+  (println "Found an action" ?fact))
+
 (def groups [:action :calculation :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :normal))
 (def activation-group-sort-fn (util/make-activation-group-sort-fn groups :normal))
-(def hierarchy (util/make-ancestors-fn test-schema))
-
+(def hierarchy (util/schema->hierarchy test-schema))
+(def ancestors-fn (util/make-ancestors-fn hierarchy))
+(ancestors-fn :add-todo-action)
 ;(def-tuple-session tuple-session
 ;  'libx.perf-tuple
 ;  :activation-group-fn activation-group-fn
 ;  :activation-group-sort-fn activation-group-sort-fn)
 (def tuple-session
   (cr/mk-session 'libx.perf-tuple
-   :fact-type-fn (fn [fact]
-                   (:a fact))
-   :ancestors-fn (fn [a]
-                   (println "Ancestors fn" a)
-                   (or ((:ancestors hierarchy) a) [:all]))
+   :fact-type-fn (fn [fact] (:a fact))
+   :ancestors-fn ancestors-fn
    :activation-group-fn activation-group-fn
    :activation-group-sort-fn activation-group-sort-fn))
 

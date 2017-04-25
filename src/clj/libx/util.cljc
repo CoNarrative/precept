@@ -168,7 +168,7 @@
           (= group-a group-b) (> (:salience a) (:salience b))
           :else false)))))
 
-(defn make-ancestors-fn [schema]
+(defn schema->hierarchy [schema]
   (let [h (atom (make-hierarchy))
         unique (group-by :db/unique schema)
         cardinality (group-by :db/cardinality schema)
@@ -182,7 +182,21 @@
     (swap! h derive :unique-value :all)
     (swap! h derive :unique-identity :all)
     @h))
-    ;(fn [a] (or (ancestors @h a) :all))))
+
+(defn action? [a]
+  (> (.indexOf (name a) "-action") -1))
+
+(defn make-ancestors-fn
+  ([hierarchy]
+   #(or ((:ancestors hierarchy) %)
+      (cond
+        (action? %) #{:all :action}
+        :else #{:all})))
+  ([hierarchy root-fact-type]
+   #(or ((:ancestors hierarchy) %)
+      (cond
+        (action? %) #{root-fact-type :action}
+        :else #{root-fact-type}))))
 
 ;; From clojure.core.incubator
 (defn dissoc-in
