@@ -171,6 +171,30 @@
             '(defrule my-rule
                [:my-attribute (= ?t (:t this))]
                =>
+               (println "RHS"))))))
+  (testing "Tx-id field - bind the fact"
+    (is (= (macroexpand
+             '(def-tuple-rule my-rule
+                [?fact <- [_ :my-attribute _ ?t]]
+                =>
+                (println "RHS")))
+          (macroexpand
+            '(defrule my-rule
+               [?fact <- :my-attribute (= ?t (:t this))]
+               =>
+               (println "RHS"))))))
+  (testing "With :test op"
+    (is (= (macroexpand
+             '(def-tuple-rule my-rule
+                [?fact <- [_ :my-attribute _ ?t]]
+                [:test (> ?t ?fact)]
+                =>
+                (println "RHS")))
+          (macroexpand
+            '(defrule my-rule
+               [?fact <- :my-attribute (= ?t (:t this))]
+               [:test (> ?t ?fact)]
+               =>
                (println "RHS")))))))
 
 (deftest def-tuple-query-test

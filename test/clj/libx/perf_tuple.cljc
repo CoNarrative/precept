@@ -81,9 +81,14 @@
   (retract! ?action))
 
 (def-tuple-rule print-a-schema-fact
-  [?fact <- :unique-identity]
+  {:super true :salience 100}
+  [[?e :unique-identity]]
+  [[?e ?a _ ?t1]]
+  [?fact2 <- [?e ?a _ ?t2]]
+  [:test (> ?t1 ?t2)]
   =>
-  (println "Unique identity fact " ?fact))
+  (println (str ?t1 " is greater than " ?t2))
+  (retract! ?fact2))
 
 (def-tuple-rule acc-all-visible
   {:group :report}
@@ -93,12 +98,17 @@
   (println "Reporting count" ?count)
   (insert! [-1 :todo/count ?count]))
 
+(def-tuple-rule report-unique-identity-facts
+  {:group :report}
+  [?fact <- [_ :unique-identity]]
+  =>
+  (println "REPORTING Unique identity fact " ?fact))
+
 (def groups [:action :calculation :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :normal))
 (def activation-group-sort-fn (util/make-activation-group-sort-fn groups :normal))
 (def hierarchy (util/make-ancestors-fn test-schema))
-(:ancestors hierarchy)
-;(ancestors-fn :todo/title)
+
 ;(def-tuple-session tuple-session
 ;  'libx.perf-tuple
 ;  :activation-group-fn activation-group-fn
@@ -112,8 +122,6 @@
                    (or ((:ancestors hierarchy) a) [:all]))
    :activation-group-fn activation-group-fn
    :activation-group-sort-fn activation-group-sort-fn))
-
-;(ancestors-fn :done-count)
 
 (defn n-facts-session [n]
   (-> tuple-session
@@ -129,7 +137,8 @@
           (-> @state
             ;(l/replace-listener)
             (insert [(guid) :add-todo-action "hey"])
-            (insert [(guid) :done-count 7])
+            (insert [1 :done-count 6])
+            (insert [1 :done-count 7])
             (cr/fire-rules)))))))
 
 (perf-loop 1#_00)
