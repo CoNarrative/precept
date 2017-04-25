@@ -82,7 +82,7 @@
 
 (def-tuple-rule remove-older-unique-identity-facts
   {:super true :salience 100}
-  [[?e :unique-identity]]
+  [[?e :unique-identity _ ?t1]]
   [[?e ?a _ ?t1]]
   [?fact2 <- [?e ?a _ ?t2]]
   [:test (> ?t1 ?t2)]
@@ -125,7 +125,7 @@
   (cr/mk-session 'libx.perf-tuple
    :fact-type-fn (fn [fact] (:a fact))
    :ancestors-fn ancestors-fn
-   :activation-group-fn activation-group-fn
+   :activation-group-fn (fn [x] #_(println "Activation group fn" x) (activation-group-fn x))
    :activation-group-sort-fn activation-group-sort-fn))
 
 (defn n-facts-session [n]
@@ -154,14 +154,6 @@
 ;; compute
 ;; report
 ;; cleanup
-
-;;TODO. Remove or move to test
-;(activation-group-fn {:props {:salience 100
-;                              :group :cleanup)
-;
-;(activation-group-sort-fn {:group :schema :salience -100}
-;                          {:group :cleanup :salience 100})
-                          ;{:group "cleanup"})
 
 
 ;; Timings - all our stuff
