@@ -7,12 +7,11 @@
 (deftest def-tuple-session-test
   (testing "Macroexpansion should be the same as equivalent
             arguments to defsession"
-    (let [clara-session '(defsession foo
-                           'libx.macros-test
+      (is (= (macroexpand '(defsession foo
+                            'libx.macros-test
                             :fact-type-fn :a
-                            :ancestors-fn (fn [type] [:all]))
-          wrapper       '(def-tuple-session foo 'libx.macros-test)]
-      (is (= (macroexpand clara-session) (macroexpand wrapper)))))
+                            :ancestors-fn (fn [type] [:all])))
+             (macroexpand '(def-tuple-session foo 'libx.macros-test)))))
 
   (testing "Allow overwrite defaults"
     (let [clara-session '(defsession foo

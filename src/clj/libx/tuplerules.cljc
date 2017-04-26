@@ -19,10 +19,6 @@
        (swap! rule-ids assoc head rule-name)
        rule-name))))
 
-@rule-ids
-(gen-rule-id '([-2 :foo bar]))
-
-(str '([-3 :foo bar]))
 (defn split-head-body
   [rule]
   (let [[head [sep & body]] (split-with #(not= ':- %) rule)]
@@ -35,9 +31,9 @@
 
 ;(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]])
 
-(def macro-body '([?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]]))
+;(def macro-body '([?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]]))
 
-(split-head-body macro-body)
+;(split-head-body macro-body)
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj
@@ -66,8 +62,8 @@
                        (merge {:fact-type-fn :a
                                :ancestors-fn '(fn [type] [:all])}
                          (apply hash-map (drop-while (complement keyword?) sources-and-options))))
-             body (vector (into options sources))]
-         `(def ~name (com/mk-session ~@body))))))
+             body (into options sources)]
+         `(def ~name (com/mk-session `~[~@body]))))))
 
 #?(:clj
    (defmacro def-tuple-rule

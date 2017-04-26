@@ -3,20 +3,25 @@
               [libx.tuplerules :refer [deflogical]]
               [clara.rules :refer [defrule]]))
 
+(defn rule-props [expansion]
+  (second (nth expansion 2)))
+
 (deftest deflogical-test
   (testing "Single fact"
     (is (=
-          (macroexpand
-             '(deflogical
-                [-1 :foo "bar"] :-
-                [[?e :baz]]
-                [[?e :quux]]))
-          (macroexpand
-            '(defrule x
-               [:baz (= ?e (:e this))]
-               [:quux (= ?e (:e this))]
-               =>
-               (insert! [-1 :foo "bar"])))))))
+          (rule-props
+            (macroexpand
+               '(deflogical
+                  [-1 :foo "bar"] :-
+                  [[?e :baz]]
+                  [[?e :quux]])))
+          (rule-props
+            (macroexpand
+              '(defrule x
+                 [:baz (= ?e (:e this))]
+                 [:quux (= ?e (:e this))]
+                 =>
+                 (libx.util/insert! ([-1 :foo "bar"])))))))))
   ;(testing "Multiple facts"
   ;  (let [output   (macroexpand
   ;                   '(deflogical
@@ -30,6 +35,5 @@
   ;                      =>
   ;                      (insert-all! [[-1 :foo "bar"] [-2 :foo "baz"]])))]
   ;    (is (= output expected)))))
-
 
 (run-tests)
