@@ -15,6 +15,7 @@
   (mapv (fn [[k v]] (vector (:db/id m) k v))
     (dissoc m :db/id)))
 
+
 (defrecord Tuple [e a v t])
 
 (defn third [xs]

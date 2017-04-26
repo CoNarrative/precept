@@ -12,6 +12,7 @@
               [libx.spec.sub :as sub]
               [libx.core :refer [fact-id]]
               [libx.tuplerules :refer [def-tuple-session
+                                       deflogical
                                        def-tuple-rule
                                        def-tuple-query]]
               [libx.listeners :as l]
@@ -41,11 +42,14 @@
     ?fact1 ?fact2)
   (retract! (if (> ?t1 ?t2) ?fact2 ?fact1)))
 
-(def-tuple-rule todo-is-visible-when-filter-is-all
-  [[_ :ui/visibility-filter :all]]
-  [[?e :todo/title]]
-  =>
-  (insert! [?e :todo/visible :tag]))
+(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]]
+                                       [[?e :todo/title]])
+
+;(def-tuple-rule todo-is-visible-when-filter-is-all
+;  [[_ :ui/visibility-filter :all]]
+;  [[?e :todo/title]]
+;  =>
+;  (insert! [?e :todo/visible :tag]))
 
 (def-tuple-rule todo-is-visile-when-filter-is-done-and-todo-done
   [[_ :ui/visibility-filter :done]]
