@@ -23,7 +23,7 @@
   [rule]
   (let [[head [sep & body]] (split-with #(not= ':- %) rule)]
     {:body body
-     :head head}))
+     :head (first head)}))
 
 
 (defn head->rhs [head]
@@ -31,9 +31,14 @@
 
 ;(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]])
 
-;(def macro-body '([?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]]))
-
-;(split-head-body macro-body)
+(def macro-body '([?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]]))
+(def macro-body% '((println ?e) :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]]))
+(def head (:head (split-head-body macro-body)))
+(def head% (:head (split-head-body macro-body%)))
+(map util/vec->record (mapcat util/tuplize-into-vec (list head)))
+(map util/vec->record (mapcat util/tuplize-into-vec (list head%)))
+(head->rhs (:head (split-head-body macro-body%)))
+(head->rhs (:head (split-head-body macro-body)))
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj
