@@ -1,41 +1,16 @@
 (ns libx.tuplerules
     #?(:clj
-       (:require [libx.macros :refer [rewrite-lhs insert-each-logical]]
+       (:require [libx.core :as core]
+                 [libx.macros :refer [rewrite-lhs]]
+                 [libx.util :as util]
+                 [clara.rules :as cr]
                  [clara.macros :as cm]
                  [clara.rules.dsl :as dsl]
-                 [clara.rules.compiler :as com]
-                 [clara.rules :as cr]
-                 [libx.util :as util])
+                 [clara.rules.compiler :as com])
+
        :cljs
        (:require-macros libx.tuplerules)))
 
-(def rules (atom []))
-
-(defn gen-rule-name [type lhs rhs]
-   (if-let [existing (first (filter #(and (= rhs (:consequences %)) (= lhs (:conditions %))) @rules))]
-     (:name existing)
-     (let [id (util/guid)
-           entry {:id id
-                  :type type
-                  :name (str type "-" id)
-                  :conditions lhs
-                  :consequences rhs}]
-       (swap! rules conj entry)
-       (:name entry))))
-
-
-(defn split-head-body
-  "Takes macor body of a deflogical and returns map of :head, :body"
-  [rule]
-  (let [[head [sep & body]] (split-with #(not= ':- %) rule)]
-    {:body body
-     :head (first head)}))
-
-(defn head->rhs [head] (list 'do (list 'libx.util/insert! head)))
-;; TODO. Find right ns fns
-;(defn unmap-all-rule-nses [nses]
-;  (doseq [[k _] (ns-publics *ns*)]
-;    (ns-unmap *ns* k)))
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj
@@ -105,13 +80,12 @@
      [& body]
      (if (compiling-cljs?)
        `(libx.macros/deflogical ~@body)
-       (let [{:keys [body head]} (split-head-body body)
+       (let [{:keys [body head]} (util/split-head-body body)
              properties nil
              doc nil
-             name (symbol (gen-rule-name "deflogical" body head))
+             name (symbol (core/gen-rule-name "deflogical" body head))
              lhs (rewrite-lhs body)
-             rhs (head->rhs head)]
-         (println "LHS" lhs)
+             rhs (util/head->rhs head)]
          `(def ~(vary-meta name assoc :rule true :doc doc)
             (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))

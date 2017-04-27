@@ -180,6 +180,21 @@
         (action? %) #{root-fact-type :action}
         :else #{root-fact-type}))))
 
+(defn split-head-body
+  "Takes macor body of a deflogical and returns map of :head, :body"
+  [rule]
+  (let [[head [sep & body]] (split-with #(not= ':- %) rule)]
+    {:body body
+     :head (first head)}))
+
+(defn head->rhs [head] (list 'do (list 'libx.util/insert! head)))
+
+;; TODO. Find right ns fns
+;(defn unmap-all-rule-nses [nses]
+;  (doseq [[k _] (ns-publics *ns*)]
+;    (ns-unmap *ns* k)))
+
+
 ;; From clojure.core.incubator
 (defn dissoc-in
   "Dissociates an entry from a nested associative structure returning a new

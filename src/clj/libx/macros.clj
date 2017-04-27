@@ -1,11 +1,11 @@
 (ns libx.macros
-    (:require [clara.rules :refer [defrule insert! fire-rules]]
+    (:require [clara.rules.compiler :as com]
               [clara.rules.dsl :as dsl]
               [clara.macros :as cm]
               [libx.spec.lang :as lang]
-              [libx.util :refer [insert retract]]
-              [clara.rules.compiler :as com]
-              [clojure.spec :as s]))
+              [libx.util :as util]
+              [clojure.spec :as s]
+              [libx.core :as core]))
 
 (defn trace [& args] (comment (apply prn args)))
 
@@ -192,12 +192,9 @@
 
 (defmacro deflogical
   [name & body]
-  (let [doc         (if (string? (first body)) (first body) nil)
-        body        (if doc (rest body) body)
-        properties  (if (map? (first body)) (first body) nil)
-        definition  (if properties (rest body) body)
-        facts (first definition)
-        condition (rest definition)
-        lhs (rewrite-lhs condition)
-        rhs (insert-each-logical facts)]
+  (let [{:keys [body head]} (util/split-head-body body)
+        name (symbol (core/gen-rule-name "deflogical" body head))
+        lhs (rewrite-lhs body)
+        rhs (util/head->rhs head)]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
+

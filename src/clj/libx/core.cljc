@@ -19,13 +19,26 @@
 (defn trace [& args]
   (comment (println args)))
 
+(def rules (atom []))
+
+(defn gen-rule-name [type lhs rhs]
+  (if-let [existing (first (filter #(and (= rhs (:consequences %)) (= lhs (:conditions %))) @rules))]
+    (:name existing)
+    (let [id (util/guid)
+          entry {:id id
+                 :type type
+                 :name (str type "-" id)
+                 :conditions lhs
+                 :consequences rhs}]
+      (swap! rules conj entry)
+      (:name entry))))
+
 (def fact-id (atom -1))
 
 (def initial-state
-  {:subscriptions {}
-   :session nil
-   :schema nil
-   :session-history (seq nil)})
+  {:session nil
+   :session-history '()
+   :subscriptions {}})
 
 (defonce state (atom initial-state))
 
