@@ -5,7 +5,8 @@
               [libx.spec.lang :as lang]
               [libx.util :as util]
               [clojure.spec :as s]
-              [libx.core :as core]))
+              [libx.core :as core]
+              [clara.rules :as cr]))
 
 (defn trace [& args] (comment (apply prn args)))
 
@@ -192,5 +193,17 @@
         name (symbol (core/register-rule "deflogical" body head))
         lhs (rewrite-lhs body)
         rhs (util/head->rhs head)]
+    `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
+
+;; TODO. Needs way to belong to 'action-handler' group
+(defmacro store-action
+  "CLJS version of store-action"
+  [a]
+  (let [name (symbol (str "action-handler-" (clojure.string/replace (subs (str a) 1) \/ \*)))
+        doc nil
+        properties nil
+        lhs (list `[~a (~'= ~'?v ~'(:v this))])
+        rhs `(do (cr/insert-all-unconditional! (util/gen-Tuples-from-map ~'?v)))]
+    (core/register-rule "action-handler" a :default)
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
 

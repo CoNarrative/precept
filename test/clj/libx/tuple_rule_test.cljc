@@ -214,7 +214,7 @@
             '(defquery my-query [:?e]
                [:foo (= ?e (:e this)) (= ?v (:v this))]))))))
 
-(deftest action-handler-test
+(deftest store-action-test
   (testing "Expansion should be the same as equivalent defrule"
     (is (= (macroexpand
              '(store-action :foo))

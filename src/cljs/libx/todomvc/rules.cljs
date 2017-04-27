@@ -3,8 +3,7 @@
             [clara.rules :as cr]
             [libx.spec.sub :as sub]
             [libx.util :refer [insert! insert-unconditional! retract! attr-ns guid
-                               Tuple
-                               Fact ->Fact]]
+                               Tuple]]
             [libx.tuplerules :refer-macros [store-action def-tuple-session def-tuple-rule
                                             def-tuple-query]]
             [libx.util :as util]))
@@ -12,25 +11,31 @@
 (defn trace [& args]
   (comment (apply prn args)))
 
-(action-handler :input/key-code-action
-  [?e :key-code ?v])
+;; Action handlers
+;(cr/defrule handle-keycode-action
+;  [:input/key-code-action (= (:value this) ?value)]
+;  =>
+;  (insert-unconditional! [(guid) :key-code ?value]))
 
-(action-handler :new-todo/add-title-action
-  [(guid) :new-todo/title (:value ?v)])
+(cr/defrule handle-add-title-action
+  [:new-todo/add-title-action (= ?value (:value this))]
+  =>
+  (insert-unconditional! [(guid) :new-todo/title ?value]))
 
-(action-handler :ui/clear-completed-action
-  [(guid) :ui/clear-completed-action :tag])
-
-(action-handler :ui/toggle-complete-action
-  [(guid) :ui/toggle-complete :tag])
-
-(action-handler :todo/edit-action)
-  ;[(guid) :ui/toggle-complete :tag])
-(action-handler :todo/save-edit-action)
-  ;[])
-
-(action-handler :remove-entity-action
-  [?e :remove-entity-request (:id ?v)])
+(store-action :input/key-code-action)
+;(action-handler :ui/clear-completed-action
+;  [(guid) :ui/clear-completed-action :tag])
+;
+;(action-handler :ui/toggle-complete-action
+;  [(guid) :ui/toggle-complete :tag])
+;
+;(action-handler :todo/edit-action)
+;  ;[(guid) :ui/toggle-complete :tag])
+;(action-handler :todo/save-edit-action)
+;  ;[])
+;
+;(action-handler :remove-entity-action
+;  [?e :remove-entity-request (:id ?v)])
 
 
 (def-tuple-rule todo-is-visible-when-filter-is-all
@@ -80,11 +85,6 @@
   =>
   (trace "Retracting entity " ?entity)
   (doseq [tuple ?entity] (retract! tuple)))
-; DSL notes on how we might handle retractions such as these.
-; Follows convention for namespaced keyword destructuring slated for CLJ 1.9
-; (retract {:todo/keys :all})
-; (retract {:todo/keys [title visible done]})
-; (retract-entity ?e)
 
 (def-tuple-rule clear-completed-action-is-done-when-no-done-todos
   [?action <- :ui/clear-completed]
@@ -139,7 +139,7 @@
   [:exists [?e ::sub/request :todo-app]]
   [?todos <- (acc/all) :from [:todo/title]]
   =>
-  ;(trace "Inserting all-todos response" (mapv libx.util/record->vec ?todos))
+  (trace "Inserting all-todos response" (mapv libx.util/record->vec ?todos))
   (insert! [?e ::sub/response "HI"]));(libx.util/tuples->maps (mapv libx.util/record->vec ?todos))]))
 
 (def-tuple-rule subs-new-todo-title
@@ -193,7 +193,7 @@
   (insert-unconditional! [?e :todo/edit ?v]))
 
 (def-tuple-rule when-save-edit-requested
-  [[?e :todo/save-edit :action]]
+  [[?e :todo/save-edit-action]]
   [[?e :todo/edit ?v]]
   [?edited <- [?e :todo/title]]
   =>
@@ -208,6 +208,8 @@
   =>
   (retract! ?edit))
 
+;; Cleanup
+;; TODO. Lib
 (def-tuple-rule actions-cleared-at-session-end
   {:salience -100}
   [?action <- [_ :new-todo/save :action]]
@@ -215,6 +217,7 @@
   (trace "Removing action" ?action)
   (retract! ?action))
 
+;; TODO. Lib
 (def-tuple-rule keycode-cleared-at-session-end
   {:salience -100}
   [?fact <- :input/key-code]
@@ -222,4 +225,4 @@
   (trace "Removing key-code " ?fact)
   (retract! ?fact))
 
-def-tuple-session app-session 'libx.todomvc.rules
+(def-tuple-session app-session 'libx.todomvc.rules)

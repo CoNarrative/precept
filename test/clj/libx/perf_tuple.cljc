@@ -24,7 +24,6 @@
 
 (defn trace [& x] (comment (apply prn x)))
 
-;; Questions
 ;; TODO. create fn to reset `rules` atom. As we've discovered this might even be nice to
 ;; have for non-generated rule names, because when we delete a rule or rename it, it's still in
 ;; the REPL and requires a restart or manual ns-unmap to clear. We could expose a function
@@ -33,6 +32,29 @@
                                        [[?e :todo/title]])
 
 (store-action :add-todo-action-2)
+
+(cr/defrule add-item-handler
+  ;; Works with maps
+  ;[:add-todo-action [{title :title}] (= ?title title)]
+  [:add-todo-action (= ?title (:title this))]
+  ;; Does not work with maps
+  ;[:add-todo-action (= ?title title)]
+  ;[:add-todo-action (= ?title :title)]
+  =>
+  (trace "Inserting :todo/title")
+  (insert-unconditional! [(guid) :todo/title ?title]))
+
+;(def-tuple-rule maintain-list-order
+;  [[? :todo/list-order ?v]])
+
+
+
+
+
+
+
+
+
 
 (def-tuple-rule todo-is-visile-when-filter-is-done-and-todo-done
   [[_ :ui/visibility-filter :done]]
@@ -54,12 +76,6 @@
   =>
   (insert-unconditional! [?e :todo/done :tag]))
 
-(def-tuple-rule add-item-handler
-  [[_ :add-todo-action ?title]]
-  =>
-  (trace "Inserting :todo/title")
-  (insert-unconditional! [(guid) :todo/title ?title]))
-
 (cr/defrule remove-older-unique-identity-facts
   {:super true :salience 100}
   [:unique-identity (= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t1 (:t this))]
@@ -69,15 +85,16 @@
   (trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
   (retract! ?fact2))
 
-;(def-tuple-rule remove-older-unique-identity-facts
-;  {:super true :salience 100}
-;  [[?e :unique-identity _ ?t1]]
-;  [[?e ?a _ ?t1]]
-;  [?fact2 <- [?e ?a _ ?t2]]
-;  [:test (> ?t1 ?t2)]
-;  =>
-;  (trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
-;  (retract! ?fact2))
+;; FIXME. Appears to signficantly affect performance
+(def-tuple-rule remove-older-unique-identity-facts
+  {:super true :salience 100}
+  [[?e :unique-identity _ ?t1]]
+  [[?e ?a _ ?t1]]
+  [?fact2 <- [?e ?a _ ?t2]]
+  [:test (> ?t1 ?t2)]
+  =>
+  (trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
+  (retract! ?fact2))
 
 (def-tuple-rule acc-all-visible
   {:group :report}
@@ -127,7 +144,7 @@
           (-> @session
             (l/replace-listener)
             (util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
-            (insert [(guid) :add-todo-action "hey"])
+            (util/insert-action [(guid) :add-todo-action {:title "hey"}])
             (insert [1 :done-count 6])
             (insert [1 :done-count 7])
             (cr/fire-rules)))))))
@@ -135,8 +152,6 @@
 (perf-loop 1#_00)
 
 (l/vec-ops @session)
-
-(libx.tuplerules/store-action :input/key-code-action)
 ;; agenda phases
 ;; schema maintenance should be high salience and always available
 ;; action
