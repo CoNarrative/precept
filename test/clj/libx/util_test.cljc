@@ -155,16 +155,22 @@
                                   (fire-rules)))]
       (is (= :add-facts (:type (first trace))))
       (is (= (count (:facts (first trace)))
-             (* numfacts (dec (count (keys (m-fact)))))))))
+             (* numfacts (dec (count (keys (m-fact))))))))))
 
-  (testing "RHS insert (insert!)"
-    (is (every? #(= Tuple (type %))
-           (map vec->record (mapcat tuplize-into-vec (list [-1 :attr "foo"])))))
-    (is (every? #(= Tuple (type %))
-           (map vec->record (mapcat tuplize-into-vec (list [[-1 :attr "foo"] [-1 :attr "bar"]])))))
-    (is (every? #(= Tuple (type %))
-           (map vec->record (mapcat tuplize-into-vec
-                              (list [-1 :nested-v (->Tuple -1 :attr "bar" -1)])))))))
+(deftest RHS-insert-retract-parsing
+  (is (every? #(= Tuple (type %))
+         (map vec->record (mapcat tuplize-into-vec (list [-1 :attr "foo"])))))
+  (is (every? #(= Tuple (type %))
+         (map vec->record (mapcat tuplize-into-vec (list [[-1 :attr "foo"] [-1 :attr "bar"]])))))
+  (is (every? #(= Tuple (type %))
+         (map vec->record (mapcat tuplize-into-vec
+                            (list [-1 :nested-v (->Tuple -1 :attr "bar" -1)]))))))
 
+(deftest gen-Tuples-from-map-test
+  (let [m {:first-name "Bob" :last-name "Smith"}
+        rtn (gen-Tuples-from-map m)]
+    (is (vector? rtn))
+    (is (every? #(= (type %) Tuple) rtn))
+    (is (every? #(= % [:e :a :v :t]) (mapv keys rtn)))))
 
 (run-tests)
