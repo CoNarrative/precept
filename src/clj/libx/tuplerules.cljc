@@ -9,36 +9,33 @@
        :cljs
        (:require-macros libx.tuplerules)))
 
-(def rule-ids (atom {}))
+(def rules (atom []))
 
-(defn gen-rule-id [head]
-  (let [existing (get @rule-ids head)]
-    (if existing
-     existing
-     (let [rule-name (str "rule-" (util/guid))]
-       (swap! rule-ids assoc head rule-name)
-       rule-name))))
+(defn gen-rule-name [type lhs rhs]
+   (if-let [existing (first (filter #(and (= rhs (:consequences %)) (= lhs (:conditions %))) @rules))]
+     (:name existing)
+     (let [id (util/guid)
+           entry {:id id
+                  :type type
+                  :name (str type "-" id)
+                  :conditions lhs
+                  :consequences rhs}]
+       (swap! rules conj entry)
+       (:name entry))))
+
 
 (defn split-head-body
+  "Takes macor body of a deflogical and returns map of :head, :body"
   [rule]
   (let [[head [sep & body]] (split-with #(not= ':- %) rule)]
     {:body body
      :head (first head)}))
 
-
-(defn head->rhs [head]
-  (list 'do (list 'libx.util/insert! head)))
-
-;(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]])
-
-(def macro-body '([?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]]))
-(def macro-body% '((println ?e) :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]]))
-(def head (:head (split-head-body macro-body)))
-(def head% (:head (split-head-body macro-body%)))
-(map util/vec->record (mapcat util/tuplize-into-vec (list head)))
-(map util/vec->record (mapcat util/tuplize-into-vec (list head%)))
-(head->rhs (:head (split-head-body macro-body%)))
-(head->rhs (:head (split-head-body macro-body)))
+(defn head->rhs [head] (list 'do (list 'libx.util/insert! head)))
+;; TODO. Find right ns fns
+;(defn unmap-all-rule-nses [nses]
+;  (doseq [[k _] (ns-publics *ns*)]
+;    (ns-unmap *ns* k)))
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj
@@ -111,7 +108,7 @@
        (let [{:keys [body head]} (split-head-body body)
              properties nil
              doc nil
-             name (symbol (gen-rule-id head))
+             name (symbol (gen-rule-name "deflogical" body head))
              lhs (rewrite-lhs body)
              rhs (head->rhs head)]
          (println "LHS" lhs)

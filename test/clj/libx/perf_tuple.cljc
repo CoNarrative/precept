@@ -51,9 +51,12 @@
 ;; to establish identity. However, if we were to change in the below example ?fact to ?my-fact,
 ;; this would register as two different rules. This appears an issue only in development, but
 ;; an important one when working with the REPL.
+;; Is the roll-out/use of deflogical contingent upon activation group definitions by ns? Might
+;; not be absolute requirement if we specify a default group of "calc" (where they belong anyway)
 ;; TODO. create fn to reset rule-ids atom. As we've discovered this might even be nice to
-;; have for non-generated rule names (when we delete a rule or rename it, it's still in the REPL
-;; and requires a restart or manual ns-unmap)
+;; have for non-generated rule names, because when we delete a rule or rename it, it's still in
+;; the REPL and requires a restart or manual ns-unmap to clear. We could expose a function
+;; that takes all nses in which they are rules and unmaps everything in them.
 (deflogical [(guid) :fact ?fact] :- [[?fact <- :all]])
 
 ;(def-tuple-rule todo-is-visible-when-filter-is-all
