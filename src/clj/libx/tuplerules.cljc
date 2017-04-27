@@ -56,6 +56,7 @@
          (when-not rhs
            (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).")
                     {})))
+         (core/register-rule "rule" lhs rhs)
          `(def ~(vary-meta name assoc :rule true :doc doc)
             (cond-> ~(dsl/parse-rule* lhs-detuplified rhs properties {} (meta &form))
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
@@ -83,7 +84,7 @@
        (let [{:keys [body head]} (util/split-head-body body)
              properties nil
              doc nil
-             name (symbol (core/gen-rule-name "deflogical" body head))
+             name (symbol (core/register-rule "deflogical" body head))
              lhs (rewrite-lhs body)
              rhs (util/head->rhs head)]
          `(def ~(vary-meta name assoc :rule true :doc doc)

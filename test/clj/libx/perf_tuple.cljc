@@ -19,7 +19,6 @@
               [libx.schema :as schema])
     (:import [libx.util Tuple]))
 
-
 ;; TODO. Nice to use rules for this but probably faster to do this at creation time
 ;; for each fact
 (def-tuple-rule add-fact-id {:super true :salience 100}

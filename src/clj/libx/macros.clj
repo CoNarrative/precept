@@ -193,7 +193,7 @@
 (defmacro deflogical
   [name & body]
   (let [{:keys [body head]} (util/split-head-body body)
-        name (symbol (core/gen-rule-name "deflogical" body head))
+        name (symbol (core/register-rule "deflogical" body head))
         lhs (rewrite-lhs body)
         rhs (util/head->rhs head)]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))

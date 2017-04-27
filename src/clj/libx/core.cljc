@@ -21,7 +21,8 @@
 
 (def rules (atom []))
 
-(defn gen-rule-name [type lhs rhs]
+(defn register-rule [type lhs rhs]
+  "Returns rule name if found in registry, else registers new rule and returns name"
   (if-let [existing (first (filter #(and (= rhs (:consequences %)) (= lhs (:conditions %))) @rules))]
     (:name existing)
     (let [id (util/guid)
