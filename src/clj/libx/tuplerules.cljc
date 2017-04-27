@@ -71,6 +71,7 @@
              binding (if doc (second body) (first body))
              definition (if doc (drop 2 body) (rest body))
              rw-lhs (reverse (into '() (rewrite-lhs definition)))]
+         (core/register-rule "query" definition nil)
          `(def ~(vary-meta name assoc :query true :doc doc)
             (cond-> ~(dsl/parse-query* binding rw-lhs {} (meta &form))
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))

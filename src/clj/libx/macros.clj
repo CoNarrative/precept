@@ -161,7 +161,7 @@
 
 ;TODO. Pass docstring and properties to Clara's defrule
 (defmacro def-tuple-rule
-  "For CLJS"
+  "CLJS version of def-tuple-rule"
   [name & body]
   (let [doc         (if (string? (first body)) (first body) nil)
         body        (if doc (rest body) body)
@@ -171,26 +171,22 @@
         rw-lhs      (rewrite-lhs lhs)
         passthrough (filter some? (list doc properties))
         unwrite-rhs (rest rhs)]
+    (core/register-rule "rule" lhs rhs)
     `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@unwrite-rhs)))
 
 (defmacro def-tuple-query
-  "For CLJS"
+  "CLJS version of def-tuple-query"
   [name & body]
   (let [doc (if (string? (first body)) (first body) nil)
         binding (if doc (second body) (first body))
         definition (if doc (drop 2 body) (rest body))
         rw-lhs      (rewrite-lhs definition)
         passthrough (filter #(not (nil? %)) (list doc binding))]
+    (core/register-rule "query" definition nil)
     `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
 
-(defn insert-each-logical
-  "Returns sequence of facts with insert! if seq of one or insert-all! if multiple"
-  [facts]
-  (if (= (count facts) 1)
-    `(do (~'insert! ~(first facts)))
-    `(do (~'insert-all! ~facts))))
-
 (defmacro deflogical
+  "CLJS version of deflogical"
   [name & body]
   (let [{:keys [body head]} (util/split-head-body body)
         name (symbol (core/register-rule "deflogical" body head))
