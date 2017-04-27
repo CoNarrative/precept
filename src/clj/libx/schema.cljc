@@ -1,6 +1,7 @@
 (ns libx.schema
   (:require [libx.spec.sub :as sub]
             [libx.query :as q]
+            [libx.state :refer [session-hierarchy]]
             [libx.util :refer [guid]]))
 
 (defn by-ident [schema]
@@ -70,3 +71,20 @@
    (attribute ::sub/response
      :db.type/any
      :db/unique :db.unique/value)])
+
+(defn schema->hierarchy [schema]
+  (let [h (atom (make-hierarchy))
+        unique (group-by :db/unique schema)
+        cardinality (group-by :db/cardinality schema)
+        unique-attrs (map :db/ident (:db.unique/identity unique))
+        unique-vals (map :db/ident (:db.unique/value unique))
+        one-to-manys (map :db/ident (:db.cardinality/many cardinality))]
+    (doseq [x one-to-manys] (swap! h derive x :one-to-many))
+    (doseq [x unique-vals] (swap! h derive x :unique-value))
+    (doseq [x unique-attrs] (swap! h derive x :unique-identity))
+    (swap! h derive :one-to-many :all)
+    (swap! h derive :unique-value :all)
+    (swap! h derive :unique-identity :all)
+    (reset! session-hierarchy h)
+    @h))
+

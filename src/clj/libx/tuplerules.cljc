@@ -92,3 +92,14 @@
             (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
               ~doc (assoc :doc ~doc)))))))
+
+
+
+(defmacro store-action [a]
+  (let [handler-name (clojure.string/replace (subs (str a) 1) \/ \*)]
+    (core/register-rule "action-handler" a :default)
+    `(cr/defrule ~(symbol (str "action-handler-" handler-name))
+       [~a (~'= ~'?v ~'v)]
+       ~'=>
+      (util/insert-unconditional! (util/gen-Tuples-from-map ~'?v)))))
+

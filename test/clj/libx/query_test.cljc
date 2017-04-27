@@ -13,26 +13,26 @@
 (deftest cr-query
   (testing "Clara query - single fact"
     (let [blank @(def-tuple-session default 'libx.query-test)
-          s (-> blank (insert [-1 :attr "foo"])
+          s (-> blank (insert [-1 :attr "foo" 500])
                       (cr/fire-rules))
           start (:?all (first (cr/query blank find-all)))
           res (:?all (first (cr/query s find-all)))]
       (is (= start nil))
-      (is (= res (util/map->Tuple {:e -1 :a :attr :v "foo" :t -1})))))
+      (is (= res (util/map->Tuple {:e -1 :a :attr :v "foo" :t 500})))))
 
   (testing "Clara query - many facts"
     (let [blank @(def-tuple-session default 'libx.query-test)
-          to-insert [[-1 :attr "foo"]
-                     [-2 :attr "bar"]
-                     [-3 :attr "baz"]]
+          to-insert [[-1 :attr "foo" 500]
+                     [-2 :attr "bar" 501]
+                     [-3 :attr "baz" 502]]
           s (-> blank (insert to-insert)
                       (cr/fire-rules))
           start (:?all (first (cr/query blank find-all-acc)))
           res (:?all (first (cr/query s find-all-acc)))]
       (is (= start []))
-      (is (= res [(util/map->Tuple {:e -1 :a :attr :v "foo" :t -1})
-                  (util/map->Tuple {:e -2 :a :attr :v "bar" :t -1})
-                  (util/map->Tuple {:e -3 :a :attr :v "baz" :t -1})]))))
+      (is (= res [(util/map->Tuple {:e -1 :a :attr :v "foo" :t 500})
+                  (util/map->Tuple {:e -2 :a :attr :v "bar" :t 501})
+                  (util/map->Tuple {:e -3 :a :attr :v "baz" :t 502})]))))
 
   (testing "entities-where - many facts"
     (let [blank @(def-tuple-session default

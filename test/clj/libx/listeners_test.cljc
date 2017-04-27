@@ -1,7 +1,7 @@
 (ns libx.listeners-test
   (:require [clojure.test :refer [use-fixtures is deftest testing run-tests]]
             [clara.rules.accumulators :as acc]
-            [clara.rules :refer [query fire-rules]]
+            [clara.rules :refer [query fire-rules] :as cr]
             [libx.listeners :as l]
             [libx.query :as q]
             [libx.util :refer [guid ->Tuple] :as util]
@@ -11,17 +11,19 @@
 (def-tuple-rule insert-logical-for-every-a
   [?f <- [?e :attr/a]]
   =>
+  (println "Found " ?f "Inserting logical fact" [?e :attr/logical-insert ?f])
   (util/insert! [?e :attr/logical-insert ?f]))
 
 (def-tuple-rule retract-a-fact-that-caused-a-logical-insertion
   [[_ :attr/logical-insert ?f]]
   =>
-  ;(println "Found " ?f " Retracting its condition for existing")
-  (util/retract! ?f))
+  (println "Found " ?f " Retracting its condition for existing")
+  (cr/retract! ?f))
 
 (def-tuple-rule accumulate-count
-  [?facts <- (acc/count) :from [:all]]
+  [?facts <- (acc/all) :from [:all]]
   =>
+  (println "All facts" ?facts)
   (do nil))
 
 (def background-facts (repeatedly 5 #(vector (guid) :junk 42)))
@@ -101,6 +103,7 @@
                   (fire-rules))
         ops-1 (l/vec-ops state-1)
         ent-1 (q/entityv state-1 123)
+        _ (println "Ent 1" ent-1)
         state-2 (-> state-1
                   (l/replace-listener)
                   (util/insert [123 :attr/b "state-2"])

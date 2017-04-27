@@ -1,6 +1,7 @@
 (ns libx.util-test
     (:require [clojure.test :refer [deftest testing is run-tests]]
               [libx.util :refer :all]
+              [libx.state :as state]
               [libx.query :as q]
               [libx.tuplerules :refer [def-tuple-session]]
               [clara.tools.inspect :as inspect]
@@ -21,6 +22,10 @@
   (and (vector x)
     (= (count x) 3)
     (keyword? (second x))))
+
+(defn fact-id? [n]
+  (and (> n -1) (<= n @state/fact-id)))
+
 
 (deftest map->tuples-test
   (testing "Converting an entity map to a vector of tuples"
@@ -45,15 +50,22 @@
 
 (deftest vec->record-test
   (testing "Tuple no nesting"
-    (is (= (vec->record [-1 :attr "foo"])
-           (->Tuple -1 :attr "foo" -1))))
+    (let [rtn (vec->record [-1 :attr "foo"])]
+      (is (= Tuple (type rtn)))
+      (is (= (butlast (vals rtn)) (list -1 :attr "foo")))
+      (is (fact-id? (last (vals rtn))))))
   (testing "Tuple with no value in 3rd slot "
     (is (thrown-with-msg? clojure.lang.ExceptionInfo
             #"Received tuple without third slot"
           (vec->record [-1 :attr]))))
-  (testing "Tuple with tuple in third slot"
-    (is (= (vec->record [-1 :attr [-2 :nested "foo"]])
-           (->Tuple -1 :attr (->Tuple -2 :nested "foo" -1) -1)))))
+  (testing "Vector tuple with vector tuple in third slot"
+    (let [rtn (vec->record [-1 :attr [-2 :nested "foo"]])]
+      (is (= (type rtn) Tuple))
+      (is (= (type (:v rtn)) Tuple))
+      (is 4 (count (vals rtn)))
+      (is 4 (count (vals (:v rtn))))
+      (is (fact-id? (:t rtn)))
+      (is (fact-id? (:t (:v rtn)))))))
 
 (deftest record->vec-test
   (testing "With single record no nesting"
@@ -65,25 +77,34 @@
 
 (deftest insertable-test
   (testing "Single vector"
-    (is (= (insertable [-1 :attr "foo"]) [(->Tuple -1 :attr "foo" -1)])))
+    (let [rtn (insertable [-1 :attr "foo"])]
+      (is (and (not (record? rtn)) (coll? rtn)))
+      (is (every? #(= (type %) Tuple) rtn))))
   (testing "Vector of vectors"
-    (is (= (insertable [[-1 :attr "foo"] [-1 :attr "bar"]])
-          [(->Tuple -1 :attr "foo" -1)
-           (->Tuple -1 :attr "bar" -1)])))
+    (let [rtn (insertable [[-1 :attr "foo"] [-1 :attr "bar"]])]
+      (is (and (not (record? rtn)) (coll? rtn)))
+      (is (every? #(= (type %) Tuple) rtn))))
   (testing "Single record"
-   (is (= (insertable (->Tuple -1 :attr "foo" -1))
-          [(->Tuple -1 :attr "foo" -1)])))
+   (is (= (insertable (->Tuple -1 :attr "foo" 123))
+          [(->Tuple -1 :attr "foo" 123)])))
   (testing "List of records"
     (is (= (insertable (list (->Tuple -1 :attr "foo" -1) (->Tuple -1 :attr "bar" -1)))
            [(->Tuple -1 :attr "foo" -1) (->Tuple -1 :attr "bar" -1)])))
-  (testing "Record inside tuple"
-    (is (= (insertable [-1 :nested-v (->Tuple -1 :attr "foo" -1)])
-           [(->Tuple -1 :nested-v (->Tuple -1 :attr "foo" -1) -1)])))
-  (testing "Records inside tuples"
-    (is (= (insertable [[-1 :nested-v (->Tuple -1 :attr "foo" -1)]
-                        [-2 :nested-v (->Tuple -2 :attr "foo" -1)]])
-          [(->Tuple -1 :nested-v (->Tuple -1 :attr "foo" -1) -1)
-           (->Tuple -2 :nested-v (->Tuple -2 :attr "foo" -1) -1)]))))
+  (testing "Record inside vector tuple"
+    (let [rtn (insertable [-1 :nested-v (->Tuple -1 :attr "foo" 111)])]
+      (is (and (not (record? rtn)) (coll? rtn)))
+      (is (every? #(= (type %) Tuple) rtn))
+      (is (= (->Tuple -1 :attr "foo" 111)
+             (:v (first rtn))))))
+  (testing "Records inside vector tuples"
+    (let [rtn (insertable [[-1 :nested-v (->Tuple -1 :attr "foo" 111)]
+                           [-2 :nested-v (->Tuple -2 :attr "foo" 222)]])]
+      (is (and (not (record? rtn)) (coll? rtn)))
+      (is (every? #(= (type %) Tuple) rtn))
+      (is (= (->Tuple -1 :attr "foo" 111)
+             (:v (first rtn))))
+      (is (= (->Tuple -2 :attr "foo" 222)
+            (:v (second rtn)))))))
 
 (deftest insert-test
   (testing "Insert single tuple"
@@ -94,7 +115,7 @@
                                    (insert fact)
                                    (fire-rules)))]
       (is (= :add-facts (:type (first trace))))
-      (is (= (list (->Tuple -1 :foo "bar" -1)) (:facts (first trace)))
+      (is (every? #(= Tuple (type %)) (:facts (first trace)))
         "Inserted fact should be a Tuple")))
 
   (testing "Insert tuples"
@@ -107,7 +128,8 @@
                                    (insert facts)
                                    (fire-rules)))]
       (is (= :add-facts (:type (first trace))))
-      (is (= (map #(apply ->Tuple %) facts) (:facts (first trace)))
+      (is (every? #(= Tuple (type %)) (:facts (first trace)))
+      ;(is (= (map #(apply ->Tuple %) facts) (:facts (first trace)))
           "Each inserted fact should be a Tuple")))
 
   (testing "Insert single map"
@@ -136,11 +158,11 @@
              (* numfacts (dec (count (keys (m-fact)))))))))
 
   (testing "RHS insert (insert!)"
-    (is (= (list (->Tuple -1 :attr "foo" -1))
+    (is (every? #(= Tuple (type %))
            (map vec->record (mapcat tuplize-into-vec (list [-1 :attr "foo"])))))
-    (is (= (list (->Tuple -1 :attr "foo" -1) (->Tuple -1 :attr "bar" -1))
+    (is (every? #(= Tuple (type %))
            (map vec->record (mapcat tuplize-into-vec (list [[-1 :attr "foo"] [-1 :attr "bar"]])))))
-    (is (= (list (->Tuple -1 :nested-v (->Tuple -1 :attr "bar" -1) -1))
+    (is (every? #(= Tuple (type %))
            (map vec->record (mapcat tuplize-into-vec
                               (list [-1 :nested-v (->Tuple -1 :attr "bar" -1)])))))))
 

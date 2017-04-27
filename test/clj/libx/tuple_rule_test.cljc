@@ -2,7 +2,7 @@
     (:require [clojure.test :refer [deftest testing is run-tests]]
               [clara.rules :refer [defrule defquery]]
               [clara.rules.accumulators :as acc]
-              [libx.tuplerules :refer [def-tuple-rule def-tuple-query]]
+              [libx.tuplerules :refer [def-tuple-rule def-tuple-query store-action]]
               [libx.util :refer [insert!] :as util]
               [libx.macros :refer [binding?
                                    variable-bindings
@@ -213,6 +213,16 @@
           (macroexpand
             '(defquery my-query [:?e]
                [:foo (= ?e (:e this)) (= ?v (:v this))]))))))
+
+(deftest action-handler-test
+  (testing "Expansion should be the same as equivalent defrule"
+    (is (= (macroexpand
+             '(store-action :foo))
+           (macroexpand
+             '(defrule action-handler-foo
+                [:foo (= ?v v)]
+                =>
+                (libx.util/insert-unconditional! (libx.util/gen-Tuples-from-map ?v))))))))
 
 
 (run-tests)

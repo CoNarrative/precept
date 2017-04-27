@@ -1,5 +1,6 @@
 (ns libx.util
-   (:require [clara.rules :as cr]))
+   (:require [clara.rules :as cr]
+             [libx.state :as state]))
 
 (defn guid []
   #?(:clj (java.util.UUID/randomUUID)
@@ -15,8 +16,16 @@
   (mapv (fn [[k v]] (vector (:db/id m) k v))
     (dissoc m :db/id)))
 
+(defn next-fact-id! [] (swap! state/fact-id inc))
+(defn reset-fact-id! [] (reset! state/fact-id -1))
 
 (defrecord Tuple [e a v t])
+
+(defn Tuple-3 [e a v] (map->Tuple {:e e :a a :v v}))
+
+(defn add-fact-id [tuple-3]
+  (assoc tuple-3 :t (next-fact-id!)))
+
 
 (defn third [xs]
   #?(:cljs (nth xs 2)
@@ -38,11 +47,23 @@
                    (not (record? (first v-pos))))
             (vec->record v-pos)
             v-pos)
-        tx-id (nth vec 4 -1)]
+        tx-id (nth vec 3 (next-fact-id!))]
     (->Tuple (first vec)
              (second vec)
              v
              tx-id)))
+
+(defn tuple-vec->action-hash-map
+  "Puts ks in x into e-a-v map and assigns m to :v"
+  [x]
+  (let [m (nth x 2)]
+    (into m {:e (first x) :a (second x) :v m :t (next-fact-id!)})))
+
+(defn gen-Tuples-from-map [m]
+  (reduce
+    (fn [acc [k v]] (conj acc (->Tuple (guid) k v (next-fact-id!))))
+    []
+    m))
 
 (defn tuplize-into-vec
   "Returns [[]...].
@@ -60,7 +81,7 @@
   [x]
   (cond
     (record? x) (vector x)
-    (and (list? x) (record? (first x))) (into [] x)
+    (and (coll? x) (not (record? x)) (record? (first x))) (into [] x)
     (and (vector? x) (vector? (first x))) (map vec->record x)
     (vector? x) (vector (vec->record x))))
 
@@ -70,6 +91,12 @@
   [session & facts]
   (let [insertables (map vec->record (mapcat tuplize-into-vec facts))]
     (cr/insert-all session insertables)))
+
+(defn insert-action
+  "Inserts hash-map from outside rule context.
+  Accepts [e a v] where v is {} with ks that become part of inserted map"
+  [session action]
+  (cr/insert session (tuple-vec->action-hash-map action)))
 
 (defn insert!
   "Inserts Facts within rule context"
@@ -88,7 +115,8 @@
   "Wrapper around Clara's `retract!`.
   To be used within RHS of rule only. Converts all input to Facts"
   [facts]
-  (let [insertables (insertable facts)]
+  (let [insertables (insertable facts)
+        _ (println "Retract!" insertables)]
     (doseq [to-retract insertables]
       (cr/retract! to-retract))))
 
@@ -150,21 +178,6 @@
           (< group-a group-b) true
           (= group-a group-b) (> (:salience a) (:salience b))
           :else false)))))
-
-(defn schema->hierarchy [schema]
-  (let [h (atom (make-hierarchy))
-        unique (group-by :db/unique schema)
-        cardinality (group-by :db/cardinality schema)
-        unique-attrs (map :db/ident (:db.unique/identity unique))
-        unique-vals (map :db/ident (:db.unique/value unique))
-        one-to-manys (map :db/ident (:db.cardinality/many cardinality))]
-    (doseq [x one-to-manys] (swap! h derive x :one-to-many))
-    (doseq [x unique-vals] (swap! h derive x :unique-value))
-    (doseq [x unique-attrs] (swap! h derive x :unique-identity))
-    (swap! h derive :one-to-many :all)
-    (swap! h derive :unique-value :all)
-    (swap! h derive :unique-identity :all)
-    @h))
 
 (defn action? [a] (> (.indexOf (name a) "-action") -1))
 
