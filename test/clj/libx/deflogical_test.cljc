@@ -21,7 +21,7 @@
                  [:baz (= ?e (:e this))]
                  [:quux (= ?e (:e this))]
                  =>
-                 (libx.util/insert! ([-1 :foo "bar"])))))))))
+                 (libx.util/insert! [-1 :foo "bar"]))))))))
   ;(testing "Multiple facts"
   ;  (let [output   (macroexpand
   ;                   '(deflogical
