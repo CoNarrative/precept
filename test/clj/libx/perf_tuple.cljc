@@ -117,7 +117,7 @@
   (-> tuple-session
     (insert (repeatedly n #(vector (guid) :todo/title "foobar")))))
 
-(def session (atom (n-facts-session 100000)))
+(def session (atom (n-facts-session 10#_0000)))
 ;(inspect/explain-activations @state)
 (defn perf-loop [iters]
   (time
@@ -125,14 +125,16 @@
       (time
         (reset! session
           (-> @session
-            ;(l/replace-listener)
-            (util/insert-action [(guid) :add-todo-action-2 {:todo/title "hey"}])
+            (l/replace-listener)
+            (util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
             (insert [(guid) :add-todo-action "hey"])
             (insert [1 :done-count 6])
             (insert [1 :done-count 7])
             (cr/fire-rules)))))))
 @state/rules
-(perf-loop 100)
+(perf-loop 1#_00)
+
+(l/vec-ops @session)
 
 (libx.tuplerules/store-action :input/key-code-action)
 ;; agenda phases

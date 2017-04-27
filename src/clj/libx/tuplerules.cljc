@@ -93,13 +93,17 @@
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
               ~doc (assoc :doc ~doc)))))))
 
-
-
 (defmacro store-action [a]
-  (let [handler-name (clojure.string/replace (subs (str a) 1) \/ \*)]
+  (let [name (symbol (str "action-handler-" (clojure.string/replace (subs (str a) 1) \/ \*)))
+        doc nil
+        properties nil
+        lhs (list `[~a (~'= ~'?v ~'(:v this))])
+        rhs `(do (cr/insert-all-unconditional! (util/gen-Tuples-from-map ~'?v)))]
     (core/register-rule "action-handler" a :default)
-    `(cr/defrule ~(symbol (str "action-handler-" handler-name))
-       [~a (~'= ~'?v ~'v)]
-       ~'=>
-      (util/insert-unconditional! (util/gen-Tuples-from-map ~'?v)))))
+    `(def ~(vary-meta name assoc :rule true :doc doc)
+       (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
+         ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
+         ~doc (assoc :doc ~doc)))))
+
+
 

@@ -220,9 +220,9 @@
              '(store-action :foo))
            (macroexpand
              '(defrule action-handler-foo
-                [:foo (= ?v v)]
+                [:foo (= ?v (:v this))]
                 =>
-                (libx.util/insert-unconditional! (libx.util/gen-Tuples-from-map ?v))))))))
+                (clara.rules/insert-all-unconditional! (libx.util/gen-Tuples-from-map ?v))))))))
 
 
 (run-tests)

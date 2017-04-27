@@ -65,6 +65,8 @@
     []
     m))
 
+(gen-Tuples-from-map {:name "Foo"})
+
 (defn tuplize-into-vec
   "Returns [[]...].
   Arg may be {} [{}...] [] [[]...]"
@@ -97,6 +99,8 @@
   Accepts [e a v] where v is {} with ks that become part of inserted map"
   [session action]
   (cr/insert session (tuple-vec->action-hash-map action)))
+
+;(tuple-vec->action-hash-map [1 :attr {:name "Foo"}])
 
 (defn insert!
   "Inserts Facts within rule context"
