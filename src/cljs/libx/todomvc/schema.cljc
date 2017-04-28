@@ -15,7 +15,6 @@
 
 (defn schema []
   [
-   ; Todos
    (attribute :todo/title
      :db.type/string
      :db/unique :db.unique/value)
@@ -34,21 +33,12 @@
      :db.type/string
      :db/unique :db.unique/identity)
 
-   (attribute :entry/save
-     :db.type/keyword
-     :db/unique :db.unique/identity)
-
    (attribute :input/key-code
      :db.type/long
      :db/unique :db.unique/identity)
 
-   ; UI
-   (attribute :ui/toggle-complete
-     :db.type/enum ;;tag
-     :db/unique :db.unique/identity)
-
    (attribute :ui/visibility-filter
-     :db.type/enum ;;tag
+     :db.type/keyword
      :db/unique :db.unique/identity)
 
    (attribute :done-count

@@ -108,9 +108,11 @@
 (def-tuple-rule action-cleanup
   {:group :cleanup}
   [?actions <- (acc/all) :from [:action]]
+  [:test (> (count ?actions) 0)]
   =>
   (trace "CLEANING actions" ?actions)
-  (retract! (:actions ?actions)))
+  (doseq [action ?actions]
+    (cr/retract! action)))
 
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))
@@ -145,8 +147,7 @@
             (l/replace-listener)
             (util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
             (util/insert-action [(guid) :add-todo-action {:title "hey"}])
-            (insert [1 :done-count 6])
-            (insert [1 :done-count 7])
+            (insert [[1 :done-count 5] [1 :done-count 6]])
             (cr/fire-rules)))))))
 @state/rules
 (perf-loop 1#_00)

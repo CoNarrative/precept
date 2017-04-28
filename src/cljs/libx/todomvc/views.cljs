@@ -22,7 +22,7 @@
            :checked (if done true false)
            :on-change #(then :todo/toggle-done-action {:id id})}]
         [:label
-          {:on-double-click #(then :todo/edit-request-action {:id id})}
+          {:on-double-click #(then :todo/start-edit-action {:id id})}
           title]
         [:button.destroy
           {:on-click #(then :remove-entity-action {:id id})}]]
@@ -30,7 +30,7 @@
         [input
           {:class "edit"
            :value edit
-           :on-change #(then :todo/edit-action {:id id :value (-> % .-target .-value)})
+           :on-change #(then :todo/update-edit-action {:id id :value (-> % .-target .-value)})
            :on-key-down #(then :input/key-code-action {:value (.-which %)})
            :on-blur #(then :todo/save-edit-action {:id id})}])]))
 
@@ -71,7 +71,7 @@
 
 
 (defn task-entry []
-  (let [{:keys [db/id new-todo/title]} @(subscribe [:new-todo/title])]
+  (let [{:keys [db/id entry/title]} @(subscribe [:task-entry])]
     ;(prn "New todo title task entry" title)
     [:header#header
       [:h1 "todos"]
@@ -80,7 +80,7 @@
          :placeholder "What needs to be done?"
          :value title
          :on-key-down #(then :input/key-code-action {:value (.-which %)})
-         :on-change #(then :new-todo/add-title-action {:value (-> % .-target .-value)})}]]))
+         :on-change #(then :entry/update-action {:value (-> % .-target .-value)})}]]))
 
 (defn todo-app []
   [:div

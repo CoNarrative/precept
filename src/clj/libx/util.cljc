@@ -26,7 +26,6 @@
 (defn add-fact-id [tuple-3]
   (assoc tuple-3 :t (next-fact-id!)))
 
-
 (defn third [xs]
   #?(:cljs (nth xs 2)
      :clj (try (nth xs 2)
@@ -65,8 +64,6 @@
     []
     m))
 
-(gen-Tuples-from-map {:name "Foo"})
-
 (defn tuplize-into-vec
   "Returns [[]...].
   Arg may be {} [{}...] [] [[]...]"
@@ -83,36 +80,39 @@
   [x]
   (cond
     (record? x) (vector x)
-    (and (coll? x) (not (record? x)) (record? (first x))) (into [] x)
-    (and (vector? x) (vector? (first x))) (map vec->record x)
+    (and (coll? x) (record? (first x))) (into [] x)
+    (and (coll? x) (vector? (first x))) (mapv vec->record x)
     (vector? x) (vector (vec->record x))))
 
 (defn insert
   "Inserts Tuples from outside rule context.
   Accepts {} [{}...] [] [[]...]"
-  [session & facts]
-  (let [insertables (map vec->record (mapcat tuplize-into-vec facts))]
+  [session facts]
+  (let [insertables (insertable facts)
+        _ (println "insert received : " facts)
+        _ (println "insert : " insertables)]
     (cr/insert-all session insertables)))
 
 (defn insert-action
   "Inserts hash-map from outside rule context.
   Accepts [e a v] where v is {} with ks that become part of inserted map"
   [session action]
+  (println "insert-action : " (tuple-vec->action-hash-map action))
   (cr/insert session (tuple-vec->action-hash-map action)))
-
-;(tuple-vec->action-hash-map [1 :attr {:name "Foo"}])
 
 (defn insert!
   "Inserts Facts within rule context"
   [facts]
-  (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
+  (let [insertables (insertable facts)]
+    (println "insert! : " insertables)
     (cr/insert-all! insertables)))
 
-;; FIXME. Causes loop when inserting single record
 (defn insert-unconditional!
   "Inserts uncondtinally Facts within rule context"
   [facts]
-  (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
+  (let [insertables (insertable facts)]
+    (println "insert-unconditional! received" facts)
+    (println "insert-unconditional! : " insertables)
     (cr/insert-all-unconditional! insertables)))
 
 (defn retract!
@@ -120,15 +120,17 @@
   To be used within RHS of rule only. Converts all input to Facts"
   [facts]
   (let [insertables (insertable facts)
-        _ (println "Retract!" insertables)]
-    (doseq [to-retract insertables]
-      (cr/retract! to-retract))))
+        _ (println "retract! :" insertables)]
+    (doseq [x insertables]
+      (cr/retract! x))))
 
 (defn retract
   "Retracts either: Tuple, {} [{}...] [] [[]..]"
-  [session & facts]
-  (let [insertables (map vec->record (mapcat tuplize-into-vec facts))]
-    (apply (partial cr/retract session) insertables)))
+  [session facts]
+  (let [insertables (insertable facts)]
+    (println "retract : " insertables)
+    (doseq [x insertables]
+      (cr/retract x))))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn clara-tups->maps
@@ -198,13 +200,13 @@
         :else #{root-fact-type}))))
 
 (defn split-head-body
-  "Takes macor body of a deflogical and returns map of :head, :body"
+  "Takes macro body of a deflogical and returns map of :head, :body"
   [rule]
   (let [[head [sep & body]] (split-with #(not= ':- %) rule)]
     {:body body
-     :head (first head)}))
+     :head head}))
 
-(defn head->rhs [head] (list 'do (list 'libx.util/insert! head)))
+(defn head->rhs [head] `(do (libx.util/insert! ~head)))
 
 ;; TODO. Find right ns fns
 ;(defn unmap-all-rule-nses [nses]

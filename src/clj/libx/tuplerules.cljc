@@ -79,10 +79,10 @@
 
 #?(:clj
    (defmacro deflogical
-     [& body]
+     [& forms]
      (if (compiling-cljs?)
-       `(libx.macros/deflogical ~@body)
-       (let [{:keys [body head]} (util/split-head-body body)
+       `(libx.macros/deflogical ~@forms)
+       (let [{:keys [body head]} (util/split-head-body forms)
              properties nil
              doc nil
              name (symbol (core/register-rule "deflogical" body head))

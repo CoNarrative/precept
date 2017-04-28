@@ -188,12 +188,12 @@
 
 (defmacro deflogical
   "CLJS version of deflogical"
-  [name & body]
-  (let [{:keys [body head]} (util/split-head-body body)
+  [& forms]
+  (let [{:keys [body head]} (util/split-head-body forms)
         name (symbol (core/register-rule "deflogical" body head))
         lhs (rewrite-lhs body)
-        rhs (util/head->rhs head)]
-    `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
+        rhs-no-do (rest (util/head->rhs head))]
+    `(cm/defrule ~name ~@lhs ~'=> ~@rhs-no-do)))
 
 ;; TODO. Needs way to belong to 'action-handler' group
 (defmacro store-action
@@ -203,7 +203,7 @@
         doc nil
         properties nil
         lhs (list `[~a (~'= ~'?v ~'(:v this))])
-        rhs `(do (cr/insert-all-unconditional! (util/gen-Tuples-from-map ~'?v)))]
+        rhs `(cr/insert-all-unconditional! (util/gen-Tuples-from-map ~'?v))]
     (core/register-rule "action-handler" a :default)
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
 

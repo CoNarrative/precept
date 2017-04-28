@@ -2,105 +2,81 @@
   (:require [clara.rules.accumulators :as acc]
             [clara.rules :as cr]
             [libx.spec.sub :as sub]
-            [libx.util :refer [insert! insert-unconditional! retract! attr-ns guid
-                               Tuple]]
-            [libx.tuplerules :refer-macros [store-action def-tuple-session def-tuple-rule
-                                            def-tuple-query]]
+            [libx.todomvc.schema :refer [app-schema]]
+            [libx.util :refer [insert! insert-unconditional! retract! attr-ns guid Tuple]]
+            [libx.tuplerules :refer-macros [deflogical store-action def-tuple-session def-tuple-rule]]
+            [libx.schema :as schema]
             [libx.util :as util]))
 
 (defn trace [& args]
-  (comment (apply prn args)))
+  (apply prn args))
 
 ;; Action handlers
-;(cr/defrule handle-keycode-action
-;  [:input/key-code-action (= (:value this) ?value)]
-;  =>
-;  (insert-unconditional! [(guid) :key-code ?value]))
+;(store-action :input/key-code-action)
+;(store-action :ui/set-visibility-filter-action)
 
-(cr/defrule handle-add-title-action
-  [:new-todo/add-title-action (= ?value (:value this))]
+;; Until we can group store-action/as-insert into :action
+(def-tuple-rule handle-entry-update
+  {:group :action}
+  [[?e :entry/update-action ?v]]
   =>
-  (insert-unconditional! [(guid) :new-todo/title ?value]))
+  (trace "Responding to edit request" ?e ?v)
+  (insert-unconditional! [?e :entry/title (:value ?v)]))
 
-(store-action :input/key-code-action)
-;(action-handler :ui/clear-completed-action
-;  [(guid) :ui/clear-completed-action :tag])
-;
-;(action-handler :ui/toggle-complete-action
-;  [(guid) :ui/toggle-complete :tag])
-;
-;(action-handler :todo/edit-action)
-;  ;[(guid) :ui/toggle-complete :tag])
-;(action-handler :todo/save-edit-action)
-;  ;[])
-;
-;(action-handler :remove-entity-action
-;  [?e :remove-entity-request (:id ?v)])
-
-
-(def-tuple-rule todo-is-visible-when-filter-is-all
-  [[_ :ui/visibility-filter :all]]
-  [[?e :todo/title]]
+(def-tuple-rule handle-key-code-action
+  {:group :action}
+  [[_ :input/key-code-action ?v]]
   =>
-  (insert! [?e :todo/visible :tag]))
+  (insert-unconditional!
+    (util/gen-Tuples-from-map ?v)))
 
-(def-tuple-rule todo-is-visile-when-filter-is-done-and-todo-done
-  [[_ :ui/visibility-filter :done]]
-  [[?e :todo/done]]
+(def-tuple-rule handle-set-visibility-filter-action
+  {:group :action}
+  [[_ :ui/set-visibility-filter-action ?v]]
   =>
-  (insert! [?e :todo/visible :tag]))
+  (insert-unconditional! (util/gen-Tuples-from-map ?v)))
 
-(def-tuple-rule todo-is-visible-when-filter-active-and-todo-not-done
-  [[_ :ui/visibility-filter :active]]
-  [[?e :todo/title]]
-  [:not [?e :todo/done]]
+(def-tuple-rule handle-start-todo-edit
+  [[?e :todo/start-edit-action]]
+  [[?e :todo/title ?v]]
   =>
-  (trace "Active tag found! Marking incomplete todo visible")
-  (insert! [?e :todo/visible :tag]))
+  (trace "Responding to edit request" ?e ?v)
+  (insert-unconditional! [?e :todo/edit ?v]))
 
-(def-tuple-rule toggle-all-complete
-  [:exists [:ui/toggle-complete]]
-  [[?e :todo/title]]
-  [:not [?e :todo/done]]
-  =>
-  (trace "Marked done via toggle complete:" ?e)
-  (insert-unconditional! [?e :todo/done :tag]))
+;; Calculations
 
-(def-tuple-rule remove-toggle-complete-when-all-todos-done
-  [?toggle <- :ui/toggle-complete]
-  [?total <- (acc/count) :from [:todo/title]]
-  [?total-done <- (acc/count) :from [:todo/done]]
-  [:test (not (not (= ?total ?total-done)))] ;;TODO. '= won't work without not not...
-  =>
-  (trace "Total todos: " ?total)
-  (trace "Total done: " ?total-done)
-  (trace "Retracting toggle-all-complete action: " ?toggle)
-  (retract! ?toggle))
+;; FIXME. One of these throwing error that is hard/impossible to trace. See if related to registry
+;(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]], [[?e :todo/title]])
 
-(def-tuple-rule no-done-todos-when-clear-completed-action
-  [:exists [:ui/clear-completed]]
-  [[?e :todo/title]]
-  [[?e :todo/done]]
-  [?entity <- (acc/all) :from [?e :all]]
-  =>
-  (trace "Retracting entity " ?entity)
-  (doseq [tuple ?entity] (retract! tuple)))
+;(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :done]] [[?e :todo/done]])
 
-(def-tuple-rule clear-completed-action-is-done-when-no-done-todos
-  [?action <- :ui/clear-completed]
-  [:not [:exists [:todo/done]]]
-  =>
-  (trace "Clear-completed action finished. Retracting " ?action)
-  (retract! ?action))
+;(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :active]]
+;                                       [[?e :todo/title]]
+;                                       [:not [?e :todo/done]]]))
 
-(def-tuple-rule find-done-count
+(def-tuple-rule active-done-count
   [?done <- (acc/count) :from [:todo/done]]
   [?total <- (acc/count) :from [:todo/title]]
   =>
-  (trace "done active count" ?done (- ?total ?done))
   (insert! [[(guid) :done-count ?done]
             [(guid) :active-count (- ?total ?done)]]))
 
+;(deflogical [[(guid) :done-count ?done]
+;             [(guid) :active-count (- ?total ?done)]]
+;            :- [?done <- (acc/count) :from [:todo/done]]
+;               [?total <- (acc/count) :from [:todo/title]])
+
+(deflogical [?e :entry/save-action] :- [[_ :input/key-code 13]] [[?e :entry/title]])
+
+(deflogical [?e :todo/save-edit-action] :- [[_ :input/key-code 13]] [[?e :todo/edit]])
+
+(def-tuple-rule all-facts
+  [?fact <- [:all]]
+  =>
+  (println "FACT" ?fact))
+
+
+;; Subscription handlers
 (def-tuple-rule subs-footer-controls
   [:exists [?e ::sub/request :footer]]
   [[_ :done-count ?done-count]]
@@ -142,87 +118,58 @@
   (trace "Inserting all-todos response" (mapv libx.util/record->vec ?todos))
   (insert! [?e ::sub/response "HI"]));(libx.util/tuples->maps (mapv libx.util/record->vec ?todos))]))
 
-(def-tuple-rule subs-new-todo-title
-  [:exists [?e ::sub/request :new-todo/title]]
-  [[?eid :new-todo/title ?v]]
+(def-tuple-rule subs-task-entry
+  [:exists [?e ::sub/request :task-entry]]
+  [[?eid :entry/title ?v]]
   =>
   (trace "[sub-response] Inserting new-todo-title" ?v)
-  (insert! [?e ::sub/response {:db/id ?eid :new-todo/title ?v}]))
+  (insert! [?e ::sub/response {:db/id ?eid :entry/title ?v}]))
 
-;;TODO. Make part of lib
+
+;; Cleanup phase
+;; TODO. Lib
+;(def-tuple-rule actions-cleared-at-session-end
+;  {:salience -100}
+;  [?action <- [_ :new-todo/save :action]]
+;  =>
+;  (trace "Removing action" ?action)
+;  (retract! ?action))
+
+;; TODO. Lib / schema
+;(def-tuple-rule keycode-cleared-at-session-end
+;  {:salience -100}
+;  [?fact <- :input/key-code]
+;  =>
+;  (trace "Removing key-code " ?fact)
+;  (retract! ?fact))
+
+;;TODO. Lib
 (def-tuple-rule entity-doesnt-exist-when-removal-requested
   [[_ :remove-entity-request ?eid]]
   [?entity <- (acc/all) :from [?eid :all]]
   =>
   (trace "Fulfilling remove entity request " ?entity)
-  (doseq [tuple ?entity] (retract! tuple)))
-
-(def-tuple-rule save-new-todo-when-press-enter
-  [[_ :input/key-code 13]]
-  [[?e :new-todo/title]]
-  =>
-  (trace "Inserting save action from RHS" ?e)
-  (insert! [?e :new-todo/save :action]))
-
-(def-tuple-rule save-edit-action-when-press-enter
-  [[_ :input/key-code 13]]
-  [[?e :todo/edit]]
-  =>
-  (trace "Inserting save action from RHS" ?e)
-  (insert! [?e :todo/save-edit :action]))
-
-(def-tuple-rule new-todos-become-regular-todos-when-saved
-  [[?e :new-todo/save :action]]
-  [[?e :new-todo/title ?v]]
-  =>
-  (trace "Saving todo " ?v)
-  (insert-unconditional! [?e :todo/title ?v]))
-
-(def-tuple-rule not-a-new-todo-if-regular-todo
-  [[?e :todo/title ?v]]
-  [?new-todo <- [?e :new-todo/title ?v]]
-  =>
-  (trace "Retracting new-todo" ?new-todo)
-  (retract! ?new-todo))
-
-(def-tuple-rule process-edit-request
-  [[?e :todo/edit-request :action]]
-  [[?e :todo/title ?v]]
-  =>
-  (trace "Responding to edit request" ?e ?v)
-  (insert-unconditional! [?e :todo/edit ?v]))
-
-(def-tuple-rule when-save-edit-requested
-  [[?e :todo/save-edit-action]]
-  [[?e :todo/edit ?v]]
-  [?edited <- [?e :todo/title]]
-  =>
-  (retract! ?edited)
-  (insert-unconditional!
-    [[?e :todo/title ?v]
-     [?e :todo/save-edit-complete :action]]))
-
-(def-tuple-rule when-save-edit-fulfilled
-  [[?e :todo/save-edit-complete :action]]
-  [?edit <- [?e :todo/edit]]
-  =>
-  (retract! ?edit))
-
-;; Cleanup
-;; TODO. Lib
-(def-tuple-rule actions-cleared-at-session-end
-  {:salience -100}
-  [?action <- [_ :new-todo/save :action]]
-  =>
-  (trace "Removing action" ?action)
-  (retract! ?action))
+  (doseq [tuple ?entity]
+    (retract! tuple)))
 
 ;; TODO. Lib
-(def-tuple-rule keycode-cleared-at-session-end
-  {:salience -100}
-  [?fact <- :input/key-code]
+(def-tuple-rule action-cleanup
+  {:group :cleanup}
+  [?actions <- (acc/all) :from [:action]]
+  [:test (> (count ?actions) 0)]
   =>
-  (trace "Removing key-code " ?fact)
-  (retract! ?fact))
+  (trace "CLEANING actions" ?actions)
+  (doseq [action ?actions]
+    (cr/retract! action)))
 
-(def-tuple-session app-session 'libx.todomvc.rules)
+(def groups [:action :calc :report :cleanup])
+(def activation-group-fn (util/make-activation-group-fn :calc))
+(def activation-group-sort-fn (util/make-activation-group-sort-fn groups :calc))
+(def hierarchy (schema/schema->hierarchy app-schema))
+(def ancestors-fn (util/make-ancestors-fn hierarchy))
+
+(def-tuple-session app-session
+  'libx.todomvc.rules
+  :ancestors-fn ancestors-fn
+  :activation-group-fn activation-group-fn
+  :activation-group-sort-fn activation-group-sort-fn)

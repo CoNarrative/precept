@@ -166,7 +166,7 @@
   (let [id (util/guid)
         name (first req)
         lens (lens store [id ::sub/response])]
-    (dispatch! (insert-action [id ::sub/request name]))
+    (dispatch! (fn [session] (util/insert session [id ::sub/request name])))
     (swap! state assoc-in [:subscriptions id] {:id id :name name :lens lens})
     lens))
 
@@ -194,5 +194,5 @@
 (defn start! [options]
   (let [opts (or options (hash-map))]
     (swap-session! (l/replace-listener (:session opts)))
-    (dispatch! (insert-action (:facts opts)))))
+    (dispatch! (fn [session] (util/insert session (:facts opts))))))
 
