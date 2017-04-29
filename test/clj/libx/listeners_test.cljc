@@ -8,22 +8,25 @@
             [libx.tuplerules :refer [def-tuple-rule def-tuple-session]])
   (:import [libx.util Tuple]))
 
+(defn trace [& args]
+  (comment (apply prn args)))
+
 (def-tuple-rule insert-logical-for-every-a
   [?f <- [?e :attr/a]]
   =>
-  (println "Found " ?f "Inserting logical fact" [?e :attr/logical-insert ?f])
+  (trace "Found " ?f "Inserting logical fact" [?e :attr/logical-insert ?f])
   (util/insert! [?e :attr/logical-insert ?f]))
 
 (def-tuple-rule retract-a-fact-that-caused-a-logical-insertion
   [[_ :attr/logical-insert ?f]]
   =>
-  (println "Found " ?f " Retracting its condition for existing")
+  (trace "Found " ?f " Retracting its condition for existing")
   (cr/retract! ?f))
 
 (def-tuple-rule accumulate-count
   [?facts <- (acc/all) :from [:all]]
   =>
-  (println "All facts" ?facts)
+  (trace "All facts" ?facts)
   (do nil))
 
 (def background-facts (repeatedly 5 #(vector (guid) :junk 42)))
@@ -91,19 +94,18 @@
                   (util/insert
                     (into
                       [[123 :attr/a "state-0"]
-                       [123 :attr/b "state-0"]]
+                       [123 :attr/b "state-0" 2]]
                       background-facts))
                   (fire-rules))
         ops-0 (l/vec-ops state-0)
         ent-0 (q/entityv state-0 123)
         state-1 (-> state-0
                   (l/replace-listener)
-                  (util/retract [123 :attr/b "state-0"])
+                  (util/retract [123 :attr/b "state-0" 2])
                   (util/insert [123 :attr/b "state-1"])
                   (fire-rules))
         ops-1 (l/vec-ops state-1)
         ent-1 (q/entityv state-1 123)
-        _ (println "Ent 1" ent-1)
         state-2 (-> state-1
                   (l/replace-listener)
                   (util/insert [123 :attr/b "state-2"])
