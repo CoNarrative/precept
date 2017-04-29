@@ -4,18 +4,19 @@
             [libx.spec.sub :as sub]
             [libx.todomvc.schema :refer [app-schema]]
             [libx.listeners :as l]
-            [libx.util :refer [insert! insert-unconditional! retract! attr-ns guid]]
-            #?(:clj [libx.tuplerules :refer [def-tuple-rule deflogical]])
-            #?(:cljs [libx.tuplerules :refer-macros [def-tuple-session deflogical def-tuple-rule]])
             [libx.schema :as schema]
-            [libx.util :as util]))
+            [libx.util :refer [insert! insert-unconditional! retract! guid] :as util]
+            #?(:clj [libx.tuplerules :refer [def-tuple-rule deflogical store-action]])
+            #?(:cljs [libx.tuplerules :refer-macros [deflogical store-action def-tuple-session
+                                                     def-tuple-rule]])))
 
 (defn trace [& args]
   (apply prn args))
 
+(store-action :entry/foo-action)
+
 (deflogical [?e :entry/new-title "Good morning Vietnam!"] :- [[?e :entry/title]])
 (deflogical [?e :entry/new-title "Hello again!"] :- [[?e :entry/title]])
-
 
 (def-tuple-rule all-facts
   {:group :report}
@@ -66,10 +67,11 @@
 
 (-> app-session
   (l/replace-listener)
-  (util/insert [(guid) :entry/foo-action :tag])
   (util/insert [[(guid) :entry/title "Hello."]
                 [(guid) :entry/title "Hello???"]
                 [1 :todo/title "H"]
                 [1 :todo/title "Hi"]])
+  (util/insert-action [(guid) :entry/foo-action {:foo/id 2 :foo/name "bar"}])
   (cr/fire-rules)
   (l/vec-ops))
+

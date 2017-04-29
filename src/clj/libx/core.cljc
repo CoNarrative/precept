@@ -143,10 +143,6 @@
 (def removals-out (apply-removals-to-store changes-out))
 (apply-additions-to-store removals-out)
 
-(defn insert-action [facts]
-  (fn [current-session]
-    (util/insert-action current-session facts)))
-
 ;; TODO. Find equivalent in CLJ
 (defn lens [a path]
   #?(:clj (atom (get-in @a path))
@@ -189,7 +185,8 @@
 (defn then
   "Dispatches action to be inserted into current session"
   ([msg] (then msg {}))
-  ([msg facts] (dispatch! (insert-action [(util/guid) msg facts])) nil))
+  ([msg facts]
+   (dispatch! (fn [session] (util/insert-action session [(util/guid) msg facts])))))
 
 (defn start! [options]
   (let [opts (or options (hash-map))]
