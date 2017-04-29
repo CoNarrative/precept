@@ -27,7 +27,8 @@
      :db.type/keyword)
 
    (attribute :todo/done
-     :db.type/keyword)
+     :db.type/boolean
+     :db/unique :db.unique/value)
 
    (attribute :entry/title
      :db.type/string

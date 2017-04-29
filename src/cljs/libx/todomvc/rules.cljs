@@ -37,22 +37,47 @@
   (insert-unconditional! (util/gen-Tuples-from-map ?v)))
 
 (def-tuple-rule handle-start-todo-edit
+  {:group :action}
   [[?e :todo/start-edit-action]]
   [[?e :todo/title ?v]]
   =>
   (trace "Responding to edit request" ?e ?v)
   (insert-unconditional! [?e :todo/edit ?v]))
 
-;; Calculations
+(def-tuple-rule handle-toggle-done-action
+  {:group :action}
+  [[?e :todo/toggle-done-action ?v]]
+  [[(:id ?v) :todo/done ?bool]]
+  =>
+  (trace "Responding to toggle done action (when done)" ?v)
+  (insert! [(:id ?v) :todo/done (not ?bool)]))
 
+
+;; Calculations
 ;; FIXME. One of these throwing error that is hard/impossible to trace. See if related to registry
 ;(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]], [[?e :todo/title]])
+(def-tuple-rule when-filter-all
+  [[_ :ui/visibility-filter :all]]
+  [[?e :todo/title]]
+  =>
+  (insert! [?e :todo/visible :tag]))
 
 ;(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :done]] [[?e :todo/done]])
+(def-tuple-rule when-filter-done
+  [[_ :ui/visibility-filter :done]]
+  [[?e :todo/title]]
+  =>
+  (insert! [?e :todo/visible :tag]))
 
 ;(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :active]]
 ;                                       [[?e :todo/title]]
 ;                                       [:not [?e :todo/done]]]))
+(def-tuple-rule when-filter-active
+  [[_ :ui/visibility-filter :active]]
+  [[?e :todo/title]]
+  [:not [?e :todo/done]]
+  =>
+  (insert! [?e :todo/visible :tag]))
 
 (def-tuple-rule active-done-count
   [?done <- (acc/count) :from [:todo/done]]
@@ -155,12 +180,36 @@
 ;; TODO. Lib
 (def-tuple-rule action-cleanup
   {:group :cleanup}
-  [?actions <- (acc/all) :from [:action]]
-  [:test (> (count ?actions) 0)]
+  [?action <- [_ :action]]
+  ;[?actions <- (acc/all) :from [:action]]
+  ;[:test (> (count ?actions) 0)]
   =>
-  (trace "CLEANING actions" ?actions)
-  (doseq [action ?actions]
-    (cr/retract! action)))
+  (trace "CLEANING actions" ?action)
+  ;(doseq [action ?actions]
+  (cr/retract! ?action))
+
+(cr/defrule remove-older-unique-identity-facts
+  {:super true :salience 100}
+  [:unique-identity (= ?a1 (:a this)) (= ?t1 (:t this))]
+  [?fact2 <- :unique-identity (= ?a1 (:a this)) (= ?t2 (:t this))]
+  [:test (> ?t1 ?t2)]
+  =>
+  (trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
+  (retract! ?fact2))
+
+(cr/defrule remove-older-unique-value-facts
+  {:super true :salience 100}
+  [?fact1 <- :unique-value (= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t1 (:t this))]
+  [?fact2 <- :unique-value (= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t2 (:t this))]
+  [:test (> ?t1 ?t2)]
+  =>
+  (trace (str "SCHEMA MAINT - :unique-value : " ?t1 " is greater than " ?t2))
+  (retract! ?fact2))
+
+(cr/defrule a-unique-identity-fact
+  [?fact <- :unique-identity]
+  =>
+  (trace "Unique identity fact" ?fact))
 
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))
@@ -168,8 +217,17 @@
 (def hierarchy (schema/schema->hierarchy app-schema))
 (def ancestors-fn (util/make-ancestors-fn hierarchy))
 
-(def-tuple-session app-session
+;(def-tuple-session app-session
+(cr/defsession app-session
   'libx.todomvc.rules
-  :ancestors-fn ancestors-fn
+  :fact-type-fn (fn [x] (:a x))
+  :ancestors-fn (fn [x] (println x) (ancestors-fn x))
   :activation-group-fn activation-group-fn
   :activation-group-sort-fn activation-group-sort-fn)
+
+
+(-> app-session
+  (util/insert [(guid) :entry/foo-action "Hello."
+                [(guid) :entry/title "Hello."]
+                [(guid) :entry/title "Hell!"]])
+  (cr/fire-rules))
