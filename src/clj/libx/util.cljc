@@ -2,6 +2,9 @@
    (:require [clara.rules :as cr]
              [libx.state :as state]))
 
+(defn trace [& args]
+  (comment (apply prn args)))
+
 (defn guid []
   #?(:clj (java.util.UUID/randomUUID)
      :cljs (random-uuid)))
@@ -89,30 +92,30 @@
   Accepts {} [{}...] [] [[]...]"
   [session facts]
   (let [insertables (insertable facts)
-        _ (println "insert received : " facts)
-        _ (println "insert : " insertables)]
+        _ (trace "insert received : " facts)
+        _ (trace "insert : " insertables)]
     (cr/insert-all session insertables)))
 
 (defn insert-action
   "Inserts hash-map from outside rule context.
   Accepts [e a v] where v is {} with ks that become part of inserted map"
   [session action]
-  (println "insert-action : " (tuple-vec->action-hash-map action))
+  (trace "insert-action : " (tuple-vec->action-hash-map action))
   (cr/insert session (tuple-vec->action-hash-map action)))
 
 (defn insert!
   "Inserts Facts within rule context"
   [facts]
   (let [insertables (insertable facts)]
-    (println "insert! : " insertables)
+    (trace "insert! : " insertables)
     (cr/insert-all! insertables)))
 
 (defn insert-unconditional!
   "Inserts uncondtinally Facts within rule context"
   [facts]
   (let [insertables (insertable facts)]
-    (println "insert-unconditional! received" facts)
-    (println "insert-unconditional! : " insertables)
+    (trace "insert-unconditional! received" facts)
+    (trace "insert-unconditional! : " insertables)
     (cr/insert-all-unconditional! insertables)))
 
 (defn retract!
@@ -120,7 +123,7 @@
   To be used within RHS of rule only. Converts all input to Facts"
   [facts]
   (let [insertables (insertable facts)
-        _ (println "retract! :" insertables)]
+        _ (trace "retract! :" insertables)]
     (doseq [x insertables]
       (cr/retract! x))))
 
@@ -128,9 +131,8 @@
   "Retracts either: Tuple, {} [{}...] [] [[]..]"
   [session facts]
   (let [insertables (insertable facts)]
-    (println "retract : " insertables)
-    (doseq [x insertables]
-      (cr/retract x))))
+    (trace "retract : " insertables)
+    (apply (partial cr/retract session) insertables)))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn clara-tups->maps
@@ -204,9 +206,8 @@
   [rule]
   (let [[head [sep & body]] (split-with #(not= ':- %) rule)]
     {:body body
-     :head head}))
+     :head (first head)}))
 
-(defn head->rhs [head] `(do (libx.util/insert! ~head)))
 
 ;; TODO. Find right ns fns
 ;(defn unmap-all-rule-nses [nses]

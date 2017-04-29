@@ -59,34 +59,26 @@
 ;  =>
 ;  (insert! (fact [-1 :todo/count ?count])))
 
-;(cr/defrule remove-older-unique-identity-facts
-;  {:super true :salience 100}
-;  [Tuple (= ?a :unique-identity) (= ?e e) (= ?t1 t)]
-  ;[?fact2 <- Tuple (= ?e e) (= ?a e) (= ?t2 t)]
-  ;[:test (> ?t1 ?t2)]
-  ;=>
-  ;(do))
-  ;(retract! ?fact2))
-  ;(println "unqiue identity" ?e ?t1 ?t2))
-  ;(println (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
-  ;(retract! ?fact2))
+(cr/defrule remove-older-unique-identity-facts
+  {:super true :salience 100}
+  [?fact1 <- :unique-identity (= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t1 (:t this))]
+  [?fact2 <- :unique-identity (= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t2 (:t this))]
+  [:test (> ?t1 ?t2)]
+  =>
+  ;(trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
+  (retract! ?fact2))
 
-;(ns-unmap *ns* 'remove-older-unique-identity-facts)
 
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))
 (def activation-group-sort-fn (util/make-activation-group-sort-fn groups :calc))
 (def hierarchy (schema/schema->hierarchy test-schema))
 (def ancestors-fn (util/make-ancestors-fn hierarchy Tuple))
-
 (cr/defsession cr-session 'libx.perf
   :fact-type-fn :a
   :ancestors-fn ancestors-fn
   :activation-group-fn activation-group-fn
   :activation-group-sort-fn activation-group-sort-fn)
-  ;:activation-group-fn :salience
-  ;:activation-group-sort-fn >)
-;(user/reload)
 
 (defn n-facts-session [n]
   (-> cr-session

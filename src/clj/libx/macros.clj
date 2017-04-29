@@ -11,8 +11,7 @@
 (defn trace [& args] (comment (apply prn args)))
 
 (defmacro def-tuple-session
-  "Wrapper around Clara's `defsession` macro.
-  Preloads query helpers."
+  "For CLJS. Wrapper around Clara's `defsession` macro."
   [name & sources-and-options]
   `(cm/defsession
      ~name
@@ -192,8 +191,8 @@
   (let [{:keys [body head]} (util/split-head-body forms)
         name (symbol (core/register-rule "deflogical" body head))
         lhs (rewrite-lhs body)
-        rhs-no-do (rest (util/head->rhs head))]
-    `(cm/defrule ~name ~@lhs ~'=> ~@rhs-no-do)))
+        rhs (list `(libx.util/insert! ~head))]
+    `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
 
 ;; TODO. Needs way to belong to 'action-handler' group
 (defmacro store-action

@@ -1,23 +1,22 @@
-(ns libx.perf-tuple
-    (:require [libx.util :refer [guid
-                                 insert
-                                 insert!
-                                 insert-unconditional!
-                                 retract!] :as util]
-              [libx.schema-fixture :refer [test-schema]]
-              [libx.state :as state]
-              [libx.schema :as schema]
-              [clara.rules :as cr]
-              [clara.rules.accumulators :as acc]
-              [libx.spec.sub :as sub]
-              [libx.tuplerules :refer [store-action
-                                       def-tuple-session
-                                       deflogical
-                                       def-tuple-rule
-                                       def-tuple-query]]
-              [libx.listeners :as l]
-              [libx.schema :as schema]
-              #?(:clj [clara.tools.inspect :as inspect])))
+(ns libx.perf-cljs
+  (:require [libx.util :refer [guid
+                               insert
+                               insert!
+                               insert-unconditional!
+                               retract!] :as util]
+            [libx.schema-fixture :refer [test-schema]]
+            [libx.state :as state]
+            [libx.schema :as schema]
+            [clara.rules :as cr]
+            [clara.rules.accumulators :as acc]
+            [libx.spec.sub :as sub]
+            [libx.tuplerules :refer [store-action
+                                     def-tuple-session
+                                     deflogical
+                                     def-tuple-rule
+                                     def-tuple-query]]
+            [libx.listeners :as l]
+            [libx.schema :as schema]))
 
 (defn trace [& x] (apply prn x))
 
@@ -26,7 +25,7 @@
 ;; the REPL and requires a restart or manual ns-unmap to clear. We could expose a function
 ;; that takes all nses in which they are rules and unmaps everything in them.
 (deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]]
-                                       [[?e :todo/title]])
+  [[?e :todo/title]])
 
 (store-action :add-todo-action-2)
 
@@ -63,12 +62,23 @@
 
 (cr/defrule remove-older-unique-identity-facts
   {:super true :salience 100}
-  [:unique-identity (= ?a1 (:a this)) (= ?t1 (:t this))]
-  [?fact2 <- :unique-identity (= ?a1 (:a this)) (= ?t2 (:t this))]
+  [?fact1 <- :unique-identity (= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t1 (:t this))]
+  [?fact2 <- :unique-identity (= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t2 (:t this))]
   [:test (> ?t1 ?t2)]
   =>
   (trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
   (retract! ?fact2))
+
+;; FIXME. Appears to signficantly affect performance
+;(def-tuple-rule remove-older-unique-identity-facts
+;  {:super true :salience 100}
+;  [[?e :unique-identity _ ?t1]]
+;  [[?e ?a _ ?t1]]
+;  [?fact2 <- [?e ?a _ ?t2]]
+;  [:test (> ?t1 ?t2)]
+;  =>
+;  (trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
+;  (retract! ?fact2))
 
 (def-tuple-rule acc-all-visible
   {:group :report}
@@ -90,9 +100,12 @@
 
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))
-(def activation-group-sort-fn (util/make-activation-group-sort-fn groups :calc))
+(def activation-group-sort-fn
+  (fn [x] (trace "Activation group sort fn" x)
+    (util/make-activation-group-sort-fn groups :calc)))
 (def hierarchy (schema/schema->hierarchy test-schema))
 (def ancestors-fn (util/make-ancestors-fn hierarchy))
+
 
 (def-tuple-session tuple-session
   'libx.perf-tuple
@@ -100,45 +113,29 @@
   :activation-group-fn activation-group-fn
   :activation-group-sort-fn activation-group-sort-fn)
 
-;(def tuple-session
-;  (cr/mk-session 'libx.perf-tuple
-;   :fact-type-fn :a
-;   :ancestors-fn ancestors-fn
-;   :activation-group-fn activation-group-fn
-;   :activation-group-sort-fn activation-group-sort-fn)
-
 (defn n-facts-session [n]
   (-> tuple-session
     (insert (repeatedly n #(vector (guid) :todo/title "foobar")))))
 
 (def session (atom (n-facts-session 10#_0000)))
-;(inspect/explain-activations @session)
+
 (defn perf-loop [iters]
   (time
     (dotimes [n iters]
       (time
         (reset! session
           (-> @session
-            ;(l/replace-listener)
+            (l/replace-listener)
             (util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
             (util/insert-action [(guid) :add-todo-action {:title "hey"}])
-            (insert [[(guid) :done-count 5]
-                     [(guid) :done-count 6]])
+            (insert [[1 :done-count 5] [1 :done-count 6]])
             (cr/fire-rules)))))))
-@state/rules
+
 (perf-loop 1#_00)
 
 (l/vec-ops @session)
-;(inspect/inspect @session)
-;; agenda phases
-;; schema maintenance should be high salience and always available
-;; action
-;; compute
-;; report
-;; cleanup
 
-
-;; Timings - all our stuff
+;; Timings - all our stuff -CLJ
 ;; 100,000 facts
 ;; 100 iterations
 ;;
