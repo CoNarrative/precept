@@ -13,7 +13,7 @@
 
 ;; Action handlers
 ;(store-action :input/key-code-action)
-;(store-action :ui/set-visibility-filter-action)
+(store-action :ui/set-visibility-filter-action)
 
 ;; Until we can group store-action/as-insert into :action
 (def-tuple-rule handle-entry-update
@@ -54,33 +54,36 @@
 
 
 ;; Calculations
-;; FIXME. One of these throwing error that is hard/impossible to trace. See if related to registry
-;(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]], [[?e :todo/title]])
-(def-tuple-rule when-filter-all
-  [[_ :ui/visibility-filter :all]]
-  [[?e :todo/title]]
-  =>
-  (insert! [?e :todo/visible :tag]))
+(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]])
 
-;(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :done]] [[?e :todo/done]])
-(def-tuple-rule when-filter-done
-  [[_ :ui/visibility-filter :done]]
-  [[?e :todo/title]]
-  =>
-  (insert! [?e :todo/visible :tag]))
+(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :done]] [[?e :todo/done true]])
 
-;(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :active]]
-;                                       [[?e :todo/title]]
-;                                       [:not [?e :todo/done]]]))
-(def-tuple-rule when-filter-active
-  [[_ :ui/visibility-filter :active]]
-  [[?e :todo/title]]
-  [:not [?e :todo/done]]
-  =>
-  (insert! [?e :todo/visible :tag]))
+(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :active]]
+                                       [[?e :todo/title]]
+                                       [[?e :todo/done false]])
+
+;(def-tuple-rule when-filter-all
+;  [[_ :ui/visibility-filter :all]]
+;  [[?e :todo/title]]
+;  =>
+;  (insert! [?e :todo/visible :tag]))
+;
+;(def-tuple-rule when-filter-done
+;  [[_ :ui/visibility-filter :done]]
+;  [[?e :todo/title]]
+;  [[?e :todo/done true]]
+;  =>
+;  (insert! [?e :todo/visible :tag]))
+;
+;(def-tuple-rule when-filter-active
+;  [[_ :ui/visibility-filter :active]]
+;  [[?e :todo/title]]
+;  [[?e :todo/done false]]
+;  =>
+;  (insert! [?e :todo/visible :tag]))
 
 (def-tuple-rule active-done-count
-  [?done <- (acc/count) :from [:todo/done]]
+  [?done <- (acc/count) :from [_ :todo/done true]]
   [?total <- (acc/count) :from [:todo/title]]
   =>
   (insert! [[(guid) :done-count ?done]
@@ -150,25 +153,7 @@
   (trace "[sub-response] Inserting new-todo-title" ?v)
   (insert! [?e ::sub/response {:db/id ?eid :entry/title ?v}]))
 
-
-;; Cleanup phase
-;; TODO. Lib
-;(def-tuple-rule actions-cleared-at-session-end
-;  {:salience -100}
-;  [?action <- [_ :new-todo/save :action]]
-;  =>
-;  (trace "Removing action" ?action)
-;  (retract! ?action))
-
-;; TODO. Lib / schema
-;(def-tuple-rule keycode-cleared-at-session-end
-;  {:salience -100}
-;  [?fact <- :input/key-code]
-;  =>
-;  (trace "Removing key-code " ?fact)
-;  (retract! ?fact))
-
-;;TODO. Lib
+;;TODO. Lib?
 (def-tuple-rule entity-doesnt-exist-when-removal-requested
   [[_ :remove-entity-request ?eid]]
   [?entity <- (acc/all) :from [?eid :all]]
@@ -206,11 +191,6 @@
   (trace (str "SCHEMA MAINT - :unique-value : " ?t1 " is greater than " ?t2))
   (retract! ?fact2))
 
-(cr/defrule a-unique-identity-fact
-  [?fact <- :unique-identity]
-  =>
-  (trace "Unique identity fact" ?fact))
-
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))
 (def activation-group-sort-fn (util/make-activation-group-sort-fn groups :calc))
@@ -220,14 +200,9 @@
 ;(def-tuple-session app-session
 (cr/defsession app-session
   'libx.todomvc.rules
-  :fact-type-fn (fn [x] (:a x))
-  :ancestors-fn (fn [x] (println x) (ancestors-fn x))
+  :fact-type-fn :a
+  :ancestors-fn ancestors-fn
   :activation-group-fn activation-group-fn
   :activation-group-sort-fn activation-group-sort-fn)
 
 
-(-> app-session
-  (util/insert [(guid) :entry/foo-action "Hello."
-                [(guid) :entry/title "Hello."]
-                [(guid) :entry/title "Hell!"]])
-  (cr/fire-rules))

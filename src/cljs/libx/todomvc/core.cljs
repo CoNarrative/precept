@@ -31,7 +31,12 @@
 (defn mount-components []
   (reagent/render [libx.todomvc.views/todo-app] (.getElementById js/document "app")))
 
-(def facts [(random-uuid) :todo/title "Hi"])
+(defn todo [title]
+  (let [id (random-uuid)]
+    [[id :todo/title title]
+     [id :todo/done false]]))
+
+(def facts (todo "Hi"))
 
 (defn ^:export main []
     (start! {:session app-session :schema app-schema :facts facts})
