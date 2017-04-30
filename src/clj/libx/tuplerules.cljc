@@ -94,19 +94,17 @@
               ~doc (assoc :doc ~doc)))))))
 
 #?(:clj
-    (defmacro store-action [a]
+    (defmacro store-action
+      [a]
       (if (compiling-cljs?)
-        `(libx.macros/store-action ~a))
-      (let [name (symbol (str "action-handler-" (clojure.string/replace (subs (str a) 1) \/ \*)))
-            doc nil
-            properties nil
-            lhs (list `[~a (~'= ~'?v ~'(:v this))])
-            rhs `(do (cr/insert-all-unconditional! (util/gen-Tuples-from-map ~'?v)))]
-        (core/register-rule "action-handler" a :default)
-        `(def ~(vary-meta name assoc :rule true :doc doc)
-           (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
-             ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
-             ~doc (assoc :doc ~doc))))))
-
-
-
+        `(libx.macros/store-action ~a)
+        (let [name (symbol (str "action-handler-" (clojure.string/replace (subs (str a) 1) \/ \*)))
+              doc nil
+              properties {:group :action}
+              lhs (list `[~a (~'= ~'?v ~'(:v this))])
+              rhs `(do (libx.util/action-insert! ~'?v))]
+          (core/register-rule "action-handler" a :default)
+          `(def ~(vary-meta name assoc :rule true :doc doc)
+             (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
+               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
+               ~doc (assoc :doc ~doc)))))))

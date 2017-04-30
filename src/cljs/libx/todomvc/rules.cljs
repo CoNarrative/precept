@@ -30,11 +30,11 @@
   (insert-unconditional!
     (util/gen-Tuples-from-map ?v)))
 
-(def-tuple-rule handle-set-visibility-filter-action
-  {:group :action}
-  [[_ :ui/set-visibility-filter-action ?v]]
-  =>
-  (insert-unconditional! (util/gen-Tuples-from-map ?v)))
+;(def-tuple-rule handle-set-visibility-filter-action
+;  {:group :action}
+;  [[_ :ui/set-visibility-filter-action ?v]]
+;  =>
+;  (insert-unconditional! (util/gen-Tuples-from-map ?v)))
 
 (def-tuple-rule handle-start-todo-edit
   {:group :action}

@@ -74,4 +74,3 @@
   (util/insert-action [(guid) :entry/foo-action {:foo/id 2 :foo/name "bar"}])
   (cr/fire-rules)
   (l/vec-ops))
-

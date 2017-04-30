@@ -67,6 +67,9 @@
     []
     m))
 
+(defn action-insert! [m]
+  (cr/insert-all-unconditional! (gen-Tuples-from-map m)))
+
 (defn tuplize-into-vec
   "Returns [[]...].
   Arg may be {} [{}...] [] [[]...]"

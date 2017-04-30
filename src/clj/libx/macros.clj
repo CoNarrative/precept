@@ -200,9 +200,9 @@
   [a]
   (let [name (symbol (str "action-handler-" (clojure.string/replace (subs (str a) 1) \/ \*)))
         doc nil
-        properties nil
+        properties {:group :action}
         lhs (list `[~a (~'= ~'?v ~'(:v this))])
-        rhs `(cr/insert-all-unconditional! (util/gen-Tuples-from-map ~'?v))]
+        rhs (list `(util/action-insert! ~'?v))]
     (core/register-rule "action-handler" a :default)
-    `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
+    `(cm/defrule ~name ~properties ~@lhs ~'=> ~@rhs)))
 
