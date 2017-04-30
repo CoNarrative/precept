@@ -79,8 +79,8 @@
         {:id "new-todo"
          :placeholder "What needs to be done?"
          :value title
-         :on-key-down #(then :input/key-code-action {:value (.-which %)})
-         :on-change #(then :entry/update-action {:value (-> % .-target .-value)})}]]))
+         :on-key-down #(then :input/key-code-action {:input/key-code (.-which %)})
+         :on-change #(then :entry/title-action {:entry/title (-> % .-target .-value)})}]]))
 
 (defn todo-app []
   [:div

@@ -11,30 +11,17 @@
 (defn trace [& args]
   (apply prn args))
 
+(def-tuple-rule all-facts
+  [?fact <- [:all]]
+  =>
+  (println "FACT" (into [] (vals ?fact))))
+
+
 ;; Action handlers
-;(store-action :input/key-code-action)
+(store-action :input/key-code-action)
 (store-action :ui/set-visibility-filter-action)
+(store-action :entry/title-action)
 
-;; Until we can group store-action/as-insert into :action
-(def-tuple-rule handle-entry-update
-  {:group :action}
-  [[?e :entry/update-action ?v]]
-  =>
-  (trace "Responding to edit request" ?e ?v)
-  (insert-unconditional! [?e :entry/title (:value ?v)]))
-
-(def-tuple-rule handle-key-code-action
-  {:group :action}
-  [[_ :input/key-code-action ?v]]
-  =>
-  (insert-unconditional!
-    (util/gen-Tuples-from-map ?v)))
-
-;(def-tuple-rule handle-set-visibility-filter-action
-;  {:group :action}
-;  [[_ :ui/set-visibility-filter-action ?v]]
-;  =>
-;  (insert-unconditional! (util/gen-Tuples-from-map ?v)))
 
 (def-tuple-rule handle-start-todo-edit
   {:group :action}
@@ -49,7 +36,7 @@
   [[?e :todo/toggle-done-action ?v]]
   [[(:id ?v) :todo/done ?bool]]
   =>
-  (trace "Responding to toggle done action (when done)" ?v)
+  (trace "Responding to toggle done action " ?v)
   (insert! [(:id ?v) :todo/done (not ?bool)]))
 
 
@@ -62,47 +49,14 @@
                                        [[?e :todo/title]]
                                        [[?e :todo/done false]])
 
-;(def-tuple-rule when-filter-all
-;  [[_ :ui/visibility-filter :all]]
-;  [[?e :todo/title]]
-;  =>
-;  (insert! [?e :todo/visible :tag]))
-;
-;(def-tuple-rule when-filter-done
-;  [[_ :ui/visibility-filter :done]]
-;  [[?e :todo/title]]
-;  [[?e :todo/done true]]
-;  =>
-;  (insert! [?e :todo/visible :tag]))
-;
-;(def-tuple-rule when-filter-active
-;  [[_ :ui/visibility-filter :active]]
-;  [[?e :todo/title]]
-;  [[?e :todo/done false]]
-;  =>
-;  (insert! [?e :todo/visible :tag]))
+(deflogical [(guid) :done-count ?n] :- [?n <- (acc/count) :from [_ :todo/done true]])
 
-(def-tuple-rule active-done-count
-  [?done <- (acc/count) :from [_ :todo/done true]]
-  [?total <- (acc/count) :from [:todo/title]]
-  =>
-  (insert! [[(guid) :done-count ?done]
-            [(guid) :active-count (- ?total ?done)]]))
-
-;(deflogical [[(guid) :done-count ?done]
-;             [(guid) :active-count (- ?total ?done)]]
-;            :- [?done <- (acc/count) :from [:todo/done]]
-;               [?total <- (acc/count) :from [:todo/title]])
+(deflogical [(guid) :active-count (- ?total ?done)]
+            :- [?total <- (acc/count) :from [:todo/title]] [[_ :done-count ?done]])
 
 (deflogical [?e :entry/save-action] :- [[_ :input/key-code 13]] [[?e :entry/title]])
 
 (deflogical [?e :todo/save-edit-action] :- [[_ :input/key-code 13]] [[?e :todo/edit]])
-
-(def-tuple-rule all-facts
-  [?fact <- [:all]]
-  =>
-  (println "FACT" ?fact))
-
 
 ;; Subscription handlers
 (def-tuple-rule subs-footer-controls
@@ -123,7 +77,7 @@
   [?entity <- (acc/all) :from [?e :all]]
   =>
   ;; warning! this is bad!
-  (trace "Inserting visible todo" ?entity)
+  (trace "Inserting visible todo" (mapv vals ?entity))
   (insert! [(guid) :visible-todo ?entity]))
 
 (def-tuple-rule subs-task-list
