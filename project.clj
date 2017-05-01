@@ -53,13 +53,14 @@
                       :pretty-print true}}
 
       :test
-       {:source-paths ["src/cljs" "test/cljs"]
+       {:source-paths ["src/cljs" "test/cljs" "test/common"]
         :compiler
                      {:main "libx.runner"
                       :output-to "target/cljsbuild/public/js/test/test.js"
                       :output-dir "target/cljsbuild/public/js/test/out"
-                      :asset-path "target/cljsbuild/public/js/test/out"
+                      :asset-path "/js/test/out"
                       :optimizations :none
+                      :cache-analysis false
                       :source-map true
                       :pretty-print true}}
 

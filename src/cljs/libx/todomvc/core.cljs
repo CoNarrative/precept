@@ -6,7 +6,6 @@
             [libx.todomvc.views]
             [libx.todomvc.schema :refer [app-schema]]
             [libx.todomvc.rules :refer [app-session]]
-            [devtools.core :as devtools]
             [reagent.core :as reagent]
             [secretary.core :as secretary])
   (:import [goog History]
@@ -17,10 +16,11 @@
 ;; Instead of secretary consider:
 ;;   - https://github.com/DomKM/silk
 ;;   - https://github.com/juxt/bidi
-(defroute "/" [] (then [(random-uuid) :ui/visibility-filter :all]))
+(defroute "/" [] (then :ui/set-visibility-filter-action
+                       {:ui/visibility-filter :all}))
 
-(defroute "/:filter" [filter]
-  (then [(random-uuid) :ui/visibility-filter (keyword filter)]))
+(defroute "/:filter" [filter] (then :ui/set-visibility-filter-action
+                                    {:ui/visibility-filter (keyword filter)}))
 
 (def history
   (doto (History.)
@@ -31,7 +31,12 @@
 (defn mount-components []
   (reagent/render [libx.todomvc.views/todo-app] (.getElementById js/document "app")))
 
-(def facts [[(random-uuid) :todo/title "Hi"]])
+(defn todo [title]
+  (let [id (random-uuid)]
+    [[id :todo/title title]
+     [id :todo/done false]]))
+
+(def facts (into (todo "Hi") (todo "there!")))
 
 (defn ^:export main []
     (start! {:session app-session :schema app-schema :facts facts})
@@ -39,5 +44,4 @@
 
 
 ;; 637 facts = molasses
-(:schema @state)
-(count (keys @store))
+@store

@@ -1,17 +1,17 @@
 (ns libx.macros
-    (:require [clara.rules :refer [defrule insert! fire-rules]]
+    (:require [clara.rules.compiler :as com]
               [clara.rules.dsl :as dsl]
               [clara.macros :as cm]
               [libx.spec.lang :as lang]
-              [libx.util :refer [insert retract]]
-              [clara.rules.compiler :as com]
-              [clojure.spec :as s]))
+              [libx.util :as util]
+              [clojure.spec :as s]
+              [libx.core :as core]
+              [clara.rules :as cr]))
 
 (defn trace [& args] (comment (apply prn args)))
 
 (defmacro def-tuple-session
-  "Wrapper around Clara's `defsession` macro.
-  Preloads query helpers."
+  "For CLJS. Wrapper around Clara's `defsession` macro."
   [name & sources-and-options]
   `(cm/defsession
      ~name
@@ -47,7 +47,8 @@
     (filter (comp binding? second)
       {:e (first tuple)
        :a (second tuple)
-       :v (last tuple)})))
+       :v (nth tuple 2 nil)
+       :t (nth tuple 3 nil)})))
 
 (defn sexprs-with-bindings [tuple]
   (into {}
@@ -56,19 +57,25 @@
        :v (last tuple)})))
 
 (defn positional-value [tuple]
- (let [v-position (first (drop 2 tuple))]
-  (if (not (value-expr? v-position))
-    {}
-    {:v (list '= v-position '(:v this))})))
+ (let [match-v (first (drop 2 tuple))
+       match-tx (nth tuple 3 nil)]
+   (reduce
+     (fn [acc [k v]]
+       (if (value-expr? v)
+         (assoc acc k (list '= v `(~k ~'this)))
+         acc))
+     {}
+     {:v match-v :t match-tx})))
 
 (defn fact-binding-with-type-only [expr]
   (let [fact-binding (take 2 expr)
         fact-type (if (keyword? (last expr)) (last expr) (first (last expr)))]
     `(~@fact-binding ~fact-type)))
 
-(defn parse-as-tuple [expr]
+(defn parse-as-tuple
   "Parses rule expression as if it contains just a tuple.
   Does not take tuple as input! [ [] ], not []"
+  [expr]
   (let [tuple                          (first expr)
         bindings                       (variable-bindings tuple)
         bindings-and-constraint-values (merge bindings
@@ -90,8 +97,9 @@
       (vector attribute)
       bindings-and-constraint-values)))
 
-(defn parse-with-fact-expression [expr]
+(defn parse-with-fact-expression
   "Returns Clara DSL for `?binding <- [tuple]`"
+  [expr]
   (let [fact-expression (take 2 expr)
         expression      (drop 2 expr)]
     (conj (lazy-seq (parse-as-tuple expression))
@@ -113,9 +121,10 @@
           (first expression)
           (parse-as-tuple expression)))))
 
-(defn parse-with-op [expr]
+(defn parse-with-op
   "Returns Clara DSL for `[:op x]`, [:op [:op x] where x is
   :keyword, [:keyword] or [tuple]"
+  [expr]
   (let [outer-op (dsl/ops (first expr))
         inner-op (dsl/ops (first (second expr)))]
     (if inner-op
@@ -127,8 +136,9 @@
                          (second expr)
                          (parse-as-tuple (vector (second expr))))))))
 
-(defn rewrite-lhs [exprs]
+(defn rewrite-lhs
   "Returns Clara DSL"
+  [exprs]
   (map (fn [expr]
           (let [leftmost        (first expr)
                 op              (keyword? (dsl/ops leftmost))
@@ -151,7 +161,7 @@
 
 ;TODO. Pass docstring and properties to Clara's defrule
 (defmacro def-tuple-rule
-  "For CLJS"
+  "CLJS version of def-tuple-rule"
   [name & body]
   (let [doc         (if (string? (first body)) (first body) nil)
         body        (if doc (rest body) body)
@@ -161,33 +171,38 @@
         rw-lhs      (rewrite-lhs lhs)
         passthrough (filter some? (list doc properties))
         unwrite-rhs (rest rhs)]
+    (core/register-rule "rule" lhs rhs)
     `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@unwrite-rhs)))
 
 (defmacro def-tuple-query
-  "For CLJS"
+  "CLJS version of def-tuple-query"
   [name & body]
   (let [doc (if (string? (first body)) (first body) nil)
         binding (if doc (second body) (first body))
         definition (if doc (drop 2 body) (rest body))
         rw-lhs      (rewrite-lhs definition)
         passthrough (filter #(not (nil? %)) (list doc binding))]
+    (core/register-rule "query" definition nil)
     `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
 
-(defn insert-each-logical [facts]
-  "Returns sequence of facts with insert! if seq of one or insert-all! if multiple"
-  (println "facts" facts)
-  (if (= (count facts) 1)
-    `(do (~'insert! ~(first facts)))
-    `(do (~'insert-all! ~facts))))
-
 (defmacro deflogical
-  [name & body]
-  (let [doc         (if (string? (first body)) (first body) nil)
-        body        (if doc (rest body) body)
-        properties  (if (map? (first body)) (first body) nil)
-        definition  (if properties (rest body) body)
-        facts (first definition)
-        condition (rest definition)
-        lhs (rewrite-lhs condition)
-        rhs (insert-each-logical facts)]
+  "CLJS version of deflogical"
+  [& forms]
+  (let [{:keys [body head]} (util/split-head-body forms)
+        name (symbol (core/register-rule "deflogical" body head))
+        lhs (rewrite-lhs body)
+        rhs (list `(libx.util/insert! ~head))]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
+
+;; TODO. Needs way to belong to 'action-handler' group
+(defmacro store-action
+  "CLJS version of store-action"
+  [a]
+  (let [name (symbol (str "action-handler-" (clojure.string/replace (subs (str a) 1) \/ \*)))
+        doc nil
+        properties {:group :action}
+        lhs (list `[~a (~'= ~'?v ~'(:v this))])
+        rhs (list `(util/action-insert! ~'?v))]
+    (core/register-rule "action-handler" a :default)
+    `(cm/defrule ~name ~properties ~@lhs ~'=> ~@rhs)))
+

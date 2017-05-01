@@ -6,3 +6,8 @@
 ;(doo-tests 'libx.subscribe-test
 ;           'libx.store-test))
 
+(defn ^:export main []
+  (enable-console-print!)
+  (println "Hello world!"))
+
+(main)

@@ -2,7 +2,8 @@
     (:require [clojure.test :refer [deftest testing is run-tests]]
               [clara.rules :refer [defrule defquery]]
               [clara.rules.accumulators :as acc]
-              [libx.tuplerules :refer [def-tuple-rule def-tuple-query]]
+              [libx.tuplerules :refer [def-tuple-rule def-tuple-query store-action]]
+              [libx.util :refer [insert!] :as util]
               [libx.macros :refer [binding?
                                    variable-bindings
                                    positional-value
@@ -47,7 +48,11 @@
   (is (= '[:ns/attr (= ?e (:e this)) (= ?v (:v this))]
         (parse-as-tuple '[[?e :ns/attr ?v]])))
   (is (= '[:ns/attr (= ?e (:e this))]
-        (parse-as-tuple '[[?e :ns/attr]]))))
+        (parse-as-tuple '[[?e :ns/attr]])))
+  (is (= '[:ns/attr (= ?tx-id (:t this))]
+        (parse-as-tuple '[[_ :ns/attr _ ?tx-id]])))
+  (is (= '[:ns/attr (= -1 (:t this))]
+        (parse-as-tuple '[[_ :ns/attr _ -1]]))))
 
 (deftest rewrite-lhs-test
   (testing "Ops - :exists, :not, :and, :or"
@@ -73,90 +78,125 @@
                 [[?e :todo/title _]]
                 [:exists [:todo/done]]
                 =>
-                (println "RHS")))
+                (insert! "RHS")))
           (macroexpand
             '(defrule my-rule
                [:todo/title (= ?e (:e this))]
                [:exists [:todo/done]]
                =>
-               (println "RHS"))))))
+               (insert! "RHS"))))))
   (testing "Match on a value"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 [[?e :todo/title "Hello"]]
                 =>
-                (println "RHS")))
+                (insert! "RHS")))
           (macroexpand
             '(defrule my-rule
                [:todo/title (= ?e (:e this)) (= "Hello" (:v this))]
                =>
-               (println "RHS"))))))
+               (insert! "RHS"))))))
   (testing "With accumulator, fact-type only"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 [?foo <- (acc/all) from [:todo/title]]
                 =>
-                (println "RHS")))
+                (insert! "RHS")))
            (macroexpand
              '(defrule my-rule
                 [?foo <- (acc/all) from [:todo/title]]
                 =>
-                (println "RHS"))))))
+                (insert! "RHS"))))))
   (testing "With op that contains tuple expression"
     (is (= (macroexpand
             '(def-tuple-rule my-rule
               [:not [?e :todo/done]]
               =>
-              (println "RHS")))
+              (insert! "RHS")))
           (macroexpand
            '(defrule my-rule
              [:not [:todo/done (= ?e (:e this))]]
              =>
-             (println "RHS"))))))
+             (insert! "RHS"))))))
   (testing "With nested ops"
       (is (= (macroexpand
               '(def-tuple-rule my-rule
                  [:not [:exists [:todo/done]]]
                  =>
-                 (println "RHS")))
+                 (insert! "RHS")))
             (macroexpand
               '(defrule my-rule
                 [:not [:exists [:todo/done]]]
                 =>
-                (println "RHS"))))))
+                (insert! "RHS"))))))
   (testing "Accum with fact assignment"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 [?entity <- (acc/all) :from [?e :all]]
                 =>
-                (println "RHS")))
+                (insert! "RHS")))
           (macroexpand
             '(defrule my-rule
                [?entity <- (acc/all) :from [:all (= ?e (:e this))]]
                =>
-               (println "RHS"))))))
+               (insert! "RHS"))))))
   (testing "Fact assignment with brackets around fact-type"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 [?entity <- [:my-attribute]]
                 =>
-                (println "RHS")))
+                (insert! "RHS")))
           (macroexpand
             '(defrule my-rule
                [?entity <- :my-attribute]
                =>
-               (println "RHS"))))))
+               (insert! "RHS"))))))
   (testing "Fact assignment no brackets around fact-type"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 [?entity <- :my-attribute]
                 =>
-                (println "RHS")))
+                (insert! "RHS")))
           (macroexpand
             '(defrule my-rule
                [?entity <- :my-attribute]
                =>
-               (println "RHS")))))))
+               (insert! "RHS"))))))
+  (testing "Tx-id field - bind"
+    (is (= (macroexpand
+             '(def-tuple-rule my-rule
+                [[_ :my-attribute _ ?t]]
+                =>
+                (insert! "RHS")))
+          (macroexpand
+            '(defrule my-rule
+               [:my-attribute (= ?t (:t this))]
+               =>
+               (insert! "RHS"))))))
+  (testing "Tx-id field - bind the fact"
+    (is (= (macroexpand
+             '(def-tuple-rule my-rule
+                [?fact <- [_ :my-attribute _ ?t]]
+                =>
+                (insert! "RHS")))
+          (macroexpand
+            '(defrule my-rule
+               [?fact <- :my-attribute (= ?t (:t this))]
+               =>
+               (insert! "RHS"))))))
+  (testing "With :test op"
+    (is (= (macroexpand
+             '(def-tuple-rule my-rule
+                [?fact <- [_ :my-attribute _ ?t]]
+                [:test (> ?t ?fact)]
+                =>
+                (insert! "RHS")))
+          (macroexpand
+            '(defrule my-rule
+               [?fact <- :my-attribute (= ?t (:t this))]
+               [:test (> ?t ?fact)]
+               =>
+               (insert! "RHS")))))))
 
 (deftest def-tuple-query-test
   (testing "Query with no args"
@@ -173,6 +213,16 @@
           (macroexpand
             '(defquery my-query [:?e]
                [:foo (= ?e (:e this)) (= ?v (:v this))]))))))
+
+(deftest store-action-test
+  (testing "Expansion should be the same as equivalent defrule"
+    (is (= (macroexpand
+             '(store-action :foo))
+           (macroexpand
+             '(defrule action-handler-foo
+                [:foo (= ?v (:v this))]
+                =>
+                (clara.rules/insert-all-unconditional! (libx.util/gen-Tuples-from-map ?v))))))))
 
 
 (run-tests)

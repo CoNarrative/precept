@@ -20,21 +20,19 @@
         [:input.toggle
           {:type "checkbox"
            :checked (if done true false)
-           :on-change #(if done
-                         (then :remove [id :todo/done :tag])
-                         (then :add [id :todo/done :tag]))}]
+           :on-change #(then :todo/toggle-done-action {:id id})}]
         [:label
-          {:on-double-click #(then [id :todo/edit-request :action])}
+          {:on-double-click #(then :todo/start-edit-action {:id id})}
           title]
         [:button.destroy
-          {:on-click #(then :remove-entity id)}]]
+          {:on-click #(then :remove-entity-action {:id id})}]]
       (when edit
         [input
           {:class "edit"
            :value edit
-           :on-change #(then [id :todo/edit (-> % .-target .-value)])
-           :on-key-down #(then [(random-uuid) :input/key-code (.-which %)])
-           :on-blur #(then [id :todo/save-edit :action])}])]))
+           :on-change #(then :todo/update-edit-action {:id id :value (-> % .-target .-value)})
+           :on-key-down #(then :input/key-code-action {:value (.-which %)})
+           :on-blur #(then :todo/save-edit-action {:id id})}])]))
 
 (defn task-list
   []
@@ -45,7 +43,7 @@
         [:input#toggle-all
           {:type "checkbox"
            :checked (not all-complete?)
-           :on-change #(then [(random-uuid) :ui/toggle-complete :tag])}]
+           :on-change #(then :ui/toggle-complete-action)}]
         [:label
           {:for "toggle-all"}
           "Mark all as complete"]
@@ -68,12 +66,12 @@
       [:li (a-fn :active "Active")]
       [:li (a-fn :done   "Completed")]]
      (when (pos? done-count)
-       [:button#clear-completed {:on-click #(then [(random-uuid) :ui/clear-completed :tag])}
+       [:button#clear-completed {:on-click #(then :ui/clear-completed-action)}
         "Clear completed"])]))
 
 
 (defn task-entry []
-  (let [{:keys [db/id new-todo/title]} @(subscribe [:new-todo/title])]
+  (let [{:keys [db/id entry/title]} @(subscribe [:task-entry])]
     ;(prn "New todo title task entry" title)
     [:header#header
       [:h1 "todos"]
@@ -81,8 +79,8 @@
         {:id "new-todo"
          :placeholder "What needs to be done?"
          :value title
-         :on-key-down #(then [(random-uuid) :input/key-code (.-which %)])
-         :on-change #(then [(random-uuid) :new-todo/title (-> % .-target .-value)])}]]))
+         :on-key-down #(then :input/key-code-action {:input/key-code (.-which %)})
+         :on-change #(then :entry/title-action {:entry/title (-> % .-target .-value)})}]]))
 
 (defn todo-app []
   [:div

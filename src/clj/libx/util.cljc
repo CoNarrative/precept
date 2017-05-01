@@ -1,5 +1,9 @@
 (ns libx.util
-   (:require [clara.rules :as cr]))
+   (:require [clara.rules :as cr]
+             [libx.state :as state]))
+
+(defn trace [& args]
+  (comment (apply prn args)))
 
 (defn guid []
   #?(:clj (java.util.UUID/randomUUID)
@@ -10,12 +14,28 @@
 
 (defn map->tuples
   "Transforms entity map to vector of tuples
-  {a1 v1 a2 v2 :db/id eid} -> [ [eid a1 v1] ... ]"
+  {a1 v1 a2 v2 :db/id eid} -> [[eid a1 v1]...]"
   [m]
   (mapv (fn [[k v]] (vector (:db/id m) k v))
     (dissoc m :db/id)))
 
-(defrecord Tuple [e a v])
+(defn entity-Tuples->entity-maps
+  [coll]
+  (mapv
+    #(reduce (fn [acc m] (assoc acc :db/id (:e m) (:a m) (:v m)))
+       {}
+       %)
+    coll))
+
+(defn next-fact-id! [] (swap! state/fact-id inc))
+(defn reset-fact-id! [] (reset! state/fact-id -1))
+
+(defrecord Tuple [e a v t])
+
+(defn Tuple-3 [e a v] (map->Tuple {:e e :a a :v v}))
+
+(defn add-fact-id [tuple-3]
+  (assoc tuple-3 :t (next-fact-id!)))
 
 (defn third [xs]
   #?(:cljs (nth xs 2)
@@ -32,14 +52,25 @@
     (vector (:e r) (:a r) v)))
 
 (defn vec->record [vec]
-  (let [v-pos (third vec)
-        v (if (and (vector? v-pos)
-                   (not (record? (first v-pos))))
-            (vec->record v-pos)
-            v-pos)]
-    (->Tuple (first vec)
-             (second vec)
-             v)))
+  (->Tuple (first vec)
+           (second vec)
+           (third vec)
+           (next-fact-id!)))
+
+(defn tuple-vec->action-hash-map
+  "Puts ks in x into e-a-v map and assigns m to :v"
+  [x]
+  (let [m (nth x 2)]
+    (into m {:e (first x) :a (second x) :v m :t (next-fact-id!)})))
+
+(defn gen-Tuples-from-map [m]
+  (reduce
+    (fn [acc [k v]] (conj acc (->Tuple (guid) k v (next-fact-id!))))
+    []
+    m))
+
+(defn action-insert! [m]
+  (cr/insert-all-unconditional! (gen-Tuples-from-map m)))
 
 (defn tuplize-into-vec
   "Returns [[]...].
@@ -51,60 +82,62 @@
     (vector? (first x)) x
     :else (vector x)))
 
-(defn insertable [x]
+(defn insertable
   "Arguments can be any mixture of vectors and records
   Ensures [], [[]...], Tuple, '(Tuple ...) conform to Tuple record instances."
+  [x]
   (cond
     (record? x) (vector x)
-    (and (list? x) (record? (first x))) (into [] x)
-    (and (vector? x) (vector? (first x))) (map vec->record x)
+    (and (coll? x) (record? (first x))) (into [] x)
+    (and (coll? x) (vector? (first x))) (mapv vec->record x)
     (vector? x) (vector (vec->record x))))
 
-(defn insert [session & facts]
-  "Inserts Tuples. Accepts {} [{}...] [] [[]...]"
-  (let [insertables (map vec->record (mapcat tuplize-into-vec facts))]
+(defn insert
+  "Inserts Tuples from outside rule context.
+  Accepts {} [{}...] [] [[]...]"
+  [session facts]
+  (let [insertables (insertable facts)
+        _ (trace "insert received : " facts)
+        _ (trace "insert : " insertables)]
     (cr/insert-all session insertables)))
 
-(defn insert! [facts]
-  (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
+(defn insert-action
+  "Inserts hash-map from outside rule context.
+  Accepts [e a v] where v is {} with ks that become part of inserted map"
+  [session action]
+  (trace "insert-action : " (tuple-vec->action-hash-map action))
+  (cr/insert session (tuple-vec->action-hash-map action)))
+
+(defn insert!
+  "Inserts Facts within rule context"
+  [facts]
+  (let [insertables (insertable facts)]
+    (trace "insert! : " insertables)
     (cr/insert-all! insertables)))
 
-(defn insert-unconditional! [facts]
-  (let [insertables (map vec->record (mapcat tuplize-into-vec (list facts)))]
+(defn insert-unconditional!
+  "Inserts uncondtinally Facts within rule context"
+  [facts]
+  (let [insertables (insertable facts)]
+    (trace "insert-unconditional! received" facts)
+    (trace "insert-unconditional! : " insertables)
     (cr/insert-all-unconditional! insertables)))
 
-(defn retract! [facts]
-  "Wrapper around Clara's `retract!`. To be used within RHS of rule only. "
-  (let [insertables (insertable facts)]
-    (doseq [to-retract insertables]
-      (cr/retract! to-retract))))
+(defn retract!
+  "Wrapper around Clara's `retract!`.
+  To be used within RHS of rule only. Converts all input to Facts"
+  [facts]
+  (let [insertables (insertable facts)
+        _ (trace "retract! :" insertables)]
+    (doseq [x insertables]
+      (cr/retract! x))))
 
-(defn retract [session & facts]
+(defn retract
   "Retracts either: Tuple, {} [{}...] [] [[]..]"
-  (let [insertables (map vec->record (mapcat tuplize-into-vec facts))]
+  [session facts]
+  (let [insertables (insertable facts)]
+    (trace "retract : " insertables)
     (apply (partial cr/retract session) insertables)))
-
-;;TODO. 1. Decide whether we require a schema in defsession
-;;      2. Deprecate pending schema validation performant in rules
-;;      3. If more performant, lookup facts to retract from the store
-;(defn schema-insert
-;  "Inserts each fact according to conditions defined in schema.
-;  Currently supports: db.unique/identity, db.unique/value"
-;  [session schema facts]
-;  (let [facts-v (if (coll? (first facts)) facts (vector facts))
-;        tuples (mapcat tuplize-into-vec facts-v)
-;        unique-attrs (schema/unique-identity-attrs schema tuples)
-;        unique-values (schema/unique-value-attrs schema tuples)
-;        unique-identity-facts (schema/unique-identity-facts session unique-attrs)
-;        unique-value-facts (schema/unique-value-facts session tuples unique-values)
-;        unique-facts (into unique-identity-facts unique-value-facts)
-;        next-session (if (empty? unique-facts)
-;                       (-> session
-;                         (insert tuples))
-;                       (-> session
-;                         (retract unique-facts)
-;                         (insert tuples)))]
-;    next-session))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn clara-tups->maps
@@ -132,20 +165,60 @@
   (let [idx (.indexOf coll x)]
     (if (get coll idx) idx not-found-idx)))
 
-(defn make-activation-group-fn [default-group]
+(defn make-activation-group-fn
+  "Reads from optional third argument to rule.
+  `super` boolean
+  `group` keyword
+  `salience` number
+  Rules marked super will be present in every agenda phase."
+  [default-group]
   (fn [m] {:salience (or (:salience (:props m)) 0)
-           :group (or (:group (:props m)) default-group)}))
+           :group (or (:group (:props m)) default-group)
+           :super (:super (:props m))}))
 
 (defn make-activation-group-sort-fn
   [groups default-group]
   (let [default-idx (.indexOf groups default-group)]
     (fn [a b]
       (let [group-a (get-index-of groups (:group a) default-idx)
-            group-b (get-index-of groups (:group b) default-idx)]
+            group-b (get-index-of groups (:group b) default-idx)
+            a-super? (:super a)
+            b-super? (:super b)]
         (cond
+          a-super? true
+          b-super? false
+          (and a-super? b-super?) (> (:salience a) (:salience b))
           (< group-a group-b) true
           (= group-a group-b) (> (:salience a) (:salience b))
           :else false)))))
+
+(defn action? [a] (> (.indexOf (name a) "-action") -1))
+
+(defn make-ancestors-fn
+  ([hierarchy]
+   #(or ((:ancestors hierarchy) %)
+      (cond
+        (action? %) #{:all :action}
+        :else #{:all})))
+  ([hierarchy root-fact-type]
+   #(or ((:ancestors hierarchy) %)
+      (cond
+        (action? %) #{root-fact-type :action}
+        :else #{root-fact-type}))))
+
+(defn split-head-body
+  "Takes macro body of a deflogical and returns map of :head, :body"
+  [rule]
+  (let [[head [sep & body]] (split-with #(not= ':- %) rule)]
+    {:body body
+     :head (first head)}))
+
+
+;; TODO. Find right ns fns
+;(defn unmap-all-rule-nses [nses]
+;  (doseq [[k _] (ns-publics *ns*)]
+;    (ns-unmap *ns* k)))
+
 
 ;; From clojure.core.incubator
 (defn dissoc-in

@@ -43,6 +43,7 @@
 (defn to-transient-fact-listener [listener]
   (TransientFactListener. (atom (.-trace listener))))
 
+; Copied from Clara and modified
 (defn append-trace
   "Appends a trace event and returns a new listener with it."
   [^TransientFactListener listener event]
@@ -100,26 +101,30 @@
 (defn list-facts [xs]
   (mapcat :facts (mapcat identity (vals xs))))
 
-(defn key-by-hashcode [coll]
+(defn key-by-hashcode
   "WILL remove duplicates"
+  [coll]
   (zipmap (map hash-ordered-coll coll) coll))
 
-(defn select-disjoint [added removed]
+(defn select-disjoint
   "Takes m keyed by hashcode. Returns same with removals applied to additions"
+  [added removed]
   (let [a (set (keys added))
         b (set (keys removed))]
     (select-keys added (remove b a))))
 
-(defn split-ops [trace]
+(defn split-ops
   "Takes trace returned by Clara's get-trace. Returns m of :added, :removed"
+  [trace]
   (let [by-type (trace-by-type trace)
         hashed-adds (key-by-hashcode (list-facts (insertions by-type)))
         hashed-retracts (key-by-hashcode (list-facts (retractions by-type)))]
     {:added (into [] (vals (select-disjoint hashed-adds hashed-retracts)))
      :removed (into [] (vals (select-disjoint hashed-retracts hashed-adds)))}))
 
-(defn ops [session]
+(defn ops
   "Returns :added, :removed results for a single fact listener. Usually wrapped with `embed-ops`."
+  [session]
   (split-ops (first (fact-traces session))))
 
 (defn vectorize-trace [trace]
@@ -135,13 +140,6 @@
   (mapv (fn [ent] (conj ent (vector (ffirst ent) :op op-kw)))
     (partition-by first change)))
 
-;(defn embed-op [changes]
-;  (let [added (:added changes)
-;        removed (:removed changes)]
-;    (mapv util/entity-tuples->entity-map
-;      (into (with-op added :add)
-;        (with-op removed :remove)))))
-
 (defn embed-op [additions-or-removals op-kw]
     (mapv util/tuple-entity->hash-map-entity
       (with-op additions-or-removals op-kw)))
@@ -154,7 +152,8 @@
 (defn change->attr [change]
   (first (remove #{:db/id :op} (keys change))))
 
-(defn change->av-map [change]
+(defn change->av-map
   "Removes :op, :db/id from change for an entity"
+  [change]
   (into {} (remove #(#{:op :db/id} (first %))
              change)))

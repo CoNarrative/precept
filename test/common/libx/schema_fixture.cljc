@@ -25,6 +25,9 @@
    (attribute :todo/done
      :db.type/keyword)
 
+   (attribute :todo/tags
+     :db.type/keyword
+     :db/cardinality :db.cardinality/many)
    ; UI
    (attribute :ui/toggle-complete
      :db.type/enum ;;tag
