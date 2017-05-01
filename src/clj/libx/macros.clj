@@ -50,11 +50,18 @@
        :v (nth tuple 2 nil)
        :t (nth tuple 3 nil)})))
 
-(defn sexprs-with-bindings [tuple]
-  (into {}
-    (filter (comp sexpr? second)
-      {:a (second tuple)
-       :v (last tuple)})))
+(defn sexprs-with-bindings
+  "[(:id ?v) :foo 'bar'] -> (= (:id ?v) (:e this))"
+  [tuple]
+  (reduce
+    (fn [acc [k v]]
+      (if (and (sexpr? v) (some binding? (flatten v)))
+        (assoc acc k (list '= v `(~k ~'this)))
+        acc))
+    {}
+    {:e (first tuple)
+     :a (second tuple)
+     :v (last tuple)}))
 
 (defn positional-value [tuple]
  (let [match-v (first (drop 2 tuple))
@@ -159,7 +166,6 @@
               :else (parse-as-tuple expr))))
     exprs))
 
-;TODO. Pass docstring and properties to Clara's defrule
 (defmacro def-tuple-rule
   "CLJS version of def-tuple-rule"
   [name & body]
@@ -194,7 +200,6 @@
         rhs (list `(libx.util/insert! ~head))]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
 
-;; TODO. Needs way to belong to 'action-handler' group
 (defmacro store-action
   "CLJS version of store-action"
   [a]
