@@ -3,6 +3,7 @@
             [clara.rules :as cr]
             [libx.spec.sub :as sub]
             [libx.todomvc.schema :refer [app-schema]]
+            [clojure.core.reducers :as r]
             [libx.util :refer [insert! insert-unconditional! retract! attr-ns guid Tuple]]
             [libx.tuplerules :refer-macros [deflogical store-action def-tuple-session def-tuple-rule]]
             [libx.schema :as schema]
@@ -31,13 +32,14 @@
   (trace "Responding to edit request" ?e ?v)
   (insert-unconditional! [?e :todo/edit ?v]))
 
+;; FIXME. Causes loop
 (def-tuple-rule handle-toggle-done-action
   {:group :action}
-  [[?e :todo/toggle-done-action ?v]]
-  [[(:id ?v) :todo/done ?bool]]
+  [:exists [?e :todo/toggle-done-action ?v ?action-tx]]
+  [:exists [(:id ?v) :todo/done ?bool]]
   =>
-  (trace "Responding to toggle done action " ?v)
-  (insert! [(:id ?v) :todo/done (not ?bool)]))
+  (trace "Responding to toggle done action " [(:id ?v) :todo/done (not ?bool)])
+  (insert-unconditional! [(:id ?v) :todo/done (not ?bool)]))
 
 
 ;; Calculations
@@ -57,6 +59,21 @@
 (deflogical [?e :entry/save-action] :- [[_ :input/key-code 13]] [[?e :entry/title]])
 
 (deflogical [?e :todo/save-edit-action] :- [[_ :input/key-code 13]] [[?e :todo/edit]])
+
+(defn by-fact-id
+  "Returns an accumulator that returns the sum of values of a given field"
+  []
+  (acc/accum
+    {:initial-value {}
+     :reduce-fn (fn [acc cur]
+                  (into {} (sort-by val (assoc acc (:e cur) (:t cur)))))
+     :retract-fn (fn [acc cur]
+                   (into {} (sort-by val (dissoc acc (:e cur)))))}))
+
+(cr/defrule maintain-list-of-visible-todos
+  [?list <- (by-fact-id) :from [:todo/visible]]
+  =>
+  (println "List!" ?list))
 
 ;; Subscription handlers
 (def-tuple-rule subs-footer-controls

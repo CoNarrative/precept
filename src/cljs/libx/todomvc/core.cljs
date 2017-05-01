@@ -36,7 +36,7 @@
     [[id :todo/title title]
      [id :todo/done false]]))
 
-(def facts (todo "Hi"))
+(def facts (into (todo "Hi") (todo "there!")))
 
 (defn ^:export main []
     (start! {:session app-session :schema app-schema :facts facts})
