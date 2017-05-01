@@ -23,14 +23,37 @@
 (store-action :ui/set-visibility-filter-action)
 (store-action :entry/title-action)
 
+;; TODO. s-expr in first position does not expand properly. May be happening
+;; in multiple slots. Needs to expand to (= (:id ?action) (:e this))
+;(def-tuple-rule handle-start-todo-edit
+;  {:group :action}
+;  [[_ :todo/start-edit-action ?action]]
+;  [[(:id ?action) :todo/title ?v]]
+;  =>
+;  (trace "Responding to edit request" (:id ?action) ?v)
+;  (insert-unconditional! [(:id ?action) :todo/edit ?v]))
 
-(def-tuple-rule handle-start-todo-edit
+(cr/defrule handle-start-todo-edit
   {:group :action}
-  [[?e :todo/start-edit-action]]
-  [[?e :todo/title ?v]]
+  [:todo/start-edit-action (= ?action (:v this))]
+  [:todo/title (= (:id ?action) (:e this)) (= ?v (:v this))]
   =>
-  (trace "Responding to edit request" ?e ?v)
-  (insert-unconditional! [?e :todo/edit ?v]))
+  (trace "Responding to edit request" (:id ?action) ?v)
+  (insert-unconditional! [(:id ?action) :todo/edit ?v]))
+
+(def-tuple-rule handle-update-edit-action
+  {:group :action}
+  [[_ :todo/update-edit-action ?params]]
+  =>
+  (insert-unconditional! [(:id ?params) :todo/edit (:value ?params)]))
+
+(def-tuple-rule handle-save-edit-action
+  {:group :action}
+  [[_ :todo/save-edit-action ?params]]
+  [?edit <- [(:id ?params) :todo/edit ?v]]
+  =>
+  (retract! ?edit)
+  (insert-unconditional! [(:id ?params) :todo/title ?v]))
 
 ;; FIXME. Causes loop
 (def-tuple-rule handle-toggle-done-action
@@ -71,7 +94,7 @@
    (acc/accum
      {:initial-value []
       :reduce-fn (fn [acc cur] (sort-by :t (conj acc (k cur))))
-      :retract-fn (fn [acc cur] (sort-by :t (remove #(= (k cur %) acc))))})))
+      :retract-fn (fn [acc cur] (sort-by :t (remove #(= (k cur %)) acc)))})))
 
 (def-tuple-rule create-list-of-visible-todos
   {:group :report}
