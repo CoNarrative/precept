@@ -32,11 +32,6 @@
 
 (defrecord Tuple [e a v t])
 
-(defn Tuple-3 [e a v] (map->Tuple {:e e :a a :v v}))
-
-(defn add-fact-id [tuple-3]
-  (assoc tuple-3 :t (next-fact-id!)))
-
 (defn third [xs]
   #?(:cljs (nth xs 2)
      :clj (try (nth xs 2)
@@ -212,6 +207,13 @@
   (let [[head [sep & body]] (split-with #(not= ':- %) rule)]
     {:body body
      :head (first head)}))
+
+(defn find-sub-by-name [name]
+  (second
+    (first
+      (filter
+        (fn [[id sub]] (= name (:name sub)))
+        (:subscriptions @state/state)))))
 
 
 ;; TODO. Find right ns fns

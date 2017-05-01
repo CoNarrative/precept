@@ -3,15 +3,18 @@
     (:require [libx.util :as util]
               [libx.listeners :as l]
               [libx.query :as q]
-              [libx.state :refer [fact-id rules]]
+              [libx.state :refer [fact-id rules store state]]
               [clara.rules :refer [fire-rules]]
               [libx.spec.core :refer [validate]]
               [libx.spec.sub :as sub]
               [libx.spec.lang :as lang]
-      #?(:clj [clojure.core.async :refer [<! >! put! take! chan go go-loop]])
-      #?(:clj [reagent.ratom :as rr])
+      #?(:clj
+              [clojure.core.async :refer [<! >! put! take! chan go go-loop]])
+      #?(:clj
+              [reagent.ratom :as rr])
       #?(:cljs [cljs.core.async :refer [put! take! chan <! >!]])
-      #?(:cljs [reagent.core :as r]))
+      #?(:cljs [reagent.core :as r])
+        [libx.state :as state])
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
 #?(:cljs (enable-console-print!))
@@ -33,17 +36,9 @@
       (swap! rules conj entry)
       (:name entry))))
 
-(def initial-state
-  {:session nil
-   :session-history '()
-   :subscriptions {}})
-
-(defonce state (atom initial-state))
-
-(defn mk-ratom [args]
-  #?(:clj (atom args) :cljs (r/atom args)))
-
-(defonce store (mk-ratom {}))
+(defn notify! [sub-name update-fn]
+  (let [sub-id (:id (util/find-sub-by-name sub-name))]
+    (swap! store update-in [sub-id ::sub/response] update-fn)))
 
 (def action-ch (chan 1))
 (def session->store (chan 1))
@@ -166,19 +161,12 @@
     (swap! state assoc-in [:subscriptions id] {:id id :name name :lens lens})
     lens))
 
-(defn find-sub-by-name [name]
-  (second
-    (first
-      (filter
-        (fn [[id sub]] (= name (:name sub)))
-        (:subscriptions @state)))))
-
 (defn subscribe
   "Returns lens that points to a path in the store. Sub is handled by a rule."
   ([req]
    (let [;_ (validate ::sub/request req) ;;TODO. move to :pre
          name (first req)
-         existing (find-sub-by-name name)
+         existing (util/find-sub-by-name name)
          _ (trace "New sub name / existing if any" name existing)]
      (or (:lens existing) (register req)))))
 
