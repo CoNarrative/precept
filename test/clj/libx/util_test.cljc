@@ -60,12 +60,15 @@
           (vec->record [-1 :attr]))))
   (testing "Vector tuple with vector tuple in third slot"
     (let [rtn (vec->record [-1 :attr [-2 :nested "foo"]])]
-      (is (= (type rtn) Tuple))
-      (is (= (type (:v rtn)) Tuple))
-      (is 4 (count (vals rtn)))
-      (is 4 (count (vals (:v rtn))))
-      (is (fact-id? (:t rtn)))
-      (is (fact-id? (:t (:v rtn)))))))
+      (is (record? rtn))
+      (is (vector? (:v rtn)))
+      (is (number? (:t rtn))))))
+      ;(is (= (type rtn) Tuple))
+      ;(is (= (type (:v rtn)) Tuple))
+      ;(is 4 (count (vals rtn)))
+      ;(is 4 (count (vals (:v rtn))))
+      ;(is (fact-id? (:t rtn)))
+      ;(is (fact-id? (:t (:v rtn)))))))
 
 (deftest record->vec-test
   (testing "With single record no nesting"
@@ -108,7 +111,21 @@
   (testing "List of vectors"
     (let [rtn (insertable (list [123 :sub/request :todo-app]))]
       (is (vector? rtn))
-      (is (every? #(= (type %) Tuple) rtn)))))
+      (is (every? #(= (type %) Tuple) rtn))))
+  (testing "Vector with a vector as data in :v position"
+    (let [rtn (insertable [123 :vector-as-data [1 :foo]])]
+      (is (vector? rtn))
+      (is (every? #(= Tuple (type %)) rtn))
+      (is (every? #(number? (:t %)) rtn))
+      (is (every? #(vector? (:v %)) rtn))
+      (is (= [1 :foo] (:v (first rtn))))))
+  (testing "Vector with hash-map as data in :v position"
+    (let [rtn (insertable [123 :vector-as-data {:a 1}])]
+      (is (vector? rtn))
+      (is (every? #(= Tuple (type %)) rtn))
+      (is (every? #(number? (:t %)) rtn))
+      (is (every? #(map? (:v %)) rtn))
+      (is (= {:a 1} (:v (first rtn)))))))
 
 (deftest insert-test
   (testing "Insert single tuple"

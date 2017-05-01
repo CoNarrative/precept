@@ -52,16 +52,10 @@
     (vector (:e r) (:a r) v)))
 
 (defn vec->record [vec]
-  (let [v-pos (third vec)
-        v (if (and (vector? v-pos)
-                   (not (record? (first v-pos))))
-            (vec->record v-pos)
-            v-pos)
-        tx-id (nth vec 3 (next-fact-id!))]
-    (->Tuple (first vec)
-             (second vec)
-             v
-             tx-id)))
+  (->Tuple (first vec)
+           (second vec)
+           (third vec)
+           (next-fact-id!)))
 
 (defn tuple-vec->action-hash-map
   "Puts ks in x into e-a-v map and assigns m to :v"
