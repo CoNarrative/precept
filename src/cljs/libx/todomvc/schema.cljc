@@ -48,7 +48,10 @@
 
    (attribute :active-count
      :db.type/enum ;;tag
-     :db/unique :db.unique/identity)])
+     :db/unique :db.unique/identity)
 
+   (attribute :todos/by-last-modified
+     :db.type/vector
+     :db/unique :db.unique/identity)])
 
 (def app-schema (schema))

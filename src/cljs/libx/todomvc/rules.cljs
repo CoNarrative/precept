@@ -60,20 +60,45 @@
 
 (deflogical [?e :todo/save-edit-action] :- [[_ :input/key-code 13]] [[?e :todo/edit]])
 
-(defn by-fact-id
-  "Returns an accumulator that returns the sum of values of a given field"
-  []
-  (acc/accum
-    {:initial-value {}
-     :reduce-fn (fn [acc cur]
-                  (into {} (sort-by val (assoc acc (:e cur) (:t cur)))))
-     :retract-fn (fn [acc cur]
-                   (into {} (sort-by val (dissoc acc (:e cur)))))}))
 
-(cr/defrule maintain-list-of-visible-todos
-  [?list <- (by-fact-id) :from [:todo/visible]]
+(defn by-fact-id
+  ([]
+   (acc/accum
+     {:initial-value []
+      :reduce-fn (fn [acc cur] (sort-by :t (conj acc cur)))
+      :retract-fn (fn [acc cur] (sort-by :t (remove #(= cur %) acc)))}))
+  ([k]
+   (acc/accum
+     {:initial-value []
+      :reduce-fn (fn [acc cur] (sort-by :t (conj acc (k cur))))
+      :retract-fn (fn [acc cur] (sort-by :t (remove #(= (k cur %) acc))))})))
+
+(def-tuple-rule create-list-of-visible-todos
+  {:group :report}
+  [?eids <- (by-fact-id :e) :from [:todo/visible]]
+  [:test (seq ?eids)]
   =>
-  (println "List!" ?list))
+  (println "List!" ?eids)
+  (insert! [(guid) :todos/by-last-modified*order ?eids])
+  (doseq [x ?eids]
+    (insert! [(guid) :todos/by-last-modified*eid x])))
+
+(def-tuple-rule update-list-of-visible-todos
+  {:group :report}
+  [[_ :todos/by-last-modified*eid ?e]]
+  [?entity <- (acc/all) :from [?e :all]]
+  =>
+  (println "Entity list!" ?entity)
+  (insert! [(guid) :todos/by-last-modified*item ?entity]))
+
+(def-tuple-rule order-list-of-visible-todos
+  [[_ :todos/by-last-modified*order ?eids]]
+  [?items <- (acc/all :v) :from [:todos/by-last-modified*item]]
+  =>
+  (let [items (group-by :e (flatten ?items))
+        ordered (vals (select-keys items (into [] ?eids)))
+        entities (util/entity-Tuples->entity-maps ordered)]
+    (println "Entities" entities)))
 
 ;; Subscription handlers
 (def-tuple-rule subs-footer-controls

@@ -19,6 +19,14 @@
   (mapv (fn [[k v]] (vector (:db/id m) k v))
     (dissoc m :db/id)))
 
+(defn entity-Tuples->entity-maps
+  [coll]
+  (mapv
+    #(reduce (fn [acc m] (assoc acc :db/id (:e m) (:a m) (:v m)))
+       {}
+       %)
+    coll))
+
 (defn next-fact-id! [] (swap! state/fact-id inc))
 (defn reset-fact-id! [] (reset! state/fact-id -1))
 
