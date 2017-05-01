@@ -11,28 +11,40 @@
       :on-change on-change
       :on-key-down on-key-down})])
 
+(defn xy [e]
+  (let [rect (.getBoundingClientRect (.-target e))]
+    [(- (.-clientX e) (.-left rect))
+     (- (.-clientY e) (.-top rect))]))
+
 (defn todo-item []
-  (fn [{:keys [db/id todo/title todo/edit todo/done]}]
-    (println "Todo item render: title, edit, done" title edit done)
-    [:li {:class (str (when done "completed ")
-                      (when edit "editing"))}
-      [:div.view
-        [:input.toggle
-          {:type "checkbox"
-           :checked (if done true false)
-           :on-change #(then :todo/toggle-done-action {:id id})}]
-        [:label
-          {:on-double-click #(then :todo/start-edit-action {:id id})}
-          title]
-        [:button.destroy
-          {:on-click #(then :remove-entity-action {:id id})}]]
-      (when edit
-        [input
-          {:class "edit"
-           :value edit
-           :on-change #(then :todo/update-edit-action {:id id :value (-> % .-target .-value)})
-           :on-key-down #(then :input/key-code-action {:value (.-which %)})
-           :on-blur #(then :todo/save-edit-action {:id id})}])]))
+  (let [dragging? (reagent/atom false) x (reagent/atom 0) y (reagent/atom 0)]
+    (fn [{:keys [db/id todo/title todo/edit todo/done]}]
+      (println "Todo item render: title, edit, done" title edit done)
+      [:li
+         {:class (str (when done "completed " (when edit "editing")))
+          :on-mouse-down #(reset! dragging? true)
+          :on-mouse-up #(reset! dragging? false)
+          :on-mouse-move #(when @dragging?
+                            (let [[new-x new-y] (xy %)]
+                             (prn new-x new-y @dragging?)
+                             (reset! x new-x) (reset! y new-y)))}
+        [:div.view
+          [:input.toggle
+            {:type "checkbox"
+             :checked (if done true false)
+             :on-change #(then :todo/toggle-done-action {:id id})}]
+          [:label
+            {:on-double-click #(then :todo/start-edit-action {:id id})}
+            title]
+          [:button.destroy
+            {:on-click #(then :remove-entity-action {:id id})}]]
+        (when edit
+          [input
+            {:class "edit"
+             :value edit
+             :on-change #(then :todo/update-edit-action {:id id :value (-> % .-target .-value)})
+             :on-key-down #(then :input/key-code-action {:value (.-which %)})
+             :on-blur #(then :todo/save-edit-action {:id id})}])])))
 
 (defn task-list
   []

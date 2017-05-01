@@ -22,6 +22,7 @@
 (store-action :input/key-code-action)
 (store-action :ui/set-visibility-filter-action)
 (store-action :entry/title-action)
+(store-action :mouse/mouse-down-action)
 
 ;; TODO. s-expr in first position does not expand properly. May be happening
 ;; in multiple slots. Needs to expand to (= (:id ?action) (:e this))
