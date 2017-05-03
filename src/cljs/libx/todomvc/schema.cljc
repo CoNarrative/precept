@@ -30,6 +30,10 @@
      :db.type/boolean
      :db/unique :db.unique/value)
 
+   (attribute :todo/mouse-down
+     :db.type/boolean
+     :db/unique :db.unique/identity)
+
    (attribute :entry/title
      :db.type/string
      :db/unique :db.unique/identity)
@@ -53,5 +57,6 @@
    (attribute :todos/by-last-modified
      :db.type/vector
      :db/unique :db.unique/identity)])
+
 
 (def app-schema (schema))

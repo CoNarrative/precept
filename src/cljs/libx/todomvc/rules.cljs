@@ -9,20 +9,21 @@
             [libx.schema :as schema]
             [libx.util :as util]))
 
-(defn trace [& args]
-  (apply prn args))
 
 (def-tuple-rule all-facts
   [?fact <- [:all]]
   =>
   (println "FACT" (into [] (vals ?fact))))
 
+(def trace (.log js/console))
 
 ;; Action handlers
 (store-action :input/key-code-action)
 (store-action :ui/set-visibility-filter-action)
 (store-action :entry/title-action)
 (store-action :mouse/mouse-down-action)
+(store-action :mouse/mouse-up-action)
+(store-action :mouse/mouse-move-action)
 
 ;; TODO. s-expr in first position does not expand properly. May be happening
 ;; in multiple slots. Needs to expand to (= (:id ?action) (:e this))
@@ -65,6 +66,30 @@
   (trace "Responding to toggle done action " [(:id ?v) :todo/done (not ?bool)])
   (insert-unconditional! [(:id ?v) :todo/done (not ?bool)]))
 
+(defn hit-node [{event :e}]
+  "Takes .path property of a DOM event and returns first element with an id"
+  (first (filter #(not (clojure.string/blank? (.-id %))) (.-path event))))
+
+(defn client-coords [e]
+  (let [rect (.getBoundingClientRect (.-target e))]
+    {:x (- (.-clientX e) (.-left rect))
+     :y (- (.-clientY e) (.-top rect))}))
+
+(def-tuple-rule find-hit-target-on-mouse-down
+  {:group :action}
+  [[_ :mouse/mouse-down-action ?node]]
+  [:test (some? (:node ?node))]
+  =>
+  (let [node (:node ?node)
+        id (.-id node)]
+    (trace "Responding to drag op" node id)
+    (insert! [id :todo/dragging true])))
+    ;(insert! [eid :mouse/tag :tag])))
+
+;(def-tuple-rule remove-mouse-down
+;  {:group :action}
+;  [?fact [_ :mouse/mouse-up-action _]]
+;  =>)
 
 ;; Calculations
 (deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]])
@@ -137,6 +162,14 @@
         {:active-count ?active-count
          :done-count ?done-count
          :visibility-filter ?visibility-filter}]))
+
+(def-tuple-rule subs-todo
+  [:exists [?e ::sub/request :todo-item]]
+  [[?e :todo/mouse-down]]
+  [?entity <- (acc/all)  :from [:e :all]]
+  =>
+  (trace "Inserting todo response" ?e ?entity)
+  (insert! [?e ::sub/response {:foo "bar"}]))
 
 (def-tuple-rule acc-todos-that-are-visible
   [[?e :todo/visible]]

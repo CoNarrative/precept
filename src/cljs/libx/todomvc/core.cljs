@@ -28,8 +28,24 @@
                    (fn [event] (secretary/dispatch! (.-token event))))
     (.setEnabled true)))
 
+(defn client-coords [e]
+  {:x (.-clientX e)
+   :y (.-clientY e)})
+
+(defn hit-node [event]
+  "Takes .path property of a DOM event and returns first element with an id"
+  (first (filter #(not (clojure.string/blank? (.-id %))) (.-path event))))
+
+;(defn client-coords [e]
+;  (let [rect (.getBoundingClientRect (.-target e))]
+;    {:x (- (.-clientX e) (.-left rect))
+;     :y (- (.-clientY e) (.-top rect))}))
+
 (defn mount-components []
-  (reagent/render [libx.todomvc.views/todo-app] (.getElementById js/document "app")))
+  (reagent/render [libx.todomvc.views/todo-app] (.getElementById js/document "app"))
+  (.addEventListener js/window "mousedown" #(then :mouse/mouse-down-action {:node (hit-node %)}))
+  (.addEventListener js/window "mousemove" #(then :mouse/mouse-move-action (client-coords %)))
+  (.addEventListener js/window "mouseup" #(then :mouse/mouse-up-action (client-coords %))))
 
 (defn todo [title]
   (let [id (random-uuid)]
