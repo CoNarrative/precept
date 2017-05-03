@@ -15,25 +15,96 @@
   =>
   (println "FACT" (into [] (vals ?fact))))
 
-(def trace (.log js/console))
+(defn trace [& args]
+  (apply prn args))
+
+
+;(defn client-coords [e]
+;  {:x (.-clientX e)
+;   :y (.-clientY e)))
+
+(defn client-coords [e]
+  (let [rect (.getBoundingClientRect (.-target e))]
+    {:x (- (.-clientX e) (.-left rect))
+     :y (- (.-clientY e) (.-top rect))}))
+
+
+(defn hit-node
+  "Takes .path property of a DOM event and returns first element with an id"
+  [event]
+  (first (filter #(not (clojure.string/blank? (.-id %)))
+           (.-path event))))
 
 ;; Action handlers
 (store-action :input/key-code-action)
 (store-action :ui/set-visibility-filter-action)
 (store-action :entry/title-action)
-(store-action :mouse/mouse-down-action)
-(store-action :mouse/mouse-up-action)
-(store-action :mouse/mouse-move-action)
 
-;; TODO. s-expr in first position does not expand properly. May be happening
-;; in multiple slots. Needs to expand to (= (:id ?action) (:e this))
-;(def-tuple-rule handle-start-todo-edit
-;  {:group :action}
-;  [[_ :todo/start-edit-action ?action]]
-;  [[(:id ?action) :todo/title ?v]]
-;  =>
-;  (trace "Responding to edit request" (:id ?action) ?v)
-;  (insert-unconditional! [(:id ?action) :todo/edit ?v]))
+
+(def-tuple-rule mouse-move-action-handler
+  {:group :action}
+  [[_ :mouse/move-action ?v]]
+  =>
+  (let [event (:event ?v)
+        x (.-clientX event)
+        y (.-clientY event)]
+    (insert-unconditional! [[(guid) :mouse/x x]
+                            [(guid) :mouse/y y]])))
+
+(def-tuple-rule mouse-down-action-handler
+  {:group :action}
+  [[_ :mouse/down-action ?v]]
+  =>
+  (let [node (hit-node (:event ?v))
+        id (.-id node)
+        facts (filter some?
+                [[(guid) :mouse/down :tag]
+                 (when id [(guid) :hit/id id])
+                 (when node [(guid) :hit/node node])])]
+    (.log js/console "Hit something? (id, node)" id node)
+    (insert-unconditional! facts)))
+
+(def-tuple-rule mouse-up-action-handler
+  {:group :action}
+  [[_ :mouse/up-action]]
+  [?down-fact <- [_ :mouse/down]]
+  =>
+  (trace "Rec'd mouse/up. Retracting mouse down fact")
+  (retract! ?down-fact))
+
+(def-tuple-rule detect-drag-intent
+  [[_ :mouse/down]]
+  [[_ :hit/id ?e]]
+  =>
+  (trace "Drag intent detected!")
+  (insert! [(guid) :drag/intent ?e]))
+
+(def-tuple-rule detect-drag-start
+  [[_ :drag/intent ?e]]
+  [[?id :dom/draggable?]]
+  =>
+  (trace "Starting drag...")
+  (insert! [(guid) :drag/start ?e]))
+
+(def-tuple-rule dom-node-moves-with-mouse-when-drag-started
+  [[_ :drag/start ?e]]
+  [[_ :mouse/x ?x]]
+  [[_ :mouse/y ?y]]
+  =>
+  (trace "Inserting translate")
+  (insert! [[?e :dom/translateX ?x]
+            [?e :dom/translateY ?y]]))
+
+(def-tuple-rule detect-when-dragging
+  [[_ :mouse/down]]
+  [[_ :dom/translateX ?x1]]
+  [[_ :dom/translateY ?y1]]
+  [[_ :mouse/x ?x2]]
+  [[_ :mouse/y ?y2]]
+  =>
+  (trace "Dragging is true")
+  (insert! [(guid) :drag/dragging? :tag]))
+
 
 (cr/defrule handle-start-todo-edit
   {:group :action}
@@ -66,14 +137,9 @@
   (trace "Responding to toggle done action " [(:id ?v) :todo/done (not ?bool)])
   (insert-unconditional! [(:id ?v) :todo/done (not ?bool)]))
 
-(defn hit-node [{event :e}]
-  "Takes .path property of a DOM event and returns first element with an id"
-  (first (filter #(not (clojure.string/blank? (.-id %))) (.-path event))))
-
-(defn client-coords [e]
-  (let [rect (.getBoundingClientRect (.-target e))]
-    {:x (- (.-clientX e) (.-left rect))
-     :y (- (.-clientY e) (.-top rect))}))
+;(defn hit-node [{event :e}]
+;  "Takes .path property of a DOM event and returns first element with an id"
+;  (first (filter #(not (clojure.string/blank? (.-id %))) (.-path event))))
 
 (def-tuple-rule find-hit-target-on-mouse-down
   {:group :action}
@@ -222,7 +288,7 @@
   ;[?actions <- (acc/all) :from [:action]]
   ;[:test (> (count ?actions) 0)]
   =>
-  (trace "CLEANING actions" ?action)
+  ;(trace "CLEANING actions" ?action)
   ;(doseq [action ?actions]
   (cr/retract! ?action))
 
@@ -232,7 +298,7 @@
   [?fact2 <- :unique-identity (= ?a1 (:a this)) (= ?t2 (:t this))]
   [:test (> ?t1 ?t2)]
   =>
-  (trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
+  ;(trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
   (retract! ?fact2))
 
 (cr/defrule remove-older-unique-value-facts
@@ -241,7 +307,7 @@
   [?fact2 <- :unique-value (= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t2 (:t this))]
   [:test (> ?t1 ?t2)]
   =>
-  (trace (str "SCHEMA MAINT - :unique-value : " ?t1 " is greater than " ?t2))
+  ;(trace (str "SCHEMA MAINT - :unique-value : " ?t1 " is greater than " ?t2))
   (retract! ?fact2))
 
 (def groups [:action :calc :report :cleanup])
@@ -257,5 +323,3 @@
   :ancestors-fn ancestors-fn
   :activation-group-fn activation-group-fn
   :activation-group-sort-fn activation-group-sort-fn)
-
-

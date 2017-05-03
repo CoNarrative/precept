@@ -13,6 +13,14 @@
           :db/ident ident}
     fields))
 
+(defn unique-identity [ident type & {:as opts}]
+   (merge {:db/id        (guid)
+           :db/ident     ident
+           :db/valueType type}
+      {:db/cardinality :db.cardinality/one}
+      opts))
+
+
 (defn schema []
   [
    (attribute :todo/title
@@ -47,11 +55,31 @@
      :db/unique :db.unique/identity)
 
    (attribute :done-count
-     :db.type/enum ;;tag
+     :db.type/long
      :db/unique :db.unique/identity)
 
    (attribute :active-count
+     :db.type/long
+     :db/unique :db.unique/identity)
+
+   (attribute :mouse/down
      :db.type/enum ;;tag
+     :db/unique :db.unique/identity)
+
+   (attribute :mouse/x
+     :db.type/long
+     :db/unique :db.unique/identity)
+
+   (attribute :mouse/y
+     :db.type/long
+     :db/unique :db.unique/identity)
+
+   (attribute :hit/id
+     :db.type/string
+     :db/unique :db.unique/identity)
+
+   (attribute :hit/node
+     :db.type/any
      :db/unique :db.unique/identity)
 
    (attribute :todos/by-last-modified
