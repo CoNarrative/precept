@@ -13,11 +13,15 @@
 (defmacro def-tuple-session
   "For CLJS. Wrapper around Clara's `defsession` macro."
   [name & sources-and-options]
-  `(cm/defsession
-     ~name
-     ~@sources-and-options
-     :fact-type-fn ~':a
-     :ancestors-fn ~'(fn [type] [:all])))
+  (let [sources (take-while (complement keyword?) sources-and-options)
+        options (mapcat identity
+                 (merge {:fact-type-fn :a
+                         :ancestors-fn '(fn [type] [:all])}
+                   (apply hash-map (drop-while (complement keyword?) sources-and-options))))
+        body (into options sources)]
+    `(cm/defsession ~name ~@body)))
+
+;(mapcat identity {:foo "bar" :baz "quux"})
 
 (defn attr-only? [x]
   (trace "Attr only?" x (s/valid? ::lang/attribute-matcher x))
