@@ -11,7 +11,7 @@
 
 
 (def-tuple-rule all-facts
-  [?fact <- [:all]]
+  [?fact <- [_ :mouse/down-action]]
   =>
   (println "FACT" (into [] (vals ?fact))))
 
@@ -40,7 +40,18 @@
 (store-action :ui/set-visibility-filter-action)
 (store-action :entry/title-action)
 
+;todo - make a shortcut for an action handler
+;also, consider moving args in ?v up to root level
 
+
+;example all-record syntax with auto-group
+;(def-action-handler handle-mouse-move-global
+;  [:mouse/move-action (= ?x x) (= ?y y)]
+;  =>
+;  (insert-unconditional ->(mouse-pos ?x ?y)))
+
+
+;simply capture mouse/x & y
 (def-tuple-rule mouse-move-action-handler
   {:group :action}
   [[_ :mouse/move-action ?v]]
@@ -51,8 +62,11 @@
     (insert-unconditional! [[(guid) :mouse/x x]
                             [(guid) :mouse/y y]])))
 
+;determine if mouse down hit something
+;if it hits, then
 (def-tuple-rule mouse-down-action-handler
   {:group :action}
+  [[_ :mouse/op-mode :at-rest]]
   [[_ :mouse/down-action ?v]]
   =>
   (let [node (hit-node (:event ?v))
@@ -141,15 +155,15 @@
 ;  "Takes .path property of a DOM event and returns first element with an id"
 ;  (first (filter #(not (clojure.string/blank? (.-id %))) (.-path event))))
 
-(def-tuple-rule find-hit-target-on-mouse-down
-  {:group :action}
-  [[_ :mouse/mouse-down-action ?node]]
-  [:test (some? (:node ?node))]
-  =>
-  (let [node (:node ?node)
-        id (.-id node)]
-    (trace "Responding to drag op" node id)
-    (insert! [id :todo/dragging true])))
+;(def-tuple-rule find-hit-target-on-mouse-down
+;  {:group :action}
+;  [[_ :mouse/mouse-down-action ?node]]
+;  [:test (some? (:node ?node))]
+;  =>
+;  (let [node (:node ?node)
+;        id (.-id node)]
+;    (trace "Responding to drag op" node id)
+;    (insert! [id :todo/dragging true])))
     ;(insert! [eid :mouse/tag :tag])))
 
 ;(def-tuple-rule remove-mouse-down

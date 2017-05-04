@@ -40,8 +40,13 @@
      [id :todo/done false]
      [id :dom/draggable? :tag]]))
 
-(def facts (into (todo "Hi") (todo "there!")))
+(def facts (concat
+             [[0 :mouse/op-mode :at-rest]]
+             (todo "what")
+             (todo "Hi")
+             (todo "there!")))
 
+(println facts)
 (defn ^:export main []
     (start! {:session app-session :schema app-schema :facts facts})
     (mount-components))

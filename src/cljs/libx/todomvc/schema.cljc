@@ -23,6 +23,10 @@
 
 (defn schema []
   [
+   (attribute :mouse/mode
+              :db.type/string
+              :db/unique :db.unique/value)
+
    (attribute :todo/title
      :db.type/string
      :db/unique :db.unique/value)
