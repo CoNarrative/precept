@@ -23,6 +23,10 @@
 
 (defn schema []
   [
+   ;(attribute :one-to-many-example
+   ;  :db.type/enum ;;tag
+   ;  :db/cardinality :db.cardinality/many)
+   
    (attribute :mouse/mode
               :db.type/string
               :db/unique :db.unique/value)

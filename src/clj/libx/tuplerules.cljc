@@ -11,6 +11,7 @@
        :cljs
        (:require-macros libx.tuplerules)))
 
+(def groups [:action :calc :report :cleanup])
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj
@@ -32,14 +33,14 @@
    (defmacro def-tuple-session
      "Contains defaults for Clara's :fact-type-fn and :ancestors-fn"
      [name & sources-and-options]
-     (let [sources (take-while (complement keyword?) sources-and-options)
-           options (mapcat identity
-                     (merge {:fact-type-fn :a
-                             :ancestors-fn '(fn [type] [:all])}
-                       (apply hash-map (drop-while (complement keyword?) sources-and-options))))
-           body (into options sources)]
-       (if (compiling-cljs?)
-         `(clara.macros/defsession ~name `~[~@body])
+     (if (compiling-cljs?)
+       `(libx.macros/def-tuple-session ~name ~@sources-and-options)
+       (let [sources (take-while (complement keyword?) sources-and-options)
+             options (mapcat identity
+                       (merge {:fact-type-fn :a
+                               :ancestors-fn '(fn [type] [:all])}
+                         (apply hash-map (drop-while (complement keyword?) sources-and-options))))
+             body (into options sources)]
          `(def ~name (com/mk-session `~[~@body]))))))
 
 #?(:clj

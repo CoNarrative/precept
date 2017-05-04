@@ -1,6 +1,7 @@
 (ns libx.todomvc.rules
   (:require [clara.rules.accumulators :as acc]
             [clara.rules :as cr]
+            [libx.core :refer [notify!]]
             [libx.spec.sub :as sub]
             [libx.todomvc.schema :refer [app-schema]]
             [clojure.core.reducers :as r]
@@ -189,7 +190,6 @@
 
 (deflogical [?e :todo/save-edit-action] :- [[_ :input/key-code 13]] [[?e :todo/edit]])
 
-
 (defn by-fact-id
   ([]
    (acc/accum
@@ -221,13 +221,19 @@
   (insert! [(guid) :todos/by-last-modified*item ?entity]))
 
 (def-tuple-rule order-list-of-visible-todos
+  {:group :report}
+  [:exists [?e ::sub/request :task-list]]
   [[_ :todos/by-last-modified*order ?eids]]
   [?items <- (acc/all :v) :from [:todos/by-last-modified*item]]
+  [:test (seq ?eids)] ;; TODO. Investigate whether us or Clara
   =>
   (let [items (group-by :e (flatten ?items))
         ordered (vals (select-keys items (into [] ?eids)))
         entities (util/entity-Tuples->entity-maps ordered)]
-    (println "Entities" entities)))
+    (println "Entities" entities)
+    (notify! :task-list (fn [x] (if (map? x)
+                                  (assoc x :visible-todos entities)
+                                  {:visible-todos entities})))))
 
 ;; Subscription handlers
 (def-tuple-rule subs-footer-controls
@@ -266,11 +272,13 @@
   =>
   (let [res (map :v ?visible-todos)
         ents (map #(map util/record->vec %) res)
-        ms (map util/tuple-entity->hash-map-entity ents)]
-    (insert!
-      [?e ::sub/response
-            {:visible-todos ms
-             :all-complete? (= ?active-count 0)}])))
+        ms (map util/tuple-entity->hash-map-entity ents)]))
+    ;; FIXME. Ends up overwriting anything via notify! in store. May be problem with add
+    ;; or remove changes method
+    ;(insert!
+    ;  [?e ::sub/response
+    ;        {})]));:visible-todos ms
+             ;:all-complete? (= ?active-count 0)})]))
 
 (def-tuple-rule subs-todo-app
   [:exists [?e ::sub/request :todo-app]]

@@ -13,7 +13,7 @@
 (deftest cr-query
   (testing "Clara query - single fact"
     (let [blank @(def-tuple-session default 'libx.query-test)
-          s (-> blank (insert [-1 :attr "foo" 500])
+          s (-> blank (insert (->Tuple -1 :attr "foo" 500))
                       (cr/fire-rules))
           start (:?all (first (cr/query blank find-all)))
           res (:?all (first (cr/query s find-all)))]
@@ -22,9 +22,9 @@
 
   (testing "Clara query - many facts"
     (let [blank @(def-tuple-session default 'libx.query-test)
-          to-insert [[-1 :attr "foo" 500]
-                     [-2 :attr "bar" 501]
-                     [-3 :attr "baz" 502]]
+          to-insert [(->Tuple -1 :attr "foo" 500)
+                     (->Tuple -2 :attr "bar" 501)
+                     (->Tuple -3 :attr "baz" 502)]
           s (-> blank (insert to-insert)
                       (cr/fire-rules))
           start (:?all (first (cr/query blank find-all-acc)))

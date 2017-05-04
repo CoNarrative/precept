@@ -1,6 +1,7 @@
 (ns libx.util-test
     (:require [clojure.test :refer [deftest testing is run-tests]]
               [libx.util :refer :all]
+              [libx.core :as core]
               [libx.state :as state]
               [libx.query :as q]
               [libx.tuplerules :refer [def-tuple-session]]
@@ -25,7 +26,6 @@
 
 (defn fact-id? [n]
   (and (> n -1) (<= n @state/fact-id)))
-
 
 (deftest map->tuples-test
   (testing "Converting an entity map to a vector of tuples"
@@ -183,5 +183,21 @@
     (is (vector? rtn))
     (is (every? #(= (type %) Tuple) rtn))
     (is (every? #(= % [:e :a :v :t]) (mapv keys rtn)))))
+
+(deftest activation-group-test
+  (testing "Returning booleans from properties based on list order"
+    (let [group-fn (make-activation-group-fn core/default-group)
+          sort-fn (make-activation-group-sort-fn core/groups core/default-group)
+          first-group-props {:props {:group (first core/groups)}}
+          last-group-props {:props {:group (last core/groups)}}
+          first-group-result (group-fn first-group-props)
+          last-group-result (group-fn last-group-props)]
+      (is (= {:group (first core/groups) :salience 0 :super nil}
+             first-group-result))
+      (is (= {:group (last core/groups) :salience 0 :super nil}
+             last-group-result))
+      (is (= true (sort-fn first-group-result last-group-result)))
+      (is (= false (sort-fn last-group-result first-group-result))))))
+
 
 (run-tests)

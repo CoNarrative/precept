@@ -6,6 +6,7 @@
               [libx.util :refer [insert!] :as util]
               [libx.macros :refer [binding?
                                    variable-bindings
+                                   sexprs-with-bindings
                                    positional-value
                                    value-expr?
                                    parse-as-tuple
@@ -195,6 +196,19 @@
             '(defrule my-rule
                [?fact <- :my-attribute (= ?t (:t this))]
                [:test (> ?t ?fact)]
+               =>
+               (insert! "RHS"))))))
+  (testing "Bind to value of s-expr"
+    (is (= (macroexpand
+             '(def-tuple-rule my-rule
+                [[_ :my-attribute ?v]]
+                [[(:id ?v) :foo]]
+                =>
+                (insert! "RHS")))
+          (macroexpand
+            '(defrule my-rule
+               [:my-attribute (= ?v (:v this))]
+               [:foo (= (:id ?v) (:e this))]
                =>
                (insert! "RHS")))))))
 

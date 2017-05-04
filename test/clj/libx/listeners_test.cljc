@@ -93,15 +93,15 @@
                   (l/replace-listener)
                   (util/insert
                     (into
-                      [[123 :attr/a "state-0"]
-                       [123 :attr/b "state-0" 2]]
-                      background-facts))
+                      [(->Tuple 123 :attr/a "state-0" 0)
+                       (->Tuple 123 :attr/b "state-0" 1)]
+                      (mapv util/vec->record background-facts)))
                   (fire-rules))
         ops-0 (l/vec-ops state-0)
         ent-0 (q/entityv state-0 123)
         state-1 (-> state-0
                   (l/replace-listener)
-                  (util/retract [123 :attr/b "state-0" 2])
+                  (util/retract (->Tuple 123 :attr/b "state-0" 1))
                   (util/insert [123 :attr/b "state-1"])
                   (fire-rules))
         ops-1 (l/vec-ops state-1)

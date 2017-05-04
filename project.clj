@@ -35,6 +35,10 @@
     :plugins      [[lein-figwheel "0.5.10-SNAPSHOT"]
                    [lein-doo "0.1.7"]]
 
+    :repl-options {:init-ns user}
+
+    :source-paths ["dev/clj"]
+
     :doo {:paths {:karma "./node_modules/karma/bin/karma"}}
 
     :cljsbuild
@@ -53,7 +57,7 @@
                       :pretty-print true}}
 
       :test
-       {:source-paths ["src/cljs" "test/cljs" "test/common"]
+       {:source-paths ["src/cljs" "test/cljs" "test/cljc"]
         :compiler
                      {:main "libx.runner"
                       :output-to "target/cljsbuild/public/js/test/test.js"
@@ -74,9 +78,8 @@
                        :asset-path "/js/out"
                        :preloads [devtools.preload]
                        :optimizations :none
+                       :cache-analysis false
                        :devcards true
                        :source-map true
-                       :pretty-print true}}}}
+                       :pretty-print true}}}}}})
 
-    :repl-options {:init-ns user}
-    :source-paths ["dev/clj"]}})
