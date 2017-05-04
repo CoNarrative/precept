@@ -22,6 +22,9 @@
 (defn trace [& args]
   (comment (println args)))
 
+(def groups [:action :calc :report :cleanup])
+(def default-group :calc)
+
 ;; TODO. Pass namespace argument from deflogical, def-tuple-rule.
 (defn register-rule [type lhs rhs]
   "Returns rule name if found in registry, else registers new rule and returns name"

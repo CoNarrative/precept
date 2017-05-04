@@ -50,6 +50,10 @@
      :db.type/enum ;;tag
      :db/unique :db.unique/identity)
 
+   ;(attribute :one-to-many-example
+   ;  :db.type/enum ;;tag
+   ;  :db/cardinality :db.cardinality/many)
+
    (attribute :todos/by-last-modified
      :db.type/vector
      :db/unique :db.unique/identity)])

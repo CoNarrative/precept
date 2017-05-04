@@ -171,6 +171,7 @@
            :group (or (:group (:props m)) default-group)
            :super (:super (:props m))}))
 
+;; Unclear what Clara expects. Could be -1 0 1 but their default sort-fn is >
 (defn make-activation-group-sort-fn
   [groups default-group]
   (let [default-idx (.indexOf groups default-group)]
@@ -194,12 +195,12 @@
    #(or ((:ancestors hierarchy) %)
       (cond
         (action? %) #{:all :action}
-        :else #{:all})))
+        :else #{:all :one-to-one})))
   ([hierarchy root-fact-type]
    #(or ((:ancestors hierarchy) %)
       (cond
         (action? %) #{root-fact-type :action}
-        :else #{root-fact-type}))))
+        :else #{root-fact-type :one-to-one}))))
 
 (defn split-head-body
   "Takes macro body of a deflogical and returns map of :head, :body"
