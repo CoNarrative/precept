@@ -13,14 +13,6 @@
           :db/ident ident}
     fields))
 
-(defn unique-identity [ident type & {:as opts}]
-   (merge {:db/id        (guid)
-           :db/ident     ident
-           :db/valueType type}
-      {:db/cardinality :db.cardinality/one}
-      opts))
-
-
 (defn schema []
   [
    (attribute :todo/title
@@ -82,9 +74,12 @@
      :db.type/any
      :db/unique :db.unique/identity)
 
+   ;(attribute :one-to-many-example
+   ;  :db.type/enum ;;tag
+   ;  :db/cardinality :db.cardinality/many)
+
    (attribute :todos/by-last-modified
      :db.type/vector
      :db/unique :db.unique/identity)])
-
 
 (def app-schema (schema))

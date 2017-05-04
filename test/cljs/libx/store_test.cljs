@@ -2,19 +2,20 @@
   (:require [cljs.test :refer [run-tests]]
             [libx.core :as core]
             [libx.util :as util]
-            [libx.tuplerules :refer [def-tuple-session]])
+            [libx.tuplerules :refer [def-tuple-session]]
+            [libx.state :as state])
   (:require-macros [cljs.test :refer [deftest async use-fixtures testing is]]))
 
 (enable-console-print!)
-(def-tuple-session my-session)
+;(def-tuple-session my-session)
 
 (defn clear-subs []
-  (swap! core/state update :subscriptions (fn [_] {})))
+  (swap! state/state update :subscriptions (fn [_] {})))
 
 (defn clear-session []
-  (swap! core/state update :session (fn [_] {})))
+  (swap! state/state update :session (fn [_] {})))
 
-(defn reset-store [] (reset! core/store))
+(defn reset-store [] (reset! state/store))
 
 (defn before-each []
   (clear-subs)
@@ -27,9 +28,9 @@
 (def the-update {:foo 1 :bar 2 :baz 3})
 
 (defn do-update-for-sub [subdef]
-  (swap! core/store update subdef (fn [_] the-update)))
+  (swap! state/store update subdef (fn [_] the-update)))
 
-(defn lens-for-sub [subdef] (get (:subscriptions @core/state) subdef))
+(defn lens-for-sub [subdef] (get (:subscriptions @state/state) subdef))
 
 
 (deftest fail
