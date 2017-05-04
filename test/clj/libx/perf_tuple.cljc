@@ -61,15 +61,6 @@
   =>
   (insert-unconditional! [?e :todo/done :tag]))
 
-(cr/defrule remove-older-unique-identity-facts
-  {:super true :salience 100}
-  [:unique-identity (= ?a1 (:a this)) (= ?t1 (:t this))]
-  [?fact2 <- :unique-identity (= ?a1 (:a this)) (= ?t2 (:t this))]
-  [:test (> ?t1 ?t2)]
-  =>
-  (trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
-  (retract! ?fact2))
-
 (def-tuple-rule acc-all-visible
   {:group :report}
   [?count <- (acc/count) :from [:todo/title]]
@@ -88,6 +79,15 @@
   (doseq [action ?actions]
     (cr/retract! action)))
 
+(cr/defrule remove-older-one-to-one-facts
+  {:super true :salience 100}
+  ;[?fact1 <- :one-to-one (= ?e (:e this)) (= ?a1 (:a this)) (= ?t1 (:t this))]
+  [?fact2 <- :one-to-one (= ?e (:e this)) (= ?a1 (:a this)) (= ?t2 (:t this))]
+  ;[:test (and (not= ?fact1 ?fact2) #_(> (:t ?fact1) (:t ?fact2)))]
+  =>
+  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact2)
+  (retract! ?fact2))
+
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))
 (def activation-group-sort-fn (util/make-activation-group-sort-fn groups :calc))
@@ -100,19 +100,17 @@
   :activation-group-fn activation-group-fn
   :activation-group-sort-fn activation-group-sort-fn)
 
-;(def tuple-session
-;  (cr/mk-session 'libx.perf-tuple
-;   :fact-type-fn :a
-;   :ancestors-fn ancestors-fn
-;   :activation-group-fn activation-group-fn
-;   :activation-group-sort-fn activation-group-sort-fn)
-
 (defn n-facts-session [n]
   (-> tuple-session
+    ;(l/replace-listener)
     (insert (repeatedly n #(vector (guid) :todo/title "foobar")))))
 
 (def session (atom (n-facts-session 10#_0000)))
-;(inspect/explain-activations @session)
+
+;(inspect/inspect @session)
+;(ns-unmap *ns* 'remove-older-one-to-one-facts)
+;; 246ms without, 5000ms with
+
 (defn perf-loop [iters]
   (time
     (dotimes [n iters]
@@ -122,10 +120,10 @@
             ;(l/replace-listener)
             (util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
             (util/insert-action [(guid) :add-todo-action {:title "hey"}])
-            (insert [[(guid) :done-count 5]
-                     [(guid) :done-count 6]])
+            (insert [[1 :done-count 5]
+                     [1 :done-count 6]])
             (cr/fire-rules)))))))
-@state/rules
+
 (perf-loop 1#_00)
 
 (l/vec-ops @session)
