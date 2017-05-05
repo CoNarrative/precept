@@ -51,9 +51,59 @@
 ;  =>
 ;  (insert-unconditional ->(mouse-pos ?x ?y)))
 
+;determine if mouse down hit something
+;if it hits, then
+(def-tuple-rule mouse-down-action-handler {:group :action}
+  [[_ :mouse/down-action ?v]]
+  =>
+  (let [node (hit-node (:event ?v))
+        id (.-id node)
+        facts (filter some?
+                      [[(guid) :mouse/down :tag]            ;always going to return. This is perma-state!
+                       (when id [(guid) :hit/id id])])]     ;optional
+    (.log js/console "Hit something? (id, node)" id node)
+    (insert-unconditional! facts)))
 
-;simply capture mouse/x & y
-(def-tuple-rule mouse-move-action-handler
+
+
+
+;action marshalling - 1) grabbing what we need from raw "event" (though it is arguable that event should not come in raw
+; so we could skip that part :-)
+; also, adding info to the mouse-down that did NOT come in from view -- that is, the "hit node id"
+(def-tuple-rule figure-out-what-was-hit-on-a-down-action {:group :action :salience 1000}
+  [[?actId :mouse/down-action ?v]]
+  =>
+  (let [node (hit-node (:event ?v))
+        id (.-id node)]
+    (.log js/console "Hit something? (id, node)" id node)
+    (insert! [?actId :mouse-down/hit-id id])))
+
+; a "reducer" because it saves perma-state
+(def-tuple-rule save-the-fact-that-mouse-is-down {:group :action}
+  [[_ :mouse/down-action]] => (insert-unconditional! [_ :mouse/left-pressed true]))
+
+;another reducer....
+(def-tuple-rule start-an-item-drag-when-appropriate {:group :action}
+  [[_ :mouse/op-mode :ready]]
+  [[?actId :mouse/down-action]]
+  [[?actId :mouse-down/hit-id ?eid]]
+  [[?eid :todo/title]]
+  =>
+  (let [op-id (guid)]
+       (insert-unconditional!
+         [[_ :mouse/op-mode :drag-item]
+          [op-id :op/origin-x x]
+          [op-id :op/origin-y y]
+          [op-id :op/drag-target ?eid]])))
+
+
+;({:op/origin-x x :op/origin-y y :op/drag-target ?eid})
+  ;also, will probably save some additional setup facts? equivalent to a "constructor" of an object
+  ;that represents the state of the mouse FSM
+
+
+;simply capture mouse/x & y (a mini-handler)
+(def-tuple-rule save-mouse-x-y
   {:group :action}
   [[_ :mouse/move-action ?v]]
   =>
@@ -63,21 +113,21 @@
     (insert-unconditional! [[(guid) :mouse/x x]
                             [(guid) :mouse/y y]])))
 
-;determine if mouse down hit something
-;if it hits, then
-(def-tuple-rule mouse-down-action-handler
-  {:group :action}
-  [[_ :mouse/op-mode :at-rest]]
-  [[_ :mouse/down-action ?v]]
+(def-tuple-rule move-item-as-it-is-dragged
+  {group :action}
+  [[_ :mouse/move-action]]
+  [[_ :]])
+
+
+
+
+
+(def-tuple-rule detect-drag-intent
+                [[_ :mouse/down]]
+  [[_ :hit/id ?e]]
   =>
-  (let [node (hit-node (:event ?v))
-        id (.-id node)
-        facts (filter some?
-                [[(guid) :mouse/down :tag]
-                 (when id [(guid) :hit/id id])
-                 (when node [(guid) :hit/node node])])]
-    (.log js/console "Hit something? (id, node)" id node)
-    (insert-unconditional! facts)))
+  (trace "Drag intent detected!")
+  (insert! [(guid) :drag/intent ?e]))
 
 (def-tuple-rule mouse-up-action-handler
   {:group :action}
@@ -87,12 +137,7 @@
   (trace "Rec'd mouse/up. Retracting mouse down fact")
   (retract! ?down-fact))
 
-(def-tuple-rule detect-drag-intent
-  [[_ :mouse/down]]
-  [[_ :hit/id ?e]]
-  =>
-  (trace "Drag intent detected!")
-  (insert! [(guid) :drag/intent ?e]))
+
 
 (def-tuple-rule detect-drag-start
   [[_ :drag/intent ?e]]
