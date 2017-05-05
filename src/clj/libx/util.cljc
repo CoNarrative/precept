@@ -192,16 +192,10 @@
 
 (defn make-ancestors-fn
   ([hierarchy]
-   (let [vector-ancestry
-           (reduce
-             (fn [acc [k v]]
-               (assoc acc k (reverse (into [] v))))
-             {}
-             (:ancestors hierarchy))]
-     #(or (vector-ancestry %)
-        (cond
-          (action? %) [:all :action]
-          :else [:all :one-to-one]))))
+   #(or ((:ancestors hierarchy) %)
+      (cond
+        (action? %) #{:all :action}
+        :else #{:all :one-to-one})))
   ([hierarchy root-fact-type]
    #(or ((:ancestors hierarchy) %)
       (cond

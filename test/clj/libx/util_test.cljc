@@ -210,16 +210,13 @@
 (deftest ancestors-fn-test
   (let [h (schema/schema->hierarchy test-schema)
         ancestors-fn (util/make-ancestors-fn h)]
-    (is (= [:all :action] (ancestors-fn :foo-action)))
-    (is (= [:all :one-to-one] (ancestors-fn :tooo/title)))
-    (is (= [:all :one-to-one] (ancestors-fn :no-match)))
-    (is (= [:all :unique-identity :one-to-one] (ancestors-fn :ui/visibility-filter)))))
+    (is (= #{:all :action} (ancestors-fn :foo-action)))
+    (is (= #{:all :one-to-one} (ancestors-fn :tooo/title)))
+    (is (= #{:all :one-to-one} (ancestors-fn :no-match)))
+    (is (= #{:all :one-to-one :unique-identity} (ancestors-fn :ui/visibility-filter)))))
 
-(def hierarchy (schema/schema->hierarchy test-schema))
-(reduce
-   (fn [acc [k v]]
-     (assoc acc k (into [] v)))
-   {}
-   (:ancestors hierarchy))
+
+
+
 
 (run-tests)
