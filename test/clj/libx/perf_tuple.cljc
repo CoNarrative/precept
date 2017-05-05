@@ -17,9 +17,12 @@
                                        def-tuple-query]]
               [libx.listeners :as l]
               [libx.schema :as schema]
-              #?(:clj [clara.tools.inspect :as inspect])))
+      #?(:clj
+              [clara.tools.inspect :as inspect])
+        [clara.tools.inspect :as inspect]))
 
-(defn trace [& x] (apply prn x))
+(defn trace [& x]
+  (comment (apply prn x)))
 
 ;; TODO. create fn to reset `rules` atom. As we've discovered this might even be nice to
 ;; have for non-generated rule names, because when we delete a rule or rename it, it's still in
@@ -79,14 +82,69 @@
   (doseq [action ?actions]
     (cr/retract! action)))
 
-(cr/defrule remove-older-one-to-one-facts
-  {:super true :salience 100}
-  ;[?fact1 <- :one-to-one (= ?e (:e this)) (= ?a1 (:a this)) (= ?t1 (:t this))]
-  [?fact2 <- :one-to-one (= ?e (:e this)) (= ?a1 (:a this)) (= ?t2 (:t this))]
-  ;[:test (and (not= ?fact1 ?fact2) #_(> (:t ?fact1) (:t ?fact2)))]
-  =>
-  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact2)
-  (retract! ?fact2))
+;; 234 ms
+;(cr/defrule remove-older-one-to-one-facts
+;  {:super true :salience 100}
+;  [?fact1 <- :done-count (= ?e (:e this))]
+;  [?fact2 <- :done-count (> (:t ?fact1) (:t this)) (= ?e (:e this))]
+;  ;[:test (and (not= ?fact1 ?fact2) (> (:t ?fact1) (:t ?fact2)))]
+;  =>
+;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact2)
+;  (retract! ?fact2))
+
+;; 5486ms
+;(cr/defrule remove-older-one-to-one-facts
+;  {:super true :salience 100}
+;  [?fact1 <- :todo/title (= ?e (:e this))]
+;  [?fact2 <- :todo/title (> (:t ?fact1) (:t this)) (= ?e (:e this))]
+;  [:test (and (not= ?fact1 ?fact2))]
+;  =>
+;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact2)
+;  (retract! ?fact2))
+
+;; 332ms
+;(cr/defrule remove-older-one-to-one-facts
+;  {:super true :salience 100}
+;  [?fact <- :todo/title (= ?e (:e this))]
+;  =>
+;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact))
+
+;; 260ms
+;(cr/defrule remove-older-one-to-one-facts
+;  {:super true :salience 100}
+;  [?fact1 <- :todo/title (= ?e (:e this))]
+;  [?fact2 <- :todo/title (= 42 (:e this))]
+;  =>
+;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact1))
+
+;; breaks
+;(cr/defrule remove-older-one-to-one-facts
+;  {:super true :salience 100}
+;  [?fact1 <- :todo/title (= ?e (:e this))]
+;  [?fact2 <- :todo/title (= (:e ?fact1) (:e this))]
+;  =>
+;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact1))
+
+;; 7792ms
+;(cr/defrule remove-older-one-to-one-facts
+;  {:super true :salience 100}
+;  [?fact1 <- :todo/title (= ?e (:e this))]
+;  [?fact2 <- :todo/title (= ?e (:e this))]
+;  =>
+;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact1))
+
+;; 6623ms
+;(cr/defrule remove-older-one-to-one-facts
+;  {:super true :salience 100}
+;  [?fact1 <- :one-to-one (= ?e (:e this))]
+;  [?fact2 <- :todo/title (= ?e (:e this)) (> (:t ?fact1) (:t this))]
+;  [:test (and (not= ?fact1 ?fact2))]
+;  =>
+;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact1))
+
+
+;; 194ms
+;(ns-unmap *ns* 'remove-older-one-to-one-facts)
 
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))
@@ -105,10 +163,9 @@
     ;(l/replace-listener)
     (insert (repeatedly n #(vector (guid) :todo/title "foobar")))))
 
-(def session (atom (n-facts-session 10#_0000)))
+(def session (atom (n-facts-session 100000#_0000)))
 
-;(inspect/inspect @session)
-;(ns-unmap *ns* 'remove-older-one-to-one-facts)
+;(get-in (inspect/inspect @session) [:rule-matches remove-older-one-to-one-facts])
 ;; 246ms without, 5000ms with
 
 (defn perf-loop [iters]
@@ -124,10 +181,11 @@
                      [1 :done-count 6]])
             (cr/fire-rules)))))))
 
-(perf-loop 1#_00)
+(perf-loop 100)
 
 (l/vec-ops @session)
 ;(inspect/inspect @session)
+;(inspect/explain-activations @session)
 ;; agenda phases
 ;; schema maintenance should be high salience and always available
 ;; action

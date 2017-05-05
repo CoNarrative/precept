@@ -93,9 +93,3 @@
     (reset! session-hierarchy h)
     @h))
 
-
-(def sch libx.todomvc.schema/app-schema)
-
-(def one-to-manys
-  (map :db/ident (:db.cardinality/many (group-by :db/cardinality sch))))
-one-to-manys

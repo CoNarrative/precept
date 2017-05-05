@@ -4,12 +4,15 @@
               [libx.core :as core]
               [libx.state :as state]
               [libx.query :as q]
+              [libx.schema :as schema]
               [libx.tuplerules :refer [def-tuple-session]]
+              [libx.schema-fixture :refer [test-schema]]
               [clara.tools.inspect :as inspect]
               [clara.tools.tracing :as trace]
               [clojure.spec :as s]
               [clara.rules :refer [query defquery fire-rules] :as cr]
-              [clara.tools.tracing :as trace])
+              [clara.tools.tracing :as trace]
+              [libx.util :as util])
     (:import [libx.util Tuple]))
 
 (defn todo-tx [id title done]
@@ -199,5 +202,24 @@
       (is (= true (sort-fn first-group-result last-group-result)))
       (is (= false (sort-fn last-group-result first-group-result))))))
 
+;; Note there appears to be no hierarchy within an ancestors list...We may
+;; derive the hierarchy in an ordered fashon but that information appears to be
+;; lost when converted to a set and supplying the :ancestors part of the hierarchy
+;; to Clara. Not clear whether Clara knows everything is descended from :all.
+;; May want to try conversion to a vector
+(deftest ancestors-fn-test
+  (let [h (schema/schema->hierarchy test-schema)
+        ancestors-fn (util/make-ancestors-fn h)]
+    (is (= [:all :action] (ancestors-fn :foo-action)))
+    (is (= [:all :one-to-one] (ancestors-fn :tooo/title)))
+    (is (= [:all :one-to-one] (ancestors-fn :no-match)))
+    (is (= [:all :unique-identity :one-to-one] (ancestors-fn :ui/visibility-filter)))))
+
+(def hierarchy (schema/schema->hierarchy test-schema))
+(reduce
+   (fn [acc [k v]]
+     (assoc acc k (into [] v)))
+   {}
+   (:ancestors hierarchy))
 
 (run-tests)
