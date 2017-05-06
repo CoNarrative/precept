@@ -87,37 +87,38 @@
     (and (coll? x) (vector? (first x))) (mapv vec->record x)
     (vector? x) (vector (vec->record x))))
 
-
-;(defn fact-index-op [fact]
-;  (let [ancestry (@state/ancestors-fn (:a fact))]
-;    (cond
-;      (ancestry :unique-identity)))
-
-;; TODO create defmulti or defmethod that figures out whether fact is one to one, unique,
-;; one to many etc and returns appropriate function that we use to key a fact in the index
-;; (in the case of one to one `(take 2 fact)`) then supply that function as arguments to the
-;; functions below that have take 2 hardcoded
-(defn find-existing-one-to-one
-  "For one-to-one facts. Returns nil if not in session and ok to insert. Else returns
-  existing fact to be retracted"
+(defn fact-index-key
+  "Returns fn used to store and access a fact in fact-index according to the fact's cardinality,
+  uniqueness"
   [fact]
-  (if-let [existing (get @state/fact-index (take 2 (vals fact)))]
+  (let [ancestry (@state/ancestors-fn (:a fact))]
+    (cond
+      (ancestry :unique) (vals (select-keys fact [:a :v :e]))
+      (ancestry :one-to-one) (take 2 (vals fact))
+      (ancestry :one-to-many) nil)))
+
+
+(defn find-in-fact-index
+  "Returns nil if not in session and ok to insert. Else returns
+  existing fact to be retracted"
+  [fact k]
+  (if-let [existing (get @state/fact-index k)]
     (do
-      (swap! state/fact-index assoc (take 2 (vals fact)) fact)
+      (swap! state/fact-index assoc k fact)
       existing)
     (do
-      (swap! state/fact-index assoc (take 2 (vals fact)) fact)
+      (swap! state/fact-index assoc k fact)
       nil)))
 
 (defn remove-from-fact-index
-  "Only works for one-to-one facts. Finds in index based on eid/attr pair.
+  "Finds in index based on supplied key.
   Compares value of fact to fact that is indexed. If existing value matches
   fact to be removed, removes fact and returns true to indicate removal, Else
-  nothing is removed and returns false."
-  [fact]
-  (let [existing (get @state/fact-index (take 2 (vals fact)))]
+  removes nothing and returns false."
+  [fact k]
+  (let [existing (get @state/fact-index k)]
     (if (= existing fact)
-      (do (swap! state/fact-index dissoc (take 2 (vals fact)))
+      (do (swap! state/fact-index dissoc k)
         true)
       false)))
 
@@ -126,9 +127,13 @@
   Accepts {} [{}...] [] [[]...]"
   [session facts]
   (let [insertables (insertable facts)
-        _ (trace "insert received : " facts)
-        _ (trace "insert : " insertables)]
-    (cr/insert-all session insertables)))
+        to-retract (remove nil? (map #(find-in-fact-index % (fact-index-key %)) insertables))
+        _ (println "[insert] insertables : " insertables)
+        _ (println "[insert] to-retract : " (seq to-retract))]
+    (if (empty? to-retract)
+      (cr/insert-all session insertables)
+      (do (cr/insert-all session insertables)
+          (apply (partial cr/retract session) to-retract)))))
 
 (defn insert-action
   "Inserts hash-map from outside rule context.
@@ -150,7 +155,7 @@
   (let [insertables (insertable facts)]
     (trace "insert-unconditional! received" facts)
     (trace "insert-unconditional! : " insertables)
-    (remove nil? (mapv find-existing-one-to-one insertables))
+    (remove nil? (mapv find-in-fact-index insertables))
     (cr/insert-all-unconditional! insertables)))
 
 (defn retract!
@@ -161,7 +166,7 @@
         _ (trace "retract! :" insertables)]
     (doseq [x insertables]
       (cr/retract! x)
-      (remove-from-fact-index x))))
+      (remove-from-fact-index x (fact-index-key x)))))
 
 (defn retract
   "Retracts either: Tuple, {} [{}...] [] [[]..]"
