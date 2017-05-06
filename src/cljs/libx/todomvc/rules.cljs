@@ -11,8 +11,8 @@
             [libx.util :as util]))
 
 
-(def-tuple-rule all-facts
-  [?fact <- [_ :mouse/down-action]]
+(def-tuple-rule print-all-facts-as-they-come
+  [?fact <- [_ :all]]
   =>
   (println "FACT" (into [] (vals ?fact))))
 
@@ -80,21 +80,21 @@
 
 ; a "reducer" because it saves perma-state
 (def-tuple-rule save-the-fact-that-mouse-is-down {:group :action}
-  [[_ :mouse/down-action]] => (insert-unconditional! [_ :mouse/left-pressed true]))
+  [[_ :action/type :mouse/down]] => (insert-unconditional! [0 :mouse/left-pressed true]))
 
 ;another reducer....
-(def-tuple-rule start-an-item-drag-when-appropriate {:group :action}
-  [[_ :mouse/op-mode :ready]]
-  [[?actId :mouse/down-action]]
-  [[?actId :mouse-down/hit-id ?eid]]
-  [[?eid :todo/title]]
-  =>
-  (let [op-id (guid)]
-       (insert-unconditional!
-         [[_ :mouse/op-mode :drag-item]
-          [op-id :op/origin-x x]
-          [op-id :op/origin-y y]
-          [op-id :op/drag-target ?eid]])))
+;(def-tuple-rule start-an-item-drag-when-appropriate {:group :action}
+;  [[_ :mouse/op-mode :ready]]
+;  [[?actId :mouse/down-action]]
+;  [[?actId :mouse-down/hit-id ?eid]]
+;  [[?eid :todo/title]]
+;  =>
+;  (let [op-id (guid)]
+;       (insert-unconditional!
+;         [[_ :mouse/op-mode :drag-item]
+;          [op-id :op/origin-x x]
+;          [op-id :op/origin-y y]
+;          [op-id :op/drag-target ?eid]])))
 
 
 ;({:op/origin-x x :op/origin-y y :op/drag-target ?eid})
@@ -113,13 +113,10 @@
     (insert-unconditional! [[(guid) :mouse/x x]
                             [(guid) :mouse/y y]])))
 
-(def-tuple-rule move-item-as-it-is-dragged
-  {group :action}
-  [[_ :mouse/move-action]]
-  [[_ :]])
-
-
-
+;(def-tuple-rule move-item-as-it-is-dragged
+;  {group :action}
+;  [[_ :mouse/move-action]]
+;  [[_ :]])
 
 
 (def-tuple-rule detect-drag-intent

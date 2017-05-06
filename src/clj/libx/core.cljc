@@ -179,6 +179,13 @@
   ([msg facts]
    (dispatch! (fn [session] (util/insert-action session [(util/guid) msg facts])))))
 
+(defn then-tuples
+  "Dispatches action to be inserted into current session"
+  ([args]
+   (dispatch! (fn [session]
+                (util/insert session
+                     (util/map->tuples (conj {:db/id (util/guid)} args)))))))
+
 (defn start! [options]
   (let [opts (or options (hash-map))]
     (swap-session! (l/replace-listener (:session opts)))

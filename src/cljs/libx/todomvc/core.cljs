@@ -2,7 +2,7 @@
   (:require-macros [secretary.core :refer [defroute]])
   (:require [goog.events :as events]
             [libx.state :refer [state store]]
-            [libx.core :refer [start! then]]
+            [libx.core :refer [start! then then-tuples]]
             [libx.spec.sub :as sub]
             [libx.todomvc.views]
             [libx.todomvc.schema :refer [app-schema]]
@@ -31,9 +31,14 @@
 
 (defn mount-components []
   (reagent/render [libx.todomvc.views/todo-app] (.getElementById js/document "app"))
-  (.addEventListener js/window "mousedown" #(then :mouse/down-action {:event %}))
-  (.addEventListener js/window "mousemove" #(then :mouse/move-action {:event %}))
-  (.addEventListener js/window "mouseup" #(then :mouse/up-action {:event %})))
+  (.addEventListener js/window "mousedown"
+                     #(then-tuples {
+                                    :action/type :mouse/down
+                                    :pos/x (.-clientX %)
+                                    :pos/y (.-clientY %)})))
+
+  ;(.addEventListener js/window "mousemove" #(then :mouse/move-action {:event %}))
+  ;(.addEventListener js/window "mouseup" #(then :mouse/up-action {:event %})))
 
 (defn todo [title]
   (let [id (random-uuid)]

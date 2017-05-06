@@ -3,7 +3,7 @@
              [libx.state :as state]))
 
 (defn trace [& args]
-  (comment (apply prn args)))
+  (apply prn args))
 
 (defn guid []
   #?(:clj (java.util.UUID/randomUUID)
