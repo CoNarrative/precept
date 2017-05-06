@@ -211,10 +211,57 @@
   (let [h (schema/schema->hierarchy test-schema)
         ancestors-fn (util/make-ancestors-fn h)]
     (is (= #{:all :action} (ancestors-fn :foo-action)))
-    (is (= #{:all :one-to-one} (ancestors-fn :tooo/title)))
+    (is (= #{:all :one-to-one :unique} (ancestors-fn :todo/title)))
+    (is (= #{:all :one-to-one} (ancestors-fn :todo/done)))
     (is (= #{:all :one-to-one} (ancestors-fn :no-match)))
-    (is (= #{:all :one-to-one :unique-identity} (ancestors-fn :ui/visibility-filter)))))
+    (is (= #{:all :one-to-many} (ancestors-fn :todo/tags)))))
 
+
+(deftest fact-indexing-test
+  (let [fact-1 (map->Tuple {:a :foo :e 1 :t 1 :v 42})
+        fact-2 (map->Tuple {:a :bar :e 1 :t 2 :v 42})
+        next-1 (map->Tuple {:a :foo :e 1 :t 3 :v 43})
+        next-2 (map->Tuple {:a :bar :e 1 :t 4 :v 43})
+        facts (vector fact-1 fact-2)]
+
+    (testing "Initial state"
+      (is (= {} (reset! state/fact-index {}))
+          "Expected fact index to be {}"))
+
+    (testing "Finding existing with empty state"
+      (is (= nil (find-existing-one-to-one fact-1))))
+
+    (testing "Fact is indexed by find-existing"
+      (is (= @state/fact-index {'(1 :foo) fact-1})))
+
+    (testing "Removing a fact that exists in index"
+      (is (= true (remove-from-fact-index fact-1)))
+      (is (= @state/fact-index {})))
+
+    (testing "Newer one-to-one facts should return old fact"
+      (is (= @state/fact-index {}))
+      (is (= nil (find-existing-one-to-one fact-1)))
+      (is (= fact-1 (find-existing-one-to-one next-1))))
+
+    (testing "Existing one-to-one-fact should have been replaced"
+      (is (= @state/fact-index {'(1 :foo) next-1})))
+
+    (testing "Remove fact from index that does not exist"
+      (is (= false (remove-from-fact-index fact-1)))
+      (is (= @state/fact-index {'(1 :foo) next-1})))
+
+    (testing "Find with same entity, different attribute with non-indexed fact"
+      (is (= @state/fact-index {'(1 :foo) next-1}))
+      (is (= nil (find-existing-one-to-one fact-2)))
+      (is (= @state/fact-index {'(1 :foo) next-1
+                                '(1 :bar) fact-2})))
+
+    (testing "Remove same entity, different attribute with non-indexed fact"
+      (is (= @state/fact-index {'(1 :foo) next-1
+                                '(1 :bar) fact-2}))
+      (is (= false (remove-from-fact-index next-2)))
+      (is (= @state/fact-index {'(1 :foo) next-1
+                                '(1 :bar) fact-2})))))
 
 
 

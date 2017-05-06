@@ -50,7 +50,7 @@
   (->Tuple (first vec)
            (second vec)
            (third vec)
-           (next-fact-id!)))
+           (nth vec 3 (next-fact-id!))))
 
 (defn tuple-vec->action-hash-map
   "Puts ks in x into e-a-v map and assigns m to :v"
@@ -87,6 +87,40 @@
     (and (coll? x) (vector? (first x))) (mapv vec->record x)
     (vector? x) (vector (vec->record x))))
 
+
+;(defn fact-index-op [fact]
+;  (let [ancestry (@state/ancestors-fn (:a fact))]
+;    (cond
+;      (ancestry :unique-identity)))
+
+;; TODO create defmulti or defmethod that figures out whether fact is one to one, unique,
+;; one to many etc and returns appropriate function that we use to key a fact in the index
+;; (in the case of one to one `(take 2 fact)`) then supply that function as arguments to the
+;; functions below that have take 2 hardcoded
+(defn find-existing-one-to-one
+  "For one-to-one facts. Returns nil if not in session and ok to insert. Else returns
+  existing fact to be retracted"
+  [fact]
+  (if-let [existing (get @state/fact-index (take 2 (vals fact)))]
+    (do
+      (swap! state/fact-index assoc (take 2 (vals fact)) fact)
+      existing)
+    (do
+      (swap! state/fact-index assoc (take 2 (vals fact)) fact)
+      nil)))
+
+(defn remove-from-fact-index
+  "Only works for one-to-one facts. Finds in index based on eid/attr pair.
+  Compares value of fact to fact that is indexed. If existing value matches
+  fact to be removed, removes fact and returns true to indicate removal, Else
+  nothing is removed and returns false."
+  [fact]
+  (let [existing (get @state/fact-index (take 2 (vals fact)))]
+    (if (= existing fact)
+      (do (swap! state/fact-index dissoc (take 2 (vals fact)))
+        true)
+      false)))
+
 (defn insert
   "Inserts Tuples from outside rule context.
   Accepts {} [{}...] [] [[]...]"
@@ -116,6 +150,7 @@
   (let [insertables (insertable facts)]
     (trace "insert-unconditional! received" facts)
     (trace "insert-unconditional! : " insertables)
+    (remove nil? (mapv find-existing-one-to-one insertables))
     (cr/insert-all-unconditional! insertables)))
 
 (defn retract!
@@ -125,7 +160,8 @@
   (let [insertables (insertable facts)
         _ (trace "retract! :" insertables)]
     (doseq [x insertables]
-      (cr/retract! x))))
+      (cr/retract! x)
+      (remove-from-fact-index x))))
 
 (defn retract
   "Retracts either: Tuple, {} [{}...] [] [[]..]"
@@ -191,16 +227,28 @@
 (defn action? [a] (> (.indexOf (name a) "-action") -1))
 
 (defn make-ancestors-fn
+  "To be used when defining a session. Stored in atom for auto truth maintenance
+  and schema enforcement."
+  ([]
+   (let [cr-ancestors-fn #(cond
+                            (action? %) #{:all :action}
+                            :else #{:all :one-to-one})]
+     (reset! state/ancestors-fn (memoize cr-ancestors-fn))
+     cr-ancestors-fn))
   ([hierarchy]
-   #(or ((:ancestors hierarchy) %)
-      (cond
-        (action? %) #{:all :action}
-        :else #{:all :one-to-one})))
+   (let [cr-ancestors-fn #(or ((:ancestors hierarchy) %)
+                            (cond
+                              (action? %) #{:all :action}
+                              :else #{:all :one-to-one}))]
+      (reset! state/ancestors-fn (memoize cr-ancestors-fn))
+      cr-ancestors-fn))
   ([hierarchy root-fact-type]
-   #(or ((:ancestors hierarchy) %)
-      (cond
-        (action? %) #{root-fact-type :action}
-        :else #{root-fact-type :one-to-one}))))
+   (let [cr-ancestors-fn #(or ((:ancestors hierarchy) %)
+                            (cond
+                              (action? %) #{root-fact-type :action}
+                              :else #{root-fact-type :one-to-one}))]
+      (reset! state/ancestors-fn (memoize cr-ancestors-fn))
+      cr-ancestors-fn)))
 
 (defn split-head-body
   "Takes macro body of a deflogical and returns map of :head, :body"

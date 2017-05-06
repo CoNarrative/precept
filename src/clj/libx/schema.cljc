@@ -57,20 +57,16 @@
   "Takes a Datomic schema"
   [schema]
   (let [h (atom (make-hierarchy))
-        unique (group-by :db/unique schema)
         cardinality (group-by :db/cardinality schema)
-        unique-attrs (map :db/ident (:db.unique/identity unique))
-        unique-vals (map :db/ident (:db.unique/value unique))
+        unique-attrs (map :db/ident (filter :db/unique schema))
         one-to-manys (map :db/ident (:db.cardinality/many cardinality))
         one-to-ones (clojure.set/difference (into #{} (map :db/ident schema)) (set one-to-manys))]
     (doseq [x one-to-ones] (swap! h derive x :one-to-one))
     (doseq [x one-to-manys] (swap! h derive x :one-to-many))
-    (doseq [x unique-vals] (swap! h derive x :unique-value))
-    (doseq [x unique-attrs] (swap! h derive x :unique-identity))
+    (doseq [x unique-attrs] (swap! h derive x :unique))
     (swap! h derive :one-to-one :all)
     (swap! h derive :one-to-many :all)
-    (swap! h derive :unique-value :all)
-    (swap! h derive :unique-identity :all)
+    (swap! h derive :unique :one-to-one)
     (reset! session-hierarchy h)
     @h))
 
