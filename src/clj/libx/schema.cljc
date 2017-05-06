@@ -13,42 +13,23 @@
 
 (defn unique-attr? [by-ident attr]
   (and (schema-attr? by-ident attr)
-       (= :db.unique/identity (get-in by-ident [attr :db/unique]))))
-
-(defn unique-value? [by-ident attr]
-  (and (schema-attr? by-ident attr)
-    (= :db.unique/value (get-in by-ident [attr :db/unique]))))
-
-(defn one-to-one? [by-ident attr]
-  (and (schema-attr? by-ident attr)
-       (= :db.cardinality/one (get-in by-ident [attr :db/cardinality]))))
+       (= (or :db.unique/identity
+              :db.unique/value)
+          (get-in by-ident [attr :db/unique]))))
 
 (defn one-to-many? [by-ident attr]
   (and (schema-attr? by-ident attr)
        (= :db.cardinality/many (get-in by-ident [attr :db/cardinality]))))
 
-(defn unique-identity-attrs [schema tuples]
+(defn unique-attrs [schema tuples]
   (reduce (fn [acc cur]
             (if (unique-attr? schema (second cur))
               (conj acc (second cur))
               acc))
     [] tuples))
 
-(defn unique-value-attrs [schema tuples]
-  (reduce (fn [acc cur]
-            (if (unique-value? schema (second cur))
-              (conj acc (second cur))
-              acc))
-    [] tuples))
-
-(defn unique-identity-facts [session unique-attrs]
+(defn unique-facts [session unique-attrs]
   (mapcat #(q/facts-where session %) unique-attrs))
-
-(defn unique-value-facts [session tups unique-attrs]
-  (let [unique-tups (filter #((set unique-attrs) (second %)) tups)
-        avs (map rest unique-tups)]
-    (mapcat (fn [[a v]] (q/facts-where session a v))
-      avs)))
 
 (defn attribute [ident type & {:as opts}]
   (merge {:db/id        (guid)

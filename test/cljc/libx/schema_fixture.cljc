@@ -1,49 +1,18 @@
 (ns libx.schema-fixture
-    (:require [libx.util :refer [guid]]))
-
-(defn attribute [ident type & {:as opts}]
-  (merge {:db/id        (guid)
-          :db/ident     ident
-          :db/valueType type}
-    {:db/cardinality :db.cardinality/one}
-    opts))
-
-(defn enum [ident & {:as fields}]
-  (merge {:db/id    (guid)
-          :db/ident ident}
-    fields))
+    (:require [libx.util :refer [guid]]
+              [libx.schema :refer [attribute]]))
 
 (defn schema []
   [
-   ; Todos
    (attribute :todo/title
-     :db.type/string)
-
-   (attribute :todo/visible
-     :db.type/boolean)
+     :db.type/string
+     :db/unique :db.unique/identity)
 
    (attribute :todo/done
-     :db.type/keyword)
+     :db.type/boolean)
 
    (attribute :todo/tags
      :db.type/keyword
-     :db/cardinality :db.cardinality/many)
-   ; UI
-   (attribute :ui/toggle-complete
-     :db.type/enum ;;tag
-     :db/unique :db.unique/identity)
-
-   (attribute :ui/visibility-filter
-     :db.type/enum ;;tag
-     :db/unique :db.unique/identity)
-
-   (attribute :done-count
-     :db.type/enum ;;tag
-     :db/unique :db.unique/identity)
-
-   (attribute :active-count
-     :db.type/enum ;;tag
-     :db/unique :db.unique/identity)])
-
+     :db/cardinality :db.cardinality/many)])
 
 (def test-schema (schema))
