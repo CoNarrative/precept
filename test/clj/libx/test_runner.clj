@@ -1,4 +1,4 @@
-(ns libx.core-test
+(ns libx.test-runner
     (:require [clojure.test :refer [run-tests]]
               [libx.lang-test]
               [libx.deflogical-test]

@@ -19,7 +19,7 @@ jobs:
             - $HOME/.m2
             - $HOME/.lein
           key: << checksum "project.clj" >>
-      - run: bin/lein do test :only libx.core-test, uberjar
+      - run: bin/lein do test :only libx.test-runner, uberjar
       - store_artifacts:
           path: target/libx.jar
           destination: uberjar
