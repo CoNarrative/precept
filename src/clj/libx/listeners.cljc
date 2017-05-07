@@ -141,7 +141,7 @@
     (partition-by first change)))
 
 (defn embed-op [additions-or-removals op-kw]
-    (mapv util/tuple-entity->hash-map-entity
+  (mapv util/tuple-entity->hash-map-entity
       (with-op additions-or-removals op-kw)))
 
 (defn replace-listener [session]

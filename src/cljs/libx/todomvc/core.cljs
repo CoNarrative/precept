@@ -1,7 +1,7 @@
 (ns ^:figwheel-always libx.todomvc.core
   (:require-macros [secretary.core :refer [defroute]])
   (:require [goog.events :as events]
-            [libx.state :refer [state store]]
+            [libx.state :as state]
             [libx.core :refer [start! then]]
             [libx.spec.sub :as sub]
             [libx.todomvc.views]
@@ -40,5 +40,8 @@
 (def facts (into (todo "Hi") (todo "there!")))
 
 (defn ^:export main []
-    (start! {:session app-session :schema app-schema :facts facts})
-    (mount-components))
+  (start! {:session app-session :schema app-schema :facts facts})
+  (mount-components))
+
+;@state/store
+

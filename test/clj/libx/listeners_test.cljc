@@ -73,7 +73,7 @@
     (testing "insertions should return add operations only"
       (is (every? #{:add-facts :add-facts-logical} (keys additions))))
 
-    (testing "insertions should return add operations only"
+    (testing "removals should return retract operations only"
       (is (every? #{:retract-facts :retract-facts-logical} (keys removals))))
 
     (testing "vectorize-trace should return trace with each Tuple in :facts as vector"

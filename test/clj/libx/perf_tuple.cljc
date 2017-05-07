@@ -94,7 +94,7 @@
   :activation-group-sort-fn activation-group-sort-fn)
 
 (defn n-facts-session [n]
-  (let [s1 (insert tuple-session (repeatedly n #(vector (guid) :too/title "foobar")))]
+  (let [s1 (insert tuple-session (repeatedly n #(vector (guid) :1-to-1 "foobar")))]
       (cr/fire-rules s1)))
 ;; Weirdly, if we insert facts but don't fire rules before attaching a listener
 ;; the facts that we insert  are not included in the session the session
@@ -109,7 +109,7 @@
 ;; 246ms without, 5000ms with
 ;; UPDATE: 264ms with fact-index
 
-(reset! state/fact-index {})
+;(reset! state/fact-index {})
 ;@state/fact-index
 
 (defn perf-loop [iters]
@@ -118,7 +118,7 @@
       ;(time
         (reset! session
           (-> @session
-            ;(l/replace-listener)
+            (l/replace-listener)
             (util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
             (util/insert-action [(guid) :add-todo-action {:title "hey"}])
             (insert [[1 :done-count 5]
@@ -127,16 +127,10 @@
 
 (time (perf-loop 100))
 (l/vec-ops @session)
-(count @state/fact-index)
+(count (:one-to-one @state/fact-index))
+(:unique @state/fact-index)
 ;(inspect/inspect @session)
 ;(inspect/explain-activations @session)
-;; agenda phases
-;; schema maintenance should be high salience and always available
-;; action
-;; compute
-;; report
-;; cleanup
-
 
 ;; Timings - all our stuff
 ;; 100,000 facts

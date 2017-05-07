@@ -74,7 +74,7 @@
     (go-loop []
       (let [f (<! in)
             applied (f (:session @state))
-            fired (time (fire-rules applied))]
+            fired (fire-rules applied)]
         (>! out fired)
         (recur)))
     out))

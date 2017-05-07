@@ -13,10 +13,10 @@
 (defn trace [& args]
   (apply prn args))
 
-(def-tuple-rule all-facts
-  [?fact <- [:all]]
-  =>
-  (println "FACT" (into [] (vals ?fact))))
+;(def-tuple-rule all-facts
+;  [?fact <- [:all]]
+;  =>
+;  (println "FACT" (into [] (vals ?fact))))
 
 
 ;; Action handlers
@@ -24,20 +24,10 @@
 (store-action :ui/set-visibility-filter-action)
 (store-action :entry/title-action)
 
-;; TODO. s-expr in first position does not expand properly. May be happening
-;; in multiple slots. Needs to expand to (= (:id ?action) (:e this))
-;(def-tuple-rule handle-start-todo-edit
-;  {:group :action}
-;  [[_ :todo/start-edit-action ?action]]
-;  [[(:id ?action) :todo/title ?v]]
-;  =>
-;  (trace "Responding to edit request" (:id ?action) ?v)
-;  (insert-unconditional! [(:id ?action) :todo/edit ?v]))
-
-(cr/defrule handle-start-todo-edit
+(def-tuple-rule handle-start-todo-edit
   {:group :action}
-  [:todo/start-edit-action (= ?action (:v this))]
-  [:todo/title (= (:id ?action) (:e this)) (= ?v (:v this))]
+  [[_ :todo/start-edit-action ?action]]
+  [[(:id ?action) :todo/title ?v]]
   =>
   (trace "Responding to edit request" (:id ?action) ?v)
   (insert-unconditional! [(:id ?action) :todo/edit ?v]))
@@ -125,9 +115,11 @@
         ordered (vals (select-keys items (into [] ?eids)))
         entities (util/entity-Tuples->entity-maps ordered)]
     (println "Entities" entities)
-    (notify! :task-list (fn [x] (if (map? x)
-                                  (assoc x :visible-todos entities)
-                                  {:visible-todos entities})))))
+    ; Following are equivalent excepting the second results in order being lost:
+    ;(notify! :task-list (fn [x] (if (map? x)
+    ;                              (assoc x :visible-todos entities)
+    ;                              {:visible-todos entities})
+    (insert! [?e ::sub/response {:visible-todos entities}])))
 
 ;; Subscription handlers
 (def-tuple-rule subs-footer-controls
@@ -199,24 +191,6 @@
   (trace "CLEANING actions" ?action)
   ;(doseq [action ?actions]
   (cr/retract! ?action))
-
-(cr/defrule remove-older-unique-identity-facts
-  {:super true :salience 100}
-  [:unique-identity (= ?a1 (:a this)) (= ?t1 (:t this))]
-  [?fact2 <- :unique-identity (= ?a1 (:a this)) (= ?t2 (:t this))]
-  [:test (> ?t1 ?t2)]
-  =>
-  (trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
-  (retract! ?fact2))
-
-(cr/defrule remove-older-unique-value-facts
-  {:super true :salience 100}
-  [?fact1 <- :unique-value (= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t1 (:t this))]
-  [?fact2 <- :unique-value (= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t2 (:t this))]
-  [:test (> ?t1 ?t2)]
-  =>
-  (trace (str "SCHEMA MAINT - :unique-value : " ?t1 " is greater than " ?t2))
-  (retract! ?fact2))
 
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))
