@@ -17,9 +17,8 @@
                                        def-tuple-query]]
               [libx.listeners :as l]
               [libx.schema :as schema]
-      #?(:clj
-              [clara.tools.inspect :as inspect])
-        [clara.tools.inspect :as inspect]))
+      #?(:clj [clara.tools.inspect :as inspect])
+      #?(:clj [clara.tools.tracing :as t])))
 
 (defn trace [& x]
   (comment (apply prn x)))
@@ -82,70 +81,6 @@
   (doseq [action ?actions]
     (cr/retract! action)))
 
-;; 234 ms
-;(cr/defrule remove-older-one-to-one-facts
-;  {:super true :salience 100}
-;  [?fact1 <- :done-count (= ?e (:e this))]
-;  [?fact2 <- :done-count (> (:t ?fact1) (:t this)) (= ?e (:e this))]
-;  ;[:test (and (not= ?fact1 ?fact2) (> (:t ?fact1) (:t ?fact2)))]
-;  =>
-;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact2)
-;  (retract! ?fact2))
-
-;; 5486ms
-;(cr/defrule remove-older-one-to-one-facts
-;  {:super true :salience 100}
-;  [?fact1 <- :todo/title (= ?e (:e this))]
-;  [?fact2 <- :todo/title (> (:t ?fact1) (:t this)) (= ?e (:e this))]
-;  [:test (and (not= ?fact1 ?fact2))]
-;  =>
-;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact2)
-;  (retract! ?fact2))
-
-;; 332ms
-;(cr/defrule remove-older-one-to-one-facts
-;  {:super true :salience 100}
-;  [?fact <- :todo/title (= ?e (:e this))]
-;  =>
-;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact))
-
-;; 260ms
-;(cr/defrule remove-older-one-to-one-facts
-;  {:super true :salience 100}
-;  [?fact1 <- :todo/title (= ?e (:e this))]
-;  [?fact2 <- :todo/title (= 42 (:e this))]
-;  =>
-;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact1))
-
-;; breaks
-;(cr/defrule remove-older-one-to-one-facts
-;  {:super true :salience 100}
-;  [?fact1 <- :todo/title (= ?e (:e this))]
-;  [?fact2 <- :todo/title (= (:e ?fact1) (:e this))]
-;  =>
-;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact1))
-
-;; 7792ms
-;(cr/defrule remove-older-one-to-one-facts
-;  {:super true :salience 100}
-;  [?fact1 <- :todo/title (= ?e (:e this))]
-;  [?fact2 <- :todo/title (= ?e (:e this))]
-;  =>
-;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact1))
-
-;; 6623ms
-;(cr/defrule remove-older-one-to-one-facts
-;  {:super true :salience 100}
-;  [?fact1 <- :one-to-one (= ?e (:e this))]
-;  [?fact2 <- :todo/title (= ?e (:e this)) (> (:t ?fact1) (:t this))]
-;  [:test (and (not= ?fact1 ?fact2))]
-;  =>
-;  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact1))
-
-
-;; 194ms
-;(ns-unmap *ns* 'remove-older-one-to-one-facts)
-
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))
 (def activation-group-sort-fn (util/make-activation-group-sort-fn groups :calc))
@@ -159,40 +94,43 @@
   :activation-group-sort-fn activation-group-sort-fn)
 
 (defn n-facts-session [n]
-  (-> tuple-session
-    ;(l/replace-listener)
-    (insert (repeatedly n #(vector (guid) :todo/title "foobar")))))
+  (let [s1 (insert tuple-session (repeatedly n #(vector (guid) :1-to-1 "foobar")))]
+      (cr/fire-rules s1)))
+;; Weirdly, if we insert facts but don't fire rules before attaching a listener
+;; the facts that we insert  are not included in the session the session
+;; on the next remove/add listener. There's actually a few ways this can occur
+;; depending on when/where listeners are added and removed. Might
+;; be nice to file a bug with Clara so they're aware.
 
-(def session (atom (n-facts-session 100000#_0000)))
+(def session (atom (n-facts-session 100000)))
 
+;(t/get-trace @session)
 ;(get-in (inspect/inspect @session) [:rule-matches remove-older-one-to-one-facts])
 ;; 246ms without, 5000ms with
+;; UPDATE: 264ms with fact-index
+
+;(reset! state/fact-index {})
+;@state/fact-index
 
 (defn perf-loop [iters]
-  (time
+  ;(time
     (dotimes [n iters]
-      (time
+      ;(time
         (reset! session
           (-> @session
-            ;(l/replace-listener)
+            (l/replace-listener)
             (util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
             (util/insert-action [(guid) :add-todo-action {:title "hey"}])
             (insert [[1 :done-count 5]
                      [1 :done-count 6]])
-            (cr/fire-rules)))))))
+            (cr/fire-rules)))))
 
-(perf-loop 100)
-
+(time (perf-loop 100))
 (l/vec-ops @session)
+(count (:one-to-one @state/fact-index))
+(:unique @state/fact-index)
 ;(inspect/inspect @session)
 ;(inspect/explain-activations @session)
-;; agenda phases
-;; schema maintenance should be high salience and always available
-;; action
-;; compute
-;; report
-;; cleanup
-
 
 ;; Timings - all our stuff
 ;; 100,000 facts

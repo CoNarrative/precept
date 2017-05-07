@@ -100,14 +100,14 @@
 ;    (doseq [x (butlast xs)]
 ;      (util/retract! x))))
 
-(cr/defrule remove-older-unique-identity-facts
-  {:super true :salience 100}
-  ;; Perf drops at 10k facts
-  [?fact1 <- :one-to-one #_(= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t1 (:t this))]
-  [?fact2 <- :one-to-one #_(= ?e1 (:e this)) (= ?a1 (:a this)) (> ?t1 (:t this))]
-  [:test (not= ?fact1 ?fact2)]
-  =>
-  (util/retract! ?fact2))
+;(cr/defrule remove-older-unique-identity-facts
+;  {:super true :salience 100}
+;  ;; Perf drops at 10k facts
+;  [?fact1 <- :one-to-one #_(= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t1 (:t this))]
+;  [?fact2 <- :one-to-one #_(= ?e1 (:e this)) (= ?a1 (:a this)) (> ?t1 (:t this))]
+;  [:test (not= ?fact1 ?fact2)]
+;  =>
+;  (util/retract! ?fact2))
 
 ;  [?list <- (asc-fact-id) :from [:one-to-one]]
 ;  =>

@@ -3,10 +3,16 @@
             [clara.rules.accumulators :as acc]
             [clara.rules :refer [query fire-rules] :as cr]
             [libx.listeners :as l]
+            [libx.state :as state]
             [libx.query :as q]
             [libx.util :refer [guid ->Tuple] :as util]
             [libx.tuplerules :refer [def-tuple-rule def-tuple-session]])
   (:import [libx.util Tuple]))
+
+(defn reset-globals [_]
+  (reset! state/fact-index {}))
+
+(use-fixtures :each reset-globals)
 
 (defn trace [& args]
   (comment (apply prn args)))
@@ -67,7 +73,7 @@
     (testing "insertions should return add operations only"
       (is (every? #{:add-facts :add-facts-logical} (keys additions))))
 
-    (testing "insertions should return add operations only"
+    (testing "removals should return retract operations only"
       (is (every? #{:retract-facts :retract-facts-logical} (keys removals))))
 
     (testing "vectorize-trace should return trace with each Tuple in :facts as vector"

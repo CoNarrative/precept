@@ -1,5 +1,5 @@
 (ns libx.util-test
-    (:require [clojure.test :refer [deftest testing is run-tests]]
+    (:require [clojure.test :refer [use-fixtures deftest testing is run-tests]]
               [libx.util :refer :all]
               [libx.core :as core]
               [libx.state :as state]
@@ -29,6 +29,12 @@
 
 (defn fact-id? [n]
   (and (> n -1) (<= n @state/fact-id)))
+
+(defn reset-globals [_]
+  (reset! state/fact-index {})
+  (make-ancestors-fn))
+
+;(use-fixtures :once reset-globals)
 
 (deftest map->tuples-test
   (testing "Converting an entity map to a vector of tuples"
@@ -132,7 +138,8 @@
 
 (deftest insert-test
   (testing "Insert single tuple"
-    (let [session @(def-tuple-session mysess)
+    (let [_ (reset! state/fact-index {})
+          session @(def-tuple-session mysess)
           fact [-1 :foo "bar"]
           trace (trace/get-trace (-> session
                                    (trace/with-tracing)
@@ -144,9 +151,9 @@
 
   (testing "Insert tuples"
     (let [session @(def-tuple-session mysess)
-          facts [[-1 :foo "bar" -1]
-                 [-1 :bar "baz" -1]
-                 [-2 :foo "baz" -1]]
+          facts [[-1 :foo "bar"]
+                 [-1 :bar "baz"]
+                 [-2 :baz "baz"]]
           trace (trace/get-trace (-> session
                                    (trace/with-tracing)
                                    (insert facts)
@@ -211,12 +218,89 @@
   (let [h (schema/schema->hierarchy test-schema)
         ancestors-fn (util/make-ancestors-fn h)]
     (is (= #{:all :action} (ancestors-fn :foo-action)))
-    (is (= #{:all :one-to-one} (ancestors-fn :tooo/title)))
+    (is (= #{:all :one-to-one :unique} (ancestors-fn :todo/title)))
+    (is (= #{:all :one-to-one} (ancestors-fn :todo/done)))
     (is (= #{:all :one-to-one} (ancestors-fn :no-match)))
-    (is (= #{:all :one-to-one :unique-identity} (ancestors-fn :ui/visibility-filter)))))
+    (is (= #{:all :one-to-many} (ancestors-fn :todo/tags)))))
 
+(deftest fact-index-key-test
+  (let [no-match (->Tuple 1 :no-match 42 1)
+        one-to-many (->Tuple 1 :todo/tags 42 2)
+        one-to-one (->Tuple 1 :todo/done 43 3)
+        unique (->Tuple 1 :todo/title "my unique title" 4)
+        h (schema/schema->hierarchy test-schema)
+        _ (make-ancestors-fn h)]
+    (is (fn? @state/ancestors-fn))
+    (is (= [:one-to-one 1 :todo/done] (fact-index-path one-to-one)))
+    (is (= [:one-to-one 1 :no-match] (fact-index-path no-match)))
+    (is (= nil (fact-index-path one-to-many)))
+    (is (= [:unique :todo/title "my unique title"] (fact-index-path unique)))))
 
+(deftest fact-indexing-test
+  (let [h (schema/schema->hierarchy test-schema)
+        _ (make-ancestors-fn h)
+        fact-1 (->Tuple 1 :foo 42 1)
+        fact-2 (->Tuple 1 :bar 42 2)
+        next-1 (->Tuple 1 :foo 43 3)
+        next-2 (->Tuple 1 :bar 43 4)
+        one-to-many (->Tuple 1 :todo/tags 42 5)
+        unique (->Tuple 1 :todo/title "my unique title" 6)]
 
+    (testing "Initial state"
+      (is (= {} (reset! state/fact-index {}))
+          "Expected fact index to be {}")
+      (is (fn? @state/ancestors-fn)
+          "Expected ancestors-fn to be a fn"))
 
+    (testing "Finding existing with empty state"
+      (is (= nil (find-in-fact-index fact-1 (fact-index-path fact-1)))))
+
+    (testing "Fact is indexed by find-existing"
+      (is (= @state/fact-index {:one-to-one {1 {:foo fact-1}}})))
+
+    (testing "Removing a fact that exists in index"
+      (is (= true (remove-from-fact-index fact-1 (fact-index-path fact-1))))
+      (is (= @state/fact-index {})))
+
+    (testing "Newer one-to-one facts should return old fact"
+      (is (= @state/fact-index {}))
+      (is (= nil (find-in-fact-index fact-1 (fact-index-path fact-1))))
+      (is (= fact-1 (find-in-fact-index next-1 (fact-index-path next-1)))))
+
+    (testing "Existing one-to-one-fact should have been replaced"
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}})))
+
+    (testing "Remove fact from index that does not exist"
+      (is (= false (remove-from-fact-index fact-1 (fact-index-path fact-1))))
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}})))
+
+    (testing "Find with same entity, different attribute should index the new fact and return
+              nil (nothing to retract)"
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}}))
+      (is (= nil (find-in-fact-index fact-2 (fact-index-path fact-2))))
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1
+                                                :bar fact-2}}})))
+
+    (testing "Removing same entity, same attribute but different fact-id should not alter index and
+              return false to indicate nothing was removed"
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1
+                                                :bar fact-2}}}))
+      (is (= false (remove-from-fact-index next-2 (fact-index-path next-2))))
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1
+                                                :bar fact-2}}})))
+
+    (testing "One-to-many attrs do not affect fact index"
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1
+                                                :bar fact-2}}}))
+      (is (= nil (find-in-fact-index one-to-many (fact-index-path one-to-many))))
+      (is (= false (remove-from-fact-index one-to-many (fact-index-path one-to-many))))
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1
+                                                :bar fact-2}}})))
+
+    (testing "Unique attrs should be indexed in own bucket"
+      (is (= nil (find-in-fact-index unique (fact-index-path unique))))
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1
+                                                :bar fact-2}}
+                                :unique {:todo/title {"my unique title" unique}}})))))
 
 (run-tests)

@@ -6,15 +6,23 @@
 
 (def initial-state
   {:session nil
-   :session-history '()
+   :session-history false ;; TODO. To enable/disable
+   ;:session-history '() ;; TODO. Own atom (public).
    :subscriptions {}})
 
+;; TODO. Aggregate impl. atoms into single `impl` atom
 (def fact-id (atom -1))
 
-(def rules (atom []))
+(def fact-index (atom {}))
 
 (def session-hierarchy (atom nil))
 
-(defonce store (mk-ratom {}))
+(def ancestors-fn (atom nil))
+
+(def rules (atom []))
 
 (defonce state (atom initial-state))
+;; TODO. ----------------------------------------------
+
+(defonce store (mk-ratom {}))
+

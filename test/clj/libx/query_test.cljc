@@ -1,11 +1,18 @@
 (ns libx.query-test
-  (:require [libx.util :refer :all :as util]
-            [libx.query :as q]
-            [libx.tuplerules :refer [def-tuple-session def-tuple-rule]]
-            [clojure.test :refer [testing is deftest run-tests]]
-            [clara.rules :as cr]
-            [clara.rules.accumulators :as acc])
+    (:require [libx.util :refer :all :as util]
+              [libx.query :as q]
+              [libx.tuplerules :refer [def-tuple-session def-tuple-rule]]
+              [clojure.test :refer [use-fixtures testing is deftest run-tests]]
+              [clara.rules :as cr]
+              [clara.rules.accumulators :as acc]
+              [libx.state :as state])
   (:import [libx.util Tuple]))
+
+(defn reset-globals [_]
+  (reset! state/fact-index {})
+  (make-ancestors-fn))
+
+(use-fixtures :each reset-globals)
 
 (cr/defquery find-all [] [?all <- :all])
 (cr/defquery find-all-acc [] [?all <- (acc/all) :from [:all]])
@@ -63,24 +70,24 @@
                               'libx.query)
         inserted (-> s
                    (insert [[123 :foo "bar"]
-                            [123 :foo "baz"]
+                            [123 :foo-1 "baz"]
                             [123 :bar "baz"]])
                    (cr/fire-rules))
         result (q/entityv inserted 123)]
-    (is (= result [[123 :foo "bar"] [123 :foo "baz"] [123 :bar "baz"]]))))
+    (is (= result [[123 :foo "bar"] [123 :foo-1 "baz"] [123 :bar "baz"]]))))
 
-;; TODO. This is wrong! Keys collide when creating map. Should use schema
+;; TODO. This is wrong! Keys will collide when creating map. Should use schema
 ;; to hydrate as one-to-many or provide warning
 (deftest entity-test
   (let [s @(def-tuple-session entity-session
                               'libx.query)
         inserted (-> s
                    (insert [[123 :foo "bar"]
-                            [123 :foo "baz"]
+                            [123 :foo-2 "baz"]
                             [123 :bar "baz"]])
                    (cr/fire-rules))
         result (q/entity inserted 123)]
-    (is (= result {:db/id 123 :foo "baz" :bar "baz"}))))
+    (is (= result {:db/id 123 :foo "bar" :foo-2 "baz" :bar "baz"}))))
 
 
 (run-tests)
