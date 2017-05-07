@@ -161,28 +161,32 @@
   (cr/insert session (tuple-vec->action-hash-map action)))
 
 (defn insert!
-  "Inserts Facts within rule context"
+  "Insert facts logically within rule context"
   [facts]
   (let [insertables (insertable facts)
-        to-retract (remove nil? (map #(find-in-fact-index % (fact-index-path %)) insertables))]
-    (trace "[insert!] : inserting " insertables)
+        indexed (remove nil? (map #(find-in-fact-index % (fact-index-path %)) insertables))
+        to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
+        to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))]
+    (trace "[insert!] : inserting " to-insert)
     (trace "[insert!] : retracting " to-retract)
     (if (empty? to-retract)
-      (cr/insert-all! insertables)
-      (do (cr/insert-all! insertables)
-          (apply (partial cr/retract!) to-retract)))))
+      (cr/insert-all! to-insert)
+      (do (cr/insert-all! to-insert)
+          (doseq [x to-retract] (cr/retract! x))))))
 
 (defn insert-unconditional!
-  "Inserts uncondtinally Facts within rule context"
+  "Insert facts unconditionally within rule context"
   [facts]
   (let [insertables (insertable facts)
-        to-retract (remove nil? (map #(find-in-fact-index % (fact-index-path %)) insertables))]
-    (trace "[insert-unconditional!] : inserting " insertables)
+        indexed (remove nil? (map #(find-in-fact-index % (fact-index-path %)) insertables))
+        to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
+        to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))]
+    (trace "[insert-unconditional!] : inserting " to-insert)
     (trace "[insert-unconditional!] : retracting " to-retract)
     (if (empty? to-retract)
-      (cr/insert-all-unconditional! insertables)
-      (do (cr/insert-all-unconditional! insertables)
-          (apply (partial cr/retract!) to-retract)))))
+      (cr/insert-all-unconditional! to-insert)
+      (do (cr/insert-all-unconditional! to-insert)
+          (doseq [x to-retract] (cr/retract!) x)))))
 
 (defn retract!
   "Wrapper around Clara's `retract!`.
@@ -195,12 +199,15 @@
       (remove-from-fact-index x (fact-index-path x)))))
 
 (defn retract
-  "Retracts either: Tuple, {} [{}...] [] [[]..]"
+  "Retract from outside rule context.
+  [] [[]..]"
   [session facts]
   (let [insertables (insertable facts)
-        _ (doseq [x insertables] #(remove-from-fact-index x (fact-index-path x)))
+        _ (doseq [x insertables] (remove-from-fact-index x (fact-index-path x)))
         _ (trace "[retract] : " insertables)]
-    (apply (partial cr/retract session) insertables)))
+    (reduce (fn [s fact] (cr/retract s fact))
+      session
+      insertables)))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn clara-tups->maps

@@ -94,17 +94,15 @@
   :activation-group-sort-fn activation-group-sort-fn)
 
 (defn n-facts-session [n]
-    (-> tuple-session
-      ;(l/replace-listener)
-      (insert (repeatedly n #(vector (guid) :todo/title "foobar")))
-      (cr/fire-rules)))
+  (let [s1 (insert tuple-session (repeatedly n #(vector (guid) :too/title "foobar")))]
+      (cr/fire-rules s1)))
 ;; Weirdly, if we insert facts but don't fire rules before attaching a listener
 ;; the facts that we insert  are not included in the session the session
 ;; on the next remove/add listener. There's actually a few ways this can occur
 ;; depending on when/where listeners are added and removed. Might
 ;; be nice to file a bug with Clara so they're aware.
 
-(def session (atom (time (n-facts-session 10#_0000))))
+(def session (atom (n-facts-session 100000)))
 
 ;(t/get-trace @session)
 ;(get-in (inspect/inspect @session) [:rule-matches remove-older-one-to-one-facts])
@@ -115,20 +113,21 @@
 ;@state/fact-index
 
 (defn perf-loop [iters]
-  (time
+  ;(time
     (dotimes [n iters]
-      (time
+      ;(time
         (reset! session
           (-> @session
-            (l/replace-listener)
+            ;(l/replace-listener)
             (util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
             (util/insert-action [(guid) :add-todo-action {:title "hey"}])
             (insert [[1 :done-count 5]
                      [1 :done-count 6]])
-            (cr/fire-rules)))))))
+            (cr/fire-rules)))))
 
-(perf-loop 100)
+(time (perf-loop 100))
 (l/vec-ops @session)
+(count @state/fact-index)
 ;(inspect/inspect @session)
 ;(inspect/explain-activations @session)
 ;; agenda phases
