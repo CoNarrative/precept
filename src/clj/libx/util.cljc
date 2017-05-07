@@ -79,9 +79,6 @@
     []
     m))
 
-(defn action-insert! [m]
-  (cr/insert-all-unconditional! (gen-Tuples-from-map m)))
-
 (defn tuplize-into-vec
   "Returns [[]...].
   Arg may be {} [{}...] [] [[]...]"
@@ -187,6 +184,9 @@
       (cr/insert-all-unconditional! to-insert)
       (do (cr/insert-all-unconditional! to-insert)
           (doseq [x to-retract] (cr/retract!) x)))))
+
+(defn action-insert! [m]
+  (insert-unconditional! (gen-Tuples-from-map m)))
 
 (defn retract!
   "Wrapper around Clara's `retract!`.
