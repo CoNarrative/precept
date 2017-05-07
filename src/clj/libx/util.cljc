@@ -113,13 +113,15 @@
   "Returns nil if not in session and ok to insert. Else returns
   existing fact to be retracted"
   [fact ks]
-  (if-let [existing (get-in @state/fact-index ks)]
-    (do
-      (swap! state/fact-index assoc-in ks fact)
-      existing)
-    (do
-      (swap! state/fact-index assoc-in ks fact)
-      nil)))
+  (if (nil? ks)
+    nil
+    (if-let [existing (get-in @state/fact-index ks)]
+      (do
+        (swap! state/fact-index assoc-in ks fact)
+        existing)
+      (do
+        (swap! state/fact-index assoc-in ks fact)
+        nil))))
 
 (defn remove-from-fact-index
   "Finds in index based on supplied key.
