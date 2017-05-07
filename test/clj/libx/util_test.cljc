@@ -34,7 +34,7 @@
   (reset! state/fact-index {})
   (make-ancestors-fn))
 
-(use-fixtures :once reset-globals)
+;(use-fixtures :once reset-globals)
 
 (deftest map->tuples-test
   (testing "Converting an entity map to a vector of tuples"
@@ -231,10 +231,10 @@
         h (schema/schema->hierarchy test-schema)
         _ (make-ancestors-fn h)]
     (is (fn? @state/ancestors-fn))
-    (is (= '(1 :todo/done) (fact-index-key one-to-one)))
-    (is (= '(1 :no-match) (fact-index-key no-match)))
-    (is (= nil (fact-index-key one-to-many)))
-    (is (= '(:todo/title "my unique title" 1) (fact-index-key unique)))))
+    (is (= [:one-to-one 1 :todo/done] (fact-index-path one-to-one)))
+    (is (= [:one-to-one 1 :no-match] (fact-index-path no-match)))
+    (is (= nil (fact-index-path one-to-many)))
+    (is (= [:unique :todo/title "my unique title"] (fact-index-path unique)))))
 
 (deftest fact-indexing-test
   (let [_ (make-ancestors-fn)
@@ -243,46 +243,47 @@
         next-1 (map->Tuple {:a :foo :e 1 :t 3 :v 43})
         next-2 (map->Tuple {:a :bar :e 1 :t 4 :v 43})]
 
-
     (testing "Initial state"
-      (is (= {} (reset! state/fact-index {})))
+      (is (= {} (reset! state/fact-index {}))
+          "Expected fact index to be {}")
       (is (fn? @state/ancestors-fn)
-          "Expected fact index to be {}"))
+          "Expected ancestors-fn to be a fn"))
 
     (testing "Finding existing with empty state"
-      (is (= nil (find-in-fact-index fact-1 (fact-index-key fact-1)))))
+      (is (= nil (find-in-fact-index fact-1 (fact-index-path fact-1)))))
 
     (testing "Fact is indexed by find-existing"
-      (is (= @state/fact-index {'(1 :foo) fact-1})))
+      (is (= @state/fact-index {:one-to-one {1 {:foo fact-1}}})))
 
     (testing "Removing a fact that exists in index"
-      (is (= true (remove-from-fact-index fact-1 (fact-index-key fact-1))))
+      (is (= true (remove-from-fact-index fact-1 (fact-index-path fact-1))))
       (is (= @state/fact-index {})))
 
     (testing "Newer one-to-one facts should return old fact"
       (is (= @state/fact-index {}))
-      (is (= nil (find-in-fact-index fact-1 (fact-index-key fact-1))))
-      (is (= fact-1 (find-in-fact-index next-1 (fact-index-key next-1)))))
+      (is (= nil (find-in-fact-index fact-1 (fact-index-path fact-1))))
+      (is (= fact-1 (find-in-fact-index next-1 (fact-index-path next-1)))))
 
     (testing "Existing one-to-one-fact should have been replaced"
-      (is (= @state/fact-index {'(1 :foo) next-1})))
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}})))
 
     (testing "Remove fact from index that does not exist"
-      (is (= false (remove-from-fact-index fact-1 (fact-index-key fact-1))))
-      (is (= @state/fact-index {'(1 :foo) next-1})))
+      (is (= false (remove-from-fact-index fact-1 (fact-index-path fact-1))))
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}})))
 
     (testing "Find with same entity, different attribute with non-indexed fact"
-      (is (= @state/fact-index {'(1 :foo) next-1}))
-      (is (= nil (find-in-fact-index fact-2 (fact-index-key fact-2))))
-      (is (= @state/fact-index {'(1 :foo) next-1
-                                '(1 :bar) fact-2})))
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}}))
+      (is (= nil (find-in-fact-index fact-2 (fact-index-path fact-2))))
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1
+                                                :bar fact-2}}})))
 
     (testing "Remove same entity, different attribute with non-indexed fact"
-      (is (= @state/fact-index {'(1 :foo) next-1
-                                '(1 :bar) fact-2}))
-      (is (= false (remove-from-fact-index next-2 (fact-index-key next-2))))
-      (is (= @state/fact-index {'(1 :foo) next-1
-                                '(1 :bar) fact-2})))))
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1
+                                                :bar fact-2}}}))
+      (is (= false (remove-from-fact-index next-2 (fact-index-path next-2))))
+
+      (is (= @state/fact-index {:one-to-one {1 {:foo next-1
+                                                :bar fact-2}}})))))
 
 
 
