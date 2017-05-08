@@ -151,13 +151,13 @@
   (insert! [(guid) :drag/dragging? :tag]))
 
 
-(cr/defrule handle-start-todo-edit
-  {:group :action}
-  [[_ :todo/start-edit-action ?action]]
-  [[(:id ?action) :todo/title ?v]]
-  =>
-  (trace "Responding to edit request" (:id ?action) ?v)
-  (insert-unconditional! [(:id ?action) :todo/edit ?v]))
+;(cr/defrule handle-start-todo-edit
+;  {:group :action}
+;  [[_ :todo/start-edit-action ?action]]
+;  [[(:id ?action) :todo/title ?v]]
+;  =>
+;  (trace "Responding to edit request" (:id ?action) ?v)
+;  (insert-unconditional! [(:id ?action) :todo/edit ?v]))
 
 (def-tuple-rule handle-update-edit-action
   {:group :action}
