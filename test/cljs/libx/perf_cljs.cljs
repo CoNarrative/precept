@@ -60,26 +60,6 @@
   =>
   (insert-unconditional! [?e :todo/done :tag]))
 
-(cr/defrule remove-older-unique-identity-facts
-  {:super true :salience 100}
-  [?fact1 <- :unique-identity (= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t1 (:t this))]
-  [?fact2 <- :unique-identity (= ?e1 (:e this)) (= ?a1 (:a this)) (= ?t2 (:t this))]
-  [:test (> ?t1 ?t2)]
-  =>
-  (trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
-  (retract! ?fact2))
-
-;; FIXME. Appears to signficantly affect performance
-;(def-tuple-rule remove-older-unique-identity-facts
-;  {:super true :salience 100}
-;  [[?e :unique-identity _ ?t1]]
-;  [[?e ?a _ ?t1]]
-;  [?fact2 <- [?e ?a _ ?t2]]
-;  [:test (> ?t1 ?t2)]
-;  =>
-;  (trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
-;  (retract! ?fact2))
-
 (def-tuple-rule acc-all-visible
   {:group :report}
   [?count <- (acc/count) :from [:todo/title]]

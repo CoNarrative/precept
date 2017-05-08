@@ -12,6 +12,21 @@
 (defn attr-ns [attr]
   (subs (first (clojure.string/split attr "/")) 1))
 
+;; From clojure.core.incubator
+(defn dissoc-in
+  "Dissociates an entry from a nested associative structure returning a new
+  nested structure. keys is a sequence of keys. Any empty maps that result
+  will not be present in the new structure."
+  [m [k & ks :as keys]]
+  (if ks
+    (if-let [nextmap (get m k)]
+      (let [newmap (dissoc-in nextmap ks)]
+        (if (seq newmap)
+          (assoc m k newmap)
+          (dissoc m k)))
+      m)
+    (dissoc m k)))
+
 (defn map->tuples
   "Transforms entity map to vector of tuples
   {a1 v1 a2 v2 :db/id eid} -> [[eid a1 v1]...]"
@@ -50,7 +65,7 @@
   (->Tuple (first vec)
            (second vec)
            (third vec)
-           (next-fact-id!)))
+           (nth vec 3 (next-fact-id!))))
 
 (defn tuple-vec->action-hash-map
   "Puts ks in x into e-a-v map and assigns m to :v"
@@ -63,9 +78,6 @@
     (fn [acc [k v]] (conj acc (->Tuple (guid) k v (next-fact-id!))))
     []
     m))
-
-(defn action-insert! [m]
-  (cr/insert-all-unconditional! (gen-Tuples-from-map m)))
 
 (defn tuplize-into-vec
   "Returns [[]...].
@@ -87,52 +99,117 @@
     (and (coll? x) (vector? (first x))) (mapv vec->record x)
     (vector? x) (vector (vec->record x))))
 
+(defn fact-index-path
+  "Returns path to store and access a fact in fact-index according to the fact's cardinality,
+  uniqueness"
+  [fact]
+  (let [ancestry (@state/ancestors-fn (:a fact))]
+    (cond
+      (ancestry :unique) (into [:unique] (vals (select-keys fact [:a :v])))
+      (ancestry :one-to-one) (into [:one-to-one] (take 2 (vals fact)))
+      :else nil)))
+
+(defn find-in-fact-index
+  "Returns nil if not in session and ok to insert. Else returns
+  existing fact to be retracted"
+  [fact ks]
+  (if (nil? ks)
+    nil
+    (if-let [existing (get-in @state/fact-index ks)]
+      (do
+        (swap! state/fact-index assoc-in ks fact)
+        existing)
+      (do
+        (swap! state/fact-index assoc-in ks fact)
+        nil))))
+
+(defn remove-from-fact-index
+  "Finds in index based on supplied key.
+  Compares value of fact to fact that is indexed. If existing value matches
+  fact to be removed, removes fact and returns true to indicate removal, Else
+  removes nothing and returns false."
+  [fact ks]
+  (let [existing (get-in @state/fact-index ks)]
+    (if (= existing fact)
+      (do (swap! state/fact-index dissoc-in ks)
+        true)
+      false)))
+
 (defn insert
-  "Inserts Tuples from outside rule context.
-  Accepts {} [{}...] [] [[]...]"
+  "Inserts facts from outside rule context.
+  Accepts [] [[]...]"
   [session facts]
   (let [insertables (insertable facts)
-        _ (trace "insert received : " facts)
-        _ (trace "insert : " insertables)]
-    (cr/insert-all session insertables)))
+        indexed (remove nil? (map #(find-in-fact-index % (fact-index-path %)) insertables))
+        to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
+        to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))
+        _ (trace "[insert] to-insert " (mapv vals to-insert))
+        _ (trace "[insert] to-retract " (mapv vals to-retract))]
+    (if (empty? to-retract)
+      (cr/insert-all session to-insert)
+      (let [inserted (cr/insert-all session to-insert)]
+          (reduce (fn [session fact] (cr/retract session fact))
+            inserted
+            to-retract)))))
 
 (defn insert-action
   "Inserts hash-map from outside rule context.
   Accepts [e a v] where v is {} with ks that become part of inserted map"
   [session action]
-  (trace "insert-action : " (tuple-vec->action-hash-map action))
+  (trace "[insert-action] : inserting" (tuple-vec->action-hash-map action))
   (cr/insert session (tuple-vec->action-hash-map action)))
 
 (defn insert!
-  "Inserts Facts within rule context"
+  "Insert facts logically within rule context"
   [facts]
-  (let [insertables (insertable facts)]
-    (trace "insert! : " insertables)
-    (cr/insert-all! insertables)))
+  (let [insertables (insertable facts)
+        indexed (remove nil? (map #(find-in-fact-index % (fact-index-path %)) insertables))
+        to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
+        to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))]
+    (trace "[insert!] : inserting " to-insert)
+    (trace "[insert!] : retracting " to-retract)
+    (if (empty? to-retract)
+      (cr/insert-all! to-insert)
+      (do (cr/insert-all! to-insert)
+          (doseq [x to-retract] (cr/retract! x))))))
 
 (defn insert-unconditional!
-  "Inserts uncondtinally Facts within rule context"
+  "Insert facts unconditionally within rule context"
   [facts]
-  (let [insertables (insertable facts)]
-    (trace "insert-unconditional! received" facts)
-    (trace "insert-unconditional! : " insertables)
-    (cr/insert-all-unconditional! insertables)))
+  (let [insertables (insertable facts)
+        indexed (remove nil? (map #(find-in-fact-index % (fact-index-path %)) insertables))
+        to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
+        to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))]
+    (trace "[insert-unconditional!] : inserting " to-insert)
+    (trace "[insert-unconditional!] : retracting " to-retract)
+    (if (empty? to-retract)
+      (cr/insert-all-unconditional! to-insert)
+      (do (cr/insert-all-unconditional! to-insert)
+          (doseq [x to-retract] (cr/retract!) x)))))
+
+(defn action-insert! [m]
+  (insert-unconditional! (gen-Tuples-from-map m)))
 
 (defn retract!
   "Wrapper around Clara's `retract!`.
   To be used within RHS of rule only. Converts all input to Facts"
   [facts]
   (let [insertables (insertable facts)
-        _ (trace "retract! :" insertables)]
+        _ (trace "[retract!] :" insertables)]
     (doseq [x insertables]
-      (cr/retract! x))))
+      (cr/retract! x)
+      (remove-from-fact-index x (fact-index-path x)))))
 
 (defn retract
-  "Retracts either: Tuple, {} [{}...] [] [[]..]"
+  "Retract from outside rule context.
+  [] [[]..]"
   [session facts]
-  (let [insertables (insertable facts)]
-    (trace "retract : " insertables)
-    (apply (partial cr/retract session) insertables)))
+  (let [insertables (insertable facts)
+        _ (doseq [x insertables] (remove-from-fact-index x (fact-index-path x)))
+        _ (trace "[retract] : " insertables)]
+    (reduce (fn [s fact] (cr/retract s fact))
+      session
+      insertables)))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn clara-tups->maps
@@ -191,16 +268,28 @@
 (defn action? [a] (> (.indexOf (name a) "-action") -1))
 
 (defn make-ancestors-fn
+  "To be used when defining a session. Stored in atom for auto truth maintenance
+  and schema enforcement."
+  ([]
+   (let [cr-ancestors-fn #(cond
+                            (action? %) #{:all :action}
+                            :else #{:all :one-to-one})]
+     (reset! state/ancestors-fn (memoize cr-ancestors-fn))
+     cr-ancestors-fn))
   ([hierarchy]
-   #(or ((:ancestors hierarchy) %)
-      (cond
-        (action? %) #{:all :action}
-        :else #{:all :one-to-one})))
+   (let [cr-ancestors-fn #(or ((:ancestors hierarchy) %)
+                            (cond
+                              (action? %) #{:all :action}
+                              :else #{:all :one-to-one}))]
+      (reset! state/ancestors-fn (memoize cr-ancestors-fn))
+      cr-ancestors-fn))
   ([hierarchy root-fact-type]
-   #(or ((:ancestors hierarchy) %)
-      (cond
-        (action? %) #{root-fact-type :action}
-        :else #{root-fact-type :one-to-one}))))
+   (let [cr-ancestors-fn #(or ((:ancestors hierarchy) %)
+                            (cond
+                              (action? %) #{root-fact-type :action}
+                              :else #{root-fact-type :one-to-one}))]
+      (reset! state/ancestors-fn (memoize cr-ancestors-fn))
+      cr-ancestors-fn)))
 
 (defn split-head-body
   "Takes macro body of a deflogical and returns map of :head, :body"
@@ -221,19 +310,3 @@
 ;(defn unmap-all-rule-nses [nses]
 ;  (doseq [[k _] (ns-publics *ns*)]
 ;    (ns-unmap *ns* k)))
-
-
-;; From clojure.core.incubator
-(defn dissoc-in
-  "Dissociates an entry from a nested associative structure returning a new
-  nested structure. keys is a sequence of keys. Any empty maps that result
-  will not be present in the new structure."
-  [m [k & ks :as keys]]
-  (if ks
-    (if-let [nextmap (get m k)]
-      (let [newmap (dissoc-in nextmap ks)]
-        (if (seq newmap)
-          (assoc m k newmap)
-          (dissoc m k)))
-      m)
-    (dissoc m k)))

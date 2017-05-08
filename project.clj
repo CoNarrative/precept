@@ -13,7 +13,7 @@
 
   :source-paths ["src/clj"]
 
-  :test-paths ["test/clj"]
+  :test-paths ["test/clj" "test/cljc"]
 
   :resource-paths ["resources" "target/cljsbuild"]
 

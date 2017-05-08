@@ -101,26 +101,14 @@
 (defn list-facts [xs]
   (mapcat :facts (mapcat identity (vals xs))))
 
-(defn key-by-hashcode
-  "WILL remove duplicates"
-  [coll]
-  (zipmap (map hash-ordered-coll coll) coll))
-
-(defn select-disjoint
-  "Takes m keyed by hashcode. Returns same with removals applied to additions"
-  [added removed]
-  (let [a (set (keys added))
-        b (set (keys removed))]
-    (select-keys added (remove b a))))
-
 (defn split-ops
   "Takes trace returned by Clara's get-trace. Returns m of :added, :removed"
   [trace]
   (let [by-type (trace-by-type trace)
-        hashed-adds (key-by-hashcode (list-facts (insertions by-type)))
-        hashed-retracts (key-by-hashcode (list-facts (retractions by-type)))]
-    {:added (into [] (vals (select-disjoint hashed-adds hashed-retracts)))
-     :removed (into [] (vals (select-disjoint hashed-retracts hashed-adds)))}))
+        added (list-facts (insertions by-type))
+        removed (list-facts (retractions by-type))]
+    {:added (into [] added)
+     :removed (into [] removed)}))
 
 (defn ops
   "Returns :added, :removed results for a single fact listener. Usually wrapped with `embed-ops`."
@@ -133,7 +121,10 @@
             (map util/record->vec facts)))
      trace))
 
-(defn vec-ops [session]
+(defn vec-ops
+  "Takes a session with a FactListener and returns the result of the trace
+  as {:added [vector tuples] :removed [vector tuples]}"
+  [session]
   (split-ops (vectorize-trace (first (fact-traces session)))))
 
 (defn with-op [change op-kw]
@@ -141,7 +132,7 @@
     (partition-by first change)))
 
 (defn embed-op [additions-or-removals op-kw]
-    (mapv util/tuple-entity->hash-map-entity
+  (mapv util/tuple-entity->hash-map-entity
       (with-op additions-or-removals op-kw)))
 
 (defn replace-listener [session]

@@ -17,9 +17,11 @@
                                        def-tuple-query]]
               [libx.listeners :as l]
               [libx.schema :as schema]
-              #?(:clj [clara.tools.inspect :as inspect])))
+      #?(:clj [clara.tools.inspect :as inspect])
+      #?(:clj [clara.tools.tracing :as t])))
 
-(defn trace [& x] (apply prn x))
+(defn trace [& x]
+  (comment (apply prn x)))
 
 ;; TODO. create fn to reset `rules` atom. As we've discovered this might even be nice to
 ;; have for non-generated rule names, because when we delete a rule or rename it, it's still in
@@ -61,15 +63,6 @@
   =>
   (insert-unconditional! [?e :todo/done :tag]))
 
-(cr/defrule remove-older-unique-identity-facts
-  {:super true :salience 100}
-  [:unique-identity (= ?a1 (:a this)) (= ?t1 (:t this))]
-  [?fact2 <- :unique-identity (= ?a1 (:a this)) (= ?t2 (:t this))]
-  [:test (> ?t1 ?t2)]
-  =>
-  (trace (str "SCHEMA MAINT - :unique-identity" ?t1 " is greater than " ?t2))
-  (retract! ?fact2))
-
 (def-tuple-rule acc-all-visible
   {:group :report}
   [?count <- (acc/count) :from [:todo/title]]
@@ -100,43 +93,44 @@
   :activation-group-fn activation-group-fn
   :activation-group-sort-fn activation-group-sort-fn)
 
-;(def tuple-session
-;  (cr/mk-session 'libx.perf-tuple
-;   :fact-type-fn :a
-;   :ancestors-fn ancestors-fn
-;   :activation-group-fn activation-group-fn
-;   :activation-group-sort-fn activation-group-sort-fn)
-
 (defn n-facts-session [n]
-  (-> tuple-session
-    (insert (repeatedly n #(vector (guid) :todo/title "foobar")))))
+  (let [s1 (insert tuple-session (repeatedly n #(vector (guid) :1-to-1 "foobar")))]
+      (cr/fire-rules s1)))
+;; Weirdly, if we insert facts but don't fire rules before attaching a listener
+;; the facts that we insert  are not included in the session the session
+;; on the next remove/add listener. There's actually a few ways this can occur
+;; depending on when/where listeners are added and removed. Might
+;; be nice to file a bug with Clara so they're aware.
 
-(def session (atom (n-facts-session 10#_0000)))
-;(inspect/explain-activations @session)
+(def session (atom (n-facts-session 100000)))
+
+;(t/get-trace @session)
+;(get-in (inspect/inspect @session) [:rule-matches remove-older-one-to-one-facts])
+;; 246ms without, 5000ms with
+;; UPDATE: 264ms with fact-index
+
+;(reset! state/fact-index {})
+;@state/fact-index
+
 (defn perf-loop [iters]
-  (time
+  ;(time
     (dotimes [n iters]
-      (time
+      ;(time
         (reset! session
           (-> @session
-            ;(l/replace-listener)
+            (l/replace-listener)
             (util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
             (util/insert-action [(guid) :add-todo-action {:title "hey"}])
-            (insert [[(guid) :done-count 5]
-                     [(guid) :done-count 6]])
-            (cr/fire-rules)))))))
-@state/rules
-(perf-loop 1#_00)
+            (insert [[1 :done-count 5]
+                     [1 :done-count 6]])
+            (cr/fire-rules)))))
 
+(time (perf-loop 100))
 (l/vec-ops @session)
+(count (:one-to-one @state/fact-index))
+(:unique @state/fact-index)
 ;(inspect/inspect @session)
-;; agenda phases
-;; schema maintenance should be high salience and always available
-;; action
-;; compute
-;; report
-;; cleanup
-
+;(inspect/explain-activations @session)
 
 ;; Timings - all our stuff
 ;; 100,000 facts

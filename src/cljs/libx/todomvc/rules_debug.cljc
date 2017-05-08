@@ -34,15 +34,6 @@
   ;(doseq [action ?actions]
   (cr/retract! ?action))
 
-(cr/defrule remove-older-one-to-one-facts
-  {:super true :salience 100}
-  [?fact1 <- :one-to-one (= ?e (:e this)) (= ?a (:a this)) (= ?t1 (:t this))]
-  [?fact2 <- :one-to-one (= ?e (:e this)) (= ?a (:a this)) (= ?t2 (:t this))]
-  [:test (> ?t1 ?t2)]
-  =>
-  (trace (str "SCHEMA MAINT - :one-to-one retracting") ?fact1 ?fact2)
-  (retract! ?fact2))
-
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))
 (def activation-group-sort-fn (util/make-activation-group-sort-fn groups :calc))
