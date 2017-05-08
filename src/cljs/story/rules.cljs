@@ -25,10 +25,6 @@
   [[_ :action/type :mouse/down]] => (insert-unconditional! [0 :mouse/left-pressed true]))
 
 
-
-
-
-
 (def-tuple-rule dom-node-moves-with-mouse-when-drag-started
   [[_ :drag/start ?e]]
   [[_ :mouse/x ?x]]
@@ -48,29 +44,6 @@
   (trace "Dragging is true")
   (insert! [(guid) :drag/dragging? :tag]))
 
-
-(def-tuple-rule handle-update-edit-action
-  {:group :action}
-  [[_ :part/update-edit-action ?params]]
-  =>
-  (insert-unconditional! [(:id ?params) :part/edit (:value ?params)]))
-
-(def-tuple-rule handle-save-edit-action
-  {:group :action}
-  [[_ :part/save-edit-action ?params]]
-  [?edit <- [(:id ?params) :part/edit ?v]]
-  =>
-  (retract! ?edit)
-  (insert-unconditional! [(:id ?params) :part/title ?v]))
-
-;; FIXME. Causes loop
-(def-tuple-rule handle-toggle-done-action
-  {:group :action}
-  [:exists [?e :part/toggle-done-action ?v ?action-tx]]
-  [:exists [(:id ?v) :part/done ?bool]]
-  =>
-  (trace "Responding to toggle done action " [(:id ?v) :part/done (not ?bool)])
-  (insert-unconditional! [(:id ?v) :part/done (not ?bool)]))
 
 ;; Calculations
 
@@ -190,10 +163,19 @@
     (retract! tuple)))
 
 ;; TODO. Lib
-(def-tuple-rule action-cleanup
+(def-tuple-rule action-attr-cleanup
   {:group :cleanup}
-  [?action <- [_ :action]]
+  [[?actionId :action/type]]
+  [?actionAttr <- [?actionId :all]]
   =>
+  (trace "Removing action attr" ?actionAttr)
+  (cr/retract! ?actionAttr))
+
+(def-tuple-rule action-cleanup-last
+                {:group :cleanup :salience -100}
+  [?action <- [_ :action/type]]
+  =>
+  (trace "Removing action" ?action)
   (cr/retract! ?action))
 
 (def groups [:action :calc :report :cleanup])

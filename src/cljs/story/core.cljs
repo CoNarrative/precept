@@ -30,7 +30,7 @@
     (.setEnabled true)))
 
 
-(defn hit-node [{event :e}]
+(defn hit-node [event]
   "Takes .path property of a DOM event and returns first element with an id"
   (first (filter #(not (clojure.string/blank? (.-id %))) (.-path event))))
 
@@ -41,9 +41,13 @@
                                     :action/type :mouse/down
                                     :mouse-down/target-id (hit-node %)
                                     :pos/x (.-clientX %)
-                                    :pos/y (.-clientY %)})))
+                                    :pos/y (.-clientY %)}))
 
-  ;(.addEventListener js/window "mousemove" #(then :mouse/move-action {:event %}))
+  (.addEventListener js/window "mousemove"
+                     #(then-tuples {
+                                    :action/type :mouse/move
+                                    :pos/x (.-clientX %)
+                                    :pos/y (.-clientY %)})))
   ;(.addEventListener js/window "mouseup" #(then :mouse/up-action {:event %})))
 
 (defn part [title]

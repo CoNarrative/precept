@@ -46,7 +46,7 @@
      {:app
       {:source-paths ["src/cljs" "dev/cljs"]
        :compiler
-                     {:main "libx.todomvc.app"
+                     {:main "story.app"
                       :asset-path "/js/out"
                       :output-to "target/cljsbuild/public/js/app.js"
                       :output-dir "target/cljsbuild/public/js/out"
