@@ -47,10 +47,10 @@
                           (l/replace-listener)
                           (util/insert
                             (into
-                              [[123 :attr/a "state-0"]
-                               [123 :attr/b "state-0"]]
+                              [[1 :attr/a "state-0"]
+                               [1 :attr/b "state-0"]]
                               background-facts))
-                          (util/retract [123 :attr/a "state-0"])
+                          (util/retract [1 :attr/a "state-0"])
                           (fire-rules))
         traces (l/fact-traces traced-session)
         keyed-by-type (l/trace-by-type (first traces))
@@ -87,53 +87,64 @@
       (is (every? #(contains? % :type) vectorized-trace))
       (is (every? (comp #(every? vector? %) :facts) vectorized-trace)))
 
-    (testing "vec-ops should return m of :added, :removed as vec of vecs"
+    (testing "vec-ops should return m of :added, :removed as vec of vecs. Should not account for
+    intersection of additions and removals"
       (is (= '(:added :removed) (keys vec-ops)))
-      (is (= (:removed vec-ops) [])))
+      (is (= (:removed vec-ops) [[1 :attr/a "state-0"]])))
 
     (testing "ops-0 :added"
       (is (= (set (:added vec-ops))
-             (set (conj background-facts [123 :attr/b "state-0"])))))))
+             (set (conj background-facts [1 :attr/a "state-0"] [1 :attr/b "state-0"])))))))
 
 
 (deftest listeners-state-transitions
   (let [test-session @(def-tuple-session the-session
                         'libx.listeners-test
                         'libx.query)
+        state-0-inserts (into
+                         [(->Tuple 123 :attr/a "state-0" 0)
+                          (->Tuple 123 :attr/b "state-0" 1)]
+                         (mapv util/vec->record background-facts))
+        state-0-retracts []
         state-0 (-> test-session
                   (l/replace-listener)
-                  (util/insert
-                    (into
-                      [(->Tuple 123 :attr/a "state-0" 0)
-                       (->Tuple 123 :attr/b "state-0" 1)]
-                      (mapv util/vec->record background-facts)))
+                  (util/insert state-0-inserts)
                   (fire-rules))
         ops-0 (l/vec-ops state-0)
         ent-0 (q/entityv state-0 123)
+
+        state-1-inserts [123 :attr/b "state-1"]
+        state-1-retracts (->Tuple 123 :attr/b "state-0" 1)
         state-1 (-> state-0
                   (l/replace-listener)
-                  (util/retract (->Tuple 123 :attr/b "state-0" 1))
-                  (util/insert [123 :attr/b "state-1"])
+                  (util/retract state-1-retracts)
+                  (util/insert state-1-inserts)
                   (fire-rules))
         ops-1 (l/vec-ops state-1)
         ent-1 (q/entityv state-1 123)
+
+        state-2-inserts [123 :attr/b "state-2"]
+        state-2-retracts []
         state-2 (-> state-1
                   (l/replace-listener)
-                  (util/insert [123 :attr/b "state-2"])
+                  (util/insert state-2-inserts)
                   (fire-rules))
         ops-2 (l/vec-ops state-2)
         ent-2 (q/entityv state-2 123)]
 
     (testing "session-0"
-      (is (= (into (set background-facts) ent-0)
-             (set (:added ops-0))))
-      (is (every? #(#{:attr/a :attr/logical-insert} (second %))
-            (:removed ops-0))))
-    (testing "ops-0 :removed"
-      (is (= (:removed (l/vec-ops state-0)) [])))
+      (is (= (set (conj (map util/record->vec state-0-inserts)
+                    [123 :attr/logical-insert [123 :attr/a "state-0"]]))
+             (set (:added ops-0)))))
+    (testing "ops-0 :removed - One should be retract! via rule, another via condition for insert
+              logical becoming false"
+      (is (= (:removed (l/vec-ops state-0))
+            [[123 :attr/a "state-0"] [123 :attr/logical-insert [123 :attr/a "state-0"]]])))
+
     (testing "ops-0 :added"
       (is (= (set (:added (l/vec-ops state-0)))
-            (set (conj background-facts [123 :attr/b "state-0"])))))
+             (set (conj (map util/record->vec state-0-inserts)
+                        [123 :attr/logical-insert [123 :attr/a "state-0"]])))))
 
     (testing "session-1"
       (is (= (into #{} ent-1)
@@ -141,15 +152,16 @@
       (is (every? #(= (last %) "state-0")
             (:removed ops-1))))
     (testing "ops-1 :removed"
-      (is (= (:removed (l/vec-ops state-1)) [[123 :attr/b "state-0"]])))
+      (is (= (:removed (l/vec-ops state-1)) (vector (util/record->vec state-1-retracts)))))
     (testing "ops-1 :added"
-      (is (= (:added (l/vec-ops state-1)) [[123 :attr/b "state-1"]])))
+      (is (= (:added (l/vec-ops state-1)) (vector state-1-inserts))))
 
     (testing "session-2"
       (is (every? (into #{} ent-2)
                   (into #{} (:added ops-2)))))
     (testing "ops-2 :removed"
-      (is (= (:removed (l/vec-ops state-2)) [[123 :attr/b "state-1"]])))
+      (is (= (:removed (l/vec-ops state-2)) [[123 :attr/b "state-1"]]))) ;; affected by
+      ;; one-to-one enforcement
     (testing "ops-2 :added"
       (is (= (:added (l/vec-ops state-2)) [[123 :attr/b "state-2"]])))))
 

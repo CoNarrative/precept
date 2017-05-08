@@ -1,5 +1,6 @@
 (ns libx.test-runner
     (:require [clojure.test :refer [run-tests]]
+              [libx.core-test]
               [libx.lang-test]
               [libx.deflogical-test]
               [libx.macros-test]
@@ -9,7 +10,8 @@
               [libx.listeners-test]))
 
 (defn run []
-  (for [ns ['libx.lang-test
+  (for [ns ['libx.core-test
+            'libx.lang-test
             'libx.deflogical-test
             'libx.macros-test
             'libx.tuple-rule-test

@@ -143,8 +143,8 @@
         indexed (remove nil? (map #(find-in-fact-index % (fact-index-path %)) insertables))
         to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
         to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))
-        _ (trace "[insert] to-insert " to-insert)
-        _ (trace "[insert] to-retract " to-retract)]
+        _ (trace "[insert] to-insert " (mapv vals to-insert))
+        _ (trace "[insert] to-retract " (mapv vals to-retract))]
     (if (empty? to-retract)
       (cr/insert-all session to-insert)
       (let [inserted (cr/insert-all session to-insert)]
