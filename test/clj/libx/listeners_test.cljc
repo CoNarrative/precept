@@ -9,9 +9,14 @@
             [libx.tuplerules :refer [def-tuple-rule def-tuple-session]])
   (:import [libx.util Tuple]))
 
-(defn reset-globals [_]
-  (reset! state/fact-index {}))
+(defn reset-globals [f]
+  (reset! state/fact-index {})
+  (util/make-ancestors-fn)
+  (f)
+  (reset! state/fact-index {})
+  (util/make-ancestors-fn))
 
+(use-fixtures :once reset-globals)
 (use-fixtures :each reset-globals)
 
 (defn trace [& args]
@@ -144,7 +149,7 @@
       (is (every? (into #{} ent-2)
                   (into #{} (:added ops-2)))))
     (testing "ops-2 :removed"
-      (is (= (:removed (l/vec-ops state-2)) [])))
+      (is (= (:removed (l/vec-ops state-2)) [[123 :attr/b "state-1"]])))
     (testing "ops-2 :added"
       (is (= (:added (l/vec-ops state-2)) [[123 :attr/b "state-2"]])))))
 
