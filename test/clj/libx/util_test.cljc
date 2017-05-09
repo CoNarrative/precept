@@ -233,7 +233,7 @@
     (is (fn? @state/ancestors-fn))
     (is (= [:one-to-one 1 :todo/done] (fact-index-path one-to-one)))
     (is (= [:one-to-one 1 :no-match] (fact-index-path no-match)))
-    (is (= nil (fact-index-path one-to-many)))
+    (is (= [:one-to-many] (fact-index-path one-to-many)))
     (is (= [:unique :todo/title "my unique title"] (fact-index-path unique)))))
 
 (deftest fact-indexing-test

@@ -3,7 +3,7 @@
     (:require [libx.util :as util]
               [libx.listeners :as l]
               [libx.query :as q]
-              [libx.state :refer [fact-id rules store state]]
+              [libx.state :refer [fact-id rules store state] :as s]
               [clara.rules :refer [fire-rules]]
               [libx.spec.core :refer [validate]]
               [libx.spec.sub :as sub]
@@ -13,8 +13,7 @@
       #?(:clj
               [reagent.ratom :as rr])
       #?(:cljs [cljs.core.async :refer [put! take! chan <! >!]])
-      #?(:cljs [reagent.core :as r])
-        [libx.state :as state])
+      #?(:cljs [reagent.core :as r]))
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
 #?(:cljs (enable-console-print!))
@@ -94,19 +93,19 @@
         (recur)))
     out))
 
-(defn add
-  "Merges change into atom"
-  [a change]
-  (trace "Adding" (:db/id change) (l/change->av-map change))
-  (swap! a update (:db/id change) (fn [ent] (merge ent (l/change->av-map change)))))
+(defn apply-additions-to-view-model! [tuples]
+  (doseq [[e a v] tuples]
+    (let [ancestry (@s/ancestors-fn a)]
+      (cond
+        (ancestry :one-to-one) (swap! s/store assoc-in [e a] v)
+        (ancestry :one-to-many) (swap! s/store update-in [e a] conj v)))))
 
-(defn del
-  "Removes keys in change from atom"
-  [a change]
-  (trace "Removing in path" (:db/id change) (l/change->attr change))
-  (let [id (:db/id change)
-        attr (l/change->attr change)]
-    (swap! a util/dissoc-in [id attr])))
+(defn apply-removals-to-view-model! [tuples]
+  (doseq [[e a v] tuples]
+    (let [ancestry (@s/ancestors-fn a)]
+      (cond
+        (ancestry :one-to-one) (swap! s/store util/dissoc-in [e a])
+        (ancestry :one-to-many) (swap! s/store update-in [e a] (fn [xs] (remove #(= v %) xs)))))))
 
 (defn apply-removals-to-store
   "Reads ops from in channel and applies removals to store"
@@ -114,10 +113,8 @@
   (let [out (chan)]
     (go-loop []
       (let [ops (<! in)
-            removals (l/embed-op (:removed ops) :remove)
-            _ (trace "Removals" removals)]
-       (doseq [removal removals]
-          (del store removal))
+            _ (trace "Removals" (:removed ops))]
+       (apply-removals-to-view-model! (:removed ops))
        (>! out ops)
        (recur)))
    out))
@@ -126,11 +123,9 @@
   "Reads ops from channel and applies additions to store"
   [in]
   (go-loop []
-    (let [changes (<! in)
-          additions (l/embed-op (:added changes) :add)
-          _ (trace "Additions" additions)]
-      (doseq [addition additions]
-        (add store addition))
+    (let [ops (<! in)
+          _ (trace "Additions" (:added ops))]
+      (apply-additions-to-view-model! (:added ops))
       (>! done-ch :done)
       (recur)))
   nil)

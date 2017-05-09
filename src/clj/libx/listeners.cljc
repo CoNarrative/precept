@@ -110,6 +110,17 @@
     {:added (into [] added)
      :removed (into [] removed)}))
 
+(defn diff-ops
+  "Returns net result of session changes in order to eliminate ordinal significance of add/remove
+  mutations to view-model"
+  [ops]
+  (let [added (clojure.set/difference (set (:added ops))
+                                    (set (:removed ops)))
+        removed (clojure.set/difference (set (:removed ops))
+                                        (set (:added ops)))]
+    {:added added
+     :removed removed}))
+
 (defn ops
   "Returns :added, :removed results for a single fact listener. Usually wrapped with `embed-ops`."
   [session]
@@ -125,7 +136,11 @@
   "Takes a session with a FactListener and returns the result of the trace
   as {:added [vector tuples] :removed [vector tuples]}"
   [session]
-  (split-ops (vectorize-trace (first (fact-traces session)))))
+  (let [diff (-> (ops session) (diff-ops))]
+    {:added (mapv util/record->vec (:added diff))
+     :removed (mapv util/record->vec (:removed diff))}))
+
+  ;(split-ops (vectorize-trace (first (fact-traces session)))))
 
 (defn with-op [change op-kw]
   (mapv (fn [ent] (conj ent (vector (ffirst ent) :op op-kw)))
