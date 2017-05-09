@@ -56,6 +56,7 @@
         keyed-by-type (l/trace-by-type (first traces))
         additions (l/insertions keyed-by-type)
         removals (l/retractions keyed-by-type)
+        split-ops (l/split-ops (first traces))
         vectorized-trace (l/vectorize-trace (first traces))
         vec-ops (l/vec-ops traced-session)]
 
@@ -87,14 +88,14 @@
       (is (every? #(contains? % :type) vectorized-trace))
       (is (every? (comp #(every? vector? %) :facts) vectorized-trace)))
 
-    (testing "vec-ops should return m of :added, :removed as vec of vecs. Should not account for
-    intersection of additions and removals"
+    (testing "vec-ops should return m of :added, :removed as vec of vecs"
       (is (= '(:added :removed) (keys vec-ops)))
-      (is (= (:removed vec-ops) [[1 :attr/a "state-0"]])))
+      (is (= (:removed vec-ops) [])
+          "Fact was added then removed. Net removals should be []"))
 
     (testing "ops-0 :added"
       (is (= (set (:added vec-ops))
-             (set (conj background-facts [1 :attr/a "state-0"] [1 :attr/b "state-0"])))))))
+             (set (conj background-facts [1 :attr/b "state-0"])))))))
 
 
 (deftest listeners-state-transitions
@@ -132,37 +133,26 @@
         ops-2 (l/vec-ops state-2)
         ent-2 (q/entityv state-2 123)]
 
-    (testing "session-0"
-      (is (= (set (conj (map util/record->vec state-0-inserts)
-                    [123 :attr/logical-insert [123 :attr/a "state-0"]]))
+    (testing "session-0: net additions"
+      (is (= (set (conj background-facts
+                   [123 :attr/b "state-0"]))
              (set (:added ops-0)))))
-    (testing "ops-0 :removed - One should be retract! via rule, another via condition for insert
-              logical becoming false"
-      (is (= (:removed (l/vec-ops state-0))
-            [[123 :attr/a "state-0"] [123 :attr/logical-insert [123 :attr/a "state-0"]]])))
 
-    (testing "ops-0 :added"
-      (is (= (set (:added (l/vec-ops state-0)))
-             (set (conj (map util/record->vec state-0-inserts)
-                        [123 :attr/logical-insert [123 :attr/a "state-0"]])))))
+    (testing "session-0: net removals"
+      (is (= (:removed (l/vec-ops state-0)) [])))
 
-    (testing "session-1"
-      (is (= (into #{} ent-1)
-             (into #{} (:added ops-1))))
-      (is (every? #(= (last %) "state-0")
-            (:removed ops-1))))
-    (testing "ops-1 :removed"
-      (is (= (:removed (l/vec-ops state-1)) (vector (util/record->vec state-1-retracts)))))
-    (testing "ops-1 :added"
+    (testing "session-1: net additions"
       (is (= (:added (l/vec-ops state-1)) (vector state-1-inserts))))
 
-    (testing "session-2"
-      (is (every? (into #{} ent-2)
-                  (into #{} (:added ops-2)))))
-    (testing "ops-2 :removed"
-      (is (= (:removed (l/vec-ops state-2)) [[123 :attr/b "state-1"]]))) ;; affected by
+    (testing "session-1: net removals"
+      (is (= (:removed (l/vec-ops state-1)) (vector (util/record->vec state-1-retracts)))))
+
+    (testing "session-2: net additions"
+      (is (= (:added (l/vec-ops state-2)) [[123 :attr/b "state-2"]])
+          (into #{} (:added ops-2))))
+
+    (testing "session-2 net removals"
+      (is (= (:removed (l/vec-ops state-2)) [[123 :attr/b "state-1"]]))))) ;; affected by
       ;; one-to-one enforcement
-    (testing "ops-2 :added"
-      (is (= (:added (l/vec-ops state-2)) [[123 :attr/b "state-2"]])))))
 
 (run-tests)
