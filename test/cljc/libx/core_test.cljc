@@ -95,11 +95,10 @@
         "Expected a string value for unique fact")
     (is (= (:v (max-fid-fact facts :test-attr/one-to-one))
            (:test-attr/one-to-one (get @state/store eid)))
-        "Expected view-model to contain lastest value for :one-to-one fact")))
-    ;; TODO. Fails because unique is not enforced as also a one-to-one in fact-index
-    ;(is (= (:v (max-fid-fact facts :test-attr/unique))
-    ;      (:test-attr/unique (get @state/store eid)))
-    ;  "Expected view-model to contain lastest value for :unique fact")))
+        "Expected view-model to contain lastest value for :one-to-one fact")
+    (is (= (:v (max-fid-fact facts :test-attr/unique))
+          (:test-attr/unique (get @state/store eid)))
+      "Expected view-model to contain lastest value for :unique fact")))
 
 
 (run-tests)

@@ -107,19 +107,21 @@
     (cond
       (ancestry :unique) [:unique (:a fact) (:v fact)]
       (ancestry :one-to-one) [:one-to-one (:e fact) (:a fact)]
-      :else :one-to-many)))
+      :else [:one-to-many])))
 
 (defn find-in-fact-index
   "Writes value to path in ks. Returns nil if nothing was overwritten. Else returns fact that was
    overwritten."
   [fact ks]
-  (if-let [existing (get-in @state/fact-index ks)]
-    (do
-      (swap! state/fact-index assoc-in ks fact)
-      existing)
-    (do
-      (swap! state/fact-index assoc-in ks fact)
-      nil)))
+  (if (= ks [:one-to-many])
+    nil
+    (if-let [existing (get-in @state/fact-index ks)]
+      (do
+        (swap! state/fact-index assoc-in ks fact)
+        existing)
+      (do
+        (swap! state/fact-index assoc-in ks fact)
+        nil))))
 
 (defn remove-from-fact-index
   "Finds in index based on supplied key.
@@ -169,7 +171,7 @@
   Accepts [] [[]...]"
   [session facts]
   (let [insertables (insertable facts)
-        indexed (remove nil? (map #(find-in-fact-index % (fact-index-path %)) insertables))
+        indexed (remove nil? (flatten (map #(update-index %) insertables)))
         to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
         to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))
         _ (trace "[insert] to-insert " (mapv vals to-insert))
@@ -192,7 +194,7 @@
   "Insert facts logically within rule context"
   [facts]
   (let [insertables (insertable facts)
-        indexed (remove nil? (map #(find-in-fact-index % (fact-index-path %)) insertables))
+        indexed (remove nil? (flatten (map #(update-index %) insertables)))
         to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
         to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))]
     (trace "[insert!] : inserting " to-insert)
@@ -206,7 +208,7 @@
   "Insert facts unconditionally within rule context"
   [facts]
   (let [insertables (insertable facts)
-        indexed (remove nil? (map #(find-in-fact-index % (fact-index-path %)) insertables))
+        indexed (remove nil? (flatten (map #(update-index %) insertables)))
         to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
         to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))]
     (trace "[insert-unconditional!] : inserting " to-insert)
