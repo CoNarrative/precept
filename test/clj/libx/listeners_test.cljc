@@ -47,10 +47,10 @@
                           (l/replace-listener)
                           (util/insert
                             (into
-                              [[1 :attr/a "state-0"]
+                              [[1 :attr/a "state-0" 123]
                                [1 :attr/b "state-0"]]
                               background-facts))
-                          (util/retract [1 :attr/a "state-0"])
+                          (util/retract [1 :attr/a "state-0" 123])
                           (fire-rules))
         traces (l/fact-traces traced-session)
         keyed-by-type (l/trace-by-type (first traces))
