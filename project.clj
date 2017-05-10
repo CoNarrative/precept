@@ -6,6 +6,7 @@
                  [org.clojure/clojurescript "1.9.494"]
                  [org.clojure/core.async "0.3.442"]
                  [com.cerner/clara-rules "0.14.0"]
+                 [impi "0.0.10"]
                  [reagent "0.6.0"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]

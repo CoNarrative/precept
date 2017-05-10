@@ -168,7 +168,7 @@
   [[?actionId :action/type]]
   [?actionAttr <- [?actionId :all]]
   =>
-  (trace "Removing action attr" ?actionAttr)
+  ;(trace "Removing action attr" ?actionAttr)
   (cr/retract! ?actionAttr))
 
 (def-tuple-rule action-cleanup-last
