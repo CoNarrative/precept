@@ -83,6 +83,14 @@
   =>
   (retract! ?done-entity))
 
+(def-tuple-rule handle-complete-all-action
+  {:group :action}
+  [[_ :ui/mark-all-done-action]]
+  [[?e :todo/done false]]
+  =>
+  (println "Marking done " ?e)
+  (insert-unconditional! [?e :todo/done true]))
+
 ;; Calculations
 (deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]])
 
@@ -163,6 +171,7 @@
   [:exists [?e ::sub/request :task-list]]
   [[_ :todos/by-last-modified*order ?eids]]
   [?items <- (acc/all :v) :from [:todos/by-last-modified*item]]
+  [[_ :active-count ?active-count]]
   [:test (seq ?eids)] ;; TODO. Investigate whether us or Clara
   =>
   (let [items (group-by :e (flatten ?items))
@@ -173,7 +182,8 @@
     ;(notify! :task-list (fn [x] (if (map? x)
     ;                              (assoc x :visible-todos entities)
     ;                              {:visible-todos entities})
-    (insert! [?e ::sub/response {:visible-todos entities}])))
+    (insert! [?e ::sub/response {:visible-todos entities
+                                 :all-complete? (= 0 ?active-count)}])))
 
 ;; Subscription handlers
 (def-tuple-rule subs-footer-controls

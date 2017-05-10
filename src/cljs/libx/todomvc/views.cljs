@@ -44,7 +44,7 @@
         [:input#toggle-all
           {:type "checkbox"
            :checked (not all-complete?)
-           :on-change #(then :ui/toggle-complete-action)}]
+           :on-change #(then :ui/mark-all-done-action)}]
         [:label
           {:for "toggle-all"}
           "Mark all as complete"]
