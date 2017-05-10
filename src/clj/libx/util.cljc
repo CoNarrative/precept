@@ -216,7 +216,7 @@
     (if (empty? to-retract)
       (cr/insert-all-unconditional! to-insert)
       (do (cr/insert-all-unconditional! to-insert)
-          (doseq [x to-retract] (cr/retract!) x)))))
+          (doseq [x to-retract] (cr/retract! x))))))
 
 (defn action-insert! [m]
   (insert-unconditional! (gen-Tuples-from-map m)))
