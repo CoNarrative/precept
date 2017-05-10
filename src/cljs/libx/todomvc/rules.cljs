@@ -51,7 +51,7 @@
   [[(:id ?action) :todo/title ?v]]
   =>
   (trace "Responding to edit request" (:id ?action) ?v)
-  (insert-unconditional! [(guid) :todo/edit ?v]))
+  (insert-unconditional! [(:id ?action) :todo/edit ?v]))
 
 (def-tuple-rule handle-update-edit-action
   {:group :action}
@@ -129,7 +129,7 @@
   (retract! ?entry)
   (insert-unconditional! (todo ?v)))
 
-(deflogical [?e :todo/save-edit-action :tag] :- [[_ :input/key-code 13]] [[?e :todo/edit]])
+(deflogical [(guid) :todo/save-edit-action {:id ?e}] :- [[_ :input/key-code 13]] [[?e :todo/edit]])
 
 (defn by-fact-id
   ([]

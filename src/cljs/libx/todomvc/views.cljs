@@ -32,7 +32,7 @@
           {:class "edit"
            :value edit
            :on-change #(then :todo/update-edit-action {:id id :value (-> % .-target .-value)})
-           :on-key-down #(then :input/key-code-action {:value (.-which %)})
+           :on-key-down #(then :input/key-code-action {:input/key-code (.-which %)})
            :on-blur #(then :todo/save-edit-action {:id id})}])]))
 
 (defn task-list
