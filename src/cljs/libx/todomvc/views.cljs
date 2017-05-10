@@ -20,7 +20,8 @@
         [:input.toggle
           {:type "checkbox"
            :checked (if done true false)
-           :on-change #(then :todo/toggle-done-action {:id id})}]
+           :on-change #(then :todo/toggle-done-action {:id id
+                                                       :old-val done})}]
         [:label
           {:on-double-click #(then :todo/start-edit-action {:id id})}
           title]

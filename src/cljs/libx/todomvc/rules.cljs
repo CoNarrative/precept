@@ -8,21 +8,41 @@
             [libx.util :refer [insert! insert-unconditional! retract! attr-ns guid Tuple]]
             [libx.tuplerules :refer-macros [deflogical store-action def-tuple-session def-tuple-rule]]
             [libx.schema :as schema]
-            [libx.util :as util]))
+            [libx.util :as util]
+            [libx.state :as state]))
 
 (defn trace [& args]
   (apply prn args))
 
-;(def-tuple-rule all-facts
-;  [?fact <- [:all]]
-;  =>
-;  (println "FACT" (into [] (vals ?fact))))
+(def-tuple-rule all-facts
+  [?fact <- [:all]]
+  =>
+  (println "FACT" (into [] (vals ?fact))))
 
 
 ;; Action handlers
-(store-action :input/key-code-action)
-(store-action :ui/set-visibility-filter-action)
-(store-action :entry/title-action)
+;(store-action :input/key-code-action)
+;(store-action :ui/set-visibility-filter-action)
+;(store-action :entry/title-action)
+
+(def-tuple-rule handle-input-keycode--action
+  {:group :action}
+  [[?e :input/key-code-action ?v]]
+  =>
+  (insert! [?e :input/key-code (:input/key-code ?v)]))
+
+(def-tuple-rule handle-set-visibility-filter-action
+  {:group :action}
+  [[?e :ui/set-visibility-filter-action ?v]]
+  =>
+  (insert-unconditional!
+    [:global :ui/visibility-filter (:ui/visibility-filter ?v)]))
+
+(def-tuple-rule handle-entry-title-action
+  {:group :action}
+  [[?e :entry/title-action ?v]]
+  =>
+  (insert-unconditional! [:global :entry/title (:entry/title ?v)]))
 
 (def-tuple-rule handle-start-todo-edit
   {:group :action}
@@ -30,7 +50,7 @@
   [[(:id ?action) :todo/title ?v]]
   =>
   (trace "Responding to edit request" (:id ?action) ?v)
-  (insert-unconditional! [(:id ?action) :todo/edit ?v]))
+  (insert-unconditional! [(guid) :todo/edit ?v]))
 
 (def-tuple-rule handle-update-edit-action
   {:group :action}
@@ -43,18 +63,16 @@
   [[_ :todo/save-edit-action ?params]]
   [?edit <- [(:id ?params) :todo/edit ?v]]
   =>
+  (println "Retracting edit" ?edit)
   (retract! ?edit)
   (insert-unconditional! [(:id ?params) :todo/title ?v]))
 
-;; FIXME. Causes loop
 (def-tuple-rule handle-toggle-done-action
   {:group :action}
-  [:exists [?e :todo/toggle-done-action ?v ?action-tx]]
-  [:exists [(:id ?v) :todo/done ?bool]]
+  [[?e :todo/toggle-done-action ?v]]
   =>
-  (trace "Responding to toggle done action " [(:id ?v) :todo/done (not ?bool)])
-  (insert-unconditional! [(:id ?v) :todo/done (not ?bool)]))
-
+  (trace "Responding to toggle done action " [(:id ?v) :todo/done (not (:old-val ?v))])
+  (insert-unconditional! [(:id ?v) :todo/done (not (:old-val ?v))]))
 
 ;; Calculations
 (deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]])
@@ -65,10 +83,25 @@
                                        [[?e :todo/title]]
                                        [[?e :todo/done false]])
 
-(deflogical [(guid) :done-count ?n] :- [?n <- (acc/count) :from [_ :todo/done true]])
+(def-tuple-rule insert-done-count
+  [?n <- (acc/count) :from [_ :todo/done true]]
+  =>
+  (println "Done count : " ?n)
+  (insert-unconditional! [:global :done-count ?n]))
 
-(deflogical [(guid) :active-count (- ?total ?done)]
-            :- [?total <- (acc/count) :from [:todo/title]] [[_ :done-count ?done]])
+(def-tuple-rule insert-active-count
+  [[_ :done-count ?done]]
+  [?total <- (acc/count) :from [:todo/title]]
+  =>
+  (println "Active count: " (- ?total ?done))
+  (insert-unconditional! [:global :active-count (- ?total ?done)]))
+
+
+;(deflogical [:global :done-count ?n] :- [?n <- (acc/count) :from [_ :todo/done true]])
+
+;(deflogical [:global :active-count (- ?total ?done)]
+;            :- [[_ :done-count ?done]]
+;               [?total <- (acc/count) :from [:todo/title]]))
 
 (deflogical [?e :entry/save-action] :- [[_ :input/key-code 13]] [[?e :entry/title]])
 
@@ -83,8 +116,13 @@
   ([k]
    (acc/accum
      {:initial-value []
-      :reduce-fn (fn [acc cur] (sort-by :t (conj acc (k cur))))
-      :retract-fn (fn [acc cur] (sort-by :t (remove #(= (k cur %)) acc)))})))
+      :reduce-fn (fn [acc cur]
+                   (trace "[by-fact-id] reduce fn acc cur" acc cur)
+                   (sort-by :t (conj acc (k cur))))
+      :retract-fn (fn [acc cur]
+                    (trace "[by-fact-id] retract fn acc cur" acc cur)
+                    (trace "[by-fact-id] returning " (sort-by :t (remove #(= (k cur) %) acc)))
+                    (sort-by :t (remove #(= (k cur) %) acc)))})))
 
 (def-tuple-rule create-list-of-visible-todos
   {:group :report}
@@ -123,47 +161,49 @@
 
 ;; Subscription handlers
 (def-tuple-rule subs-footer-controls
+  {:group :report}
   [:exists [?e ::sub/request :footer]]
   [[_ :done-count ?done-count]]
   [[_ :active-count ?active-count]]
   [[_ :ui/visibility-filter ?visibility-filter]]
   =>
-  (trace "Inserting footer response" ?e)
+  (trace "Inserting footer response- done active filter" ?done-count ?active-count
+    ?visibility-filter)
   (insert!
     [?e ::sub/response
         {:active-count ?active-count
          :done-count ?done-count
          :visibility-filter ?visibility-filter}]))
 
-(def-tuple-rule acc-todos-that-are-visible
-  [[?e :todo/visible]]
-  [?entity <- (acc/all) :from [?e :all]]
-  =>
-  ;; warning! this is bad!
-  (trace "Inserting visible todo" (mapv vals ?entity))
-  (insert! [(guid) :visible-todo ?entity]))
+;(def-tuple-rule acc-todos-that-are-visible
+;  [[?e :todo/visible]]
+;  [?entity <- (acc/all) :from [?e :all]]
+;  =>
+;  ;; warning! this is bad!
+;  (trace "Inserting visible todo" (mapv vals ?entity))
+;  (insert! [(guid) :visible-todo ?entity]))
 
-(def-tuple-rule subs-task-list
-  [:exists [?e ::sub/request :task-list]]
-  [?visible-todos <- (acc/all) :from [:visible-todo]]
-  [[_ :active-count ?active-count]]
-  =>
-  (let [res (map :v ?visible-todos)
-        ents (map #(map util/record->vec %) res)
-        ms (map util/tuple-entity->hash-map-entity ents)]))
-    ;; FIXME. Ends up overwriting anything via notify! in store. May be problem with add
-    ;; or remove changes method
-    ;(insert!
-    ;  [?e ::sub/response
-    ;        {})]));:visible-todos ms
-             ;:all-complete? (= ?active-count 0)})]))
+;(def-tuple-rule subs-task-list
+;  [:exists [?e ::sub/request :task-list]]
+;  [?visible-todos <- (acc/all) :from [:visible-todo]]
+;  [[_ :active-count ?active-count]]
+;  =>
+;  (let [res (map :v ?visible-todos)
+;        ents (map #(map util/record->vec %) res)
+;        ms (map util/tuple-entity->hash-map-entity ents)]))
+;    ;; FIXME. Ends up overwriting anything via notify! in store. May be problem with add
+;    ;; or remove changes method
+;    ;(insert!
+;    ;  [?e ::sub/response
+;    ;        {})]));:visible-todos ms
+;             ;:all-complete? (= ?active-count 0)})]))
 
 (def-tuple-rule subs-todo-app
   [:exists [?e ::sub/request :todo-app]]
   [?todos <- (acc/all) :from [:todo/title]]
   =>
   (trace "Inserting all-todos response" (mapv libx.util/record->vec ?todos))
-  (insert! [?e ::sub/response "HI"]));(libx.util/tuples->maps (mapv libx.util/record->vec ?todos))]))
+  (insert! [?e ::sub/response "X"]))
 
 (def-tuple-rule subs-task-entry
   [:exists [?e ::sub/request :task-entry]]
