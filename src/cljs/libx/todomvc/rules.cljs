@@ -75,6 +75,14 @@
   (trace "Responding to toggle done action " [(:id ?v) :todo/done (not (:old-val ?v))])
   (insert-unconditional! [(:id ?v) :todo/done (not (:old-val ?v))]))
 
+(def-tuple-rule handle-clear-completed-action
+  {:group :action}
+  [[_ :ui/clear-completed-action]]
+  [[?e :todo/done true]]
+  [?done-entity <- (acc/all) :from [?e :all]]
+  =>
+  (retract! ?done-entity))
+
 ;; Calculations
 (deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]] [[?e :todo/title]])
 
