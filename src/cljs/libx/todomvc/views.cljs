@@ -13,7 +13,7 @@
 
 (defn todo-item []
   (fn [{:keys [db/id todo/title todo/edit todo/done]}]
-    (println "Todo item render: title, edit, done" title edit done)
+    (println "Todo item render: id title, edit, done" id title edit done)
     [:li {:class (str (when done "completed ")
                       (when edit "editing"))}
       [:div.view

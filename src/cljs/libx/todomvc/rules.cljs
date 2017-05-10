@@ -229,11 +229,21 @@
   (insert! [?e ::sub/response {:db/id ?eid :entry/title ?v}]))
 
 ;;TODO. Lib?
-(def-tuple-rule entity-doesnt-exist-when-removal-requested
-  [[_ :remove-entity-request ?eid]]
-  [?entity <- (acc/all) :from [?eid :all]]
+;; TODO. Investigate why sexpr in first position (:id ?v) fails
+;(def-tuple-rule entity-doesnt-exist-when-removal-requested
+;  {:group :action}
+;  [[_ :remove-entity-action ?v]]
+;  [?entity <- (acc/all) :from [(:id ?v) :all]]
+;  =>
+;  (trace "Fulfilling remove entity request " ?v ?entity)
+;  (doseq [tuple ?entity]
+;    (retract! tuple)))
+(cr/defrule entity-doesnt-exist-when-removal-requested
+  {:group :action}
+  [:remove-entity-action (= ?v (:v this))]
+  [?entity <- (acc/all) :from [:all (= (:e this) (:id ?v))]]
   =>
-  (trace "Fulfilling remove entity request " ?entity)
+  (trace "Fulfilling remove entity request " ?v ?entity)
   (doseq [tuple ?entity]
     (retract! tuple)))
 
