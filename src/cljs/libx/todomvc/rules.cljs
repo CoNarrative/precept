@@ -8,6 +8,7 @@
             [libx.util :refer [insert! insert-unconditional! retract! attr-ns guid Tuple]]
             [libx.tuplerules :refer-macros [deflogical store-action def-tuple-session def-tuple-rule]]
             [libx.schema :as schema]
+            [libx.todomvc.facts :refer [todo]]
             [libx.util :as util]
             [libx.state :as state]))
 
@@ -103,9 +104,16 @@
 ;            :- [[_ :done-count ?done]]
 ;               [?total <- (acc/count) :from [:todo/title]]))
 
-(deflogical [?e :entry/save-action] :- [[_ :input/key-code 13]] [[?e :entry/title]])
+(deflogical [?e :entry/save-action :tag] :- [[_ :input/key-code 13]] [[?e :entry/title]])
 
-(deflogical [?e :todo/save-edit-action] :- [[_ :input/key-code 13]] [[?e :todo/edit]])
+(def-tuple-rule handle-entry-save-action
+  [[_ :entry/save-action]]
+  [?entry <- [_ :entry/title ?v]]
+  =>
+  (retract! ?entry)
+  (insert-unconditional! (todo ?v)))
+
+(deflogical [?e :todo/save-edit-action :tag] :- [[_ :input/key-code 13]] [[?e :todo/edit]])
 
 (defn by-fact-id
   ([]

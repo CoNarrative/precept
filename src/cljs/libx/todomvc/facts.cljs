@@ -1,11 +1,11 @@
 (ns libx.todomvc.facts)
 
-(defn todo [id title done]
-  (merge
-    {:db/id      id
-     :todo/title title}
-    (when-not (nil? done)
-      {:todo/done done})))
+;(defn todo [id title done]
+;  (merge
+;    {:db/id      id
+;     :todo/title title
+;    (when-not (nil? done)
+;      {:todo/done done})
 
 (defn visibility-filter [id kw]
   {:db/id                id
@@ -18,3 +18,9 @@
 (def clear-completed-action
   {:db/id              (random-uuid)
    :ui/clear-completed :tag})
+
+(defn todo [title]
+  (let [id (random-uuid)]
+    [[id :todo/title title]
+     [id :todo/done false]]))
+

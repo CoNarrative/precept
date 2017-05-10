@@ -5,6 +5,7 @@
             [libx.core :refer [start! then]]
             [libx.spec.sub :as sub]
             [libx.todomvc.views]
+            [libx.todomvc.facts :refer [todo]]
             [libx.todomvc.schema :refer [app-schema]]
             [libx.todomvc.rules :refer [app-session]]
             [reagent.core :as reagent]
@@ -31,11 +32,6 @@
 
 (defn mount-components []
   (reagent/render [libx.todomvc.views/todo-app] (.getElementById js/document "app")))
-
-(defn todo [title]
-  (let [id (random-uuid)]
-    [[id :todo/title title]
-     [id :todo/done false]]))
 
 (def facts (into (todo "Hi") (todo "there!")))
 
