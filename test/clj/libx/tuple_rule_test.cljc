@@ -4,6 +4,7 @@
               [clara.rules.accumulators :as acc]
               [libx.tuplerules :refer [def-tuple-rule def-tuple-query store-action]]
               [libx.util :refer [insert!] :as util]
+              [clara.rules :as cr]
               [libx.macros :refer [binding?
                                    variable-bindings
                                    sexprs-with-bindings
@@ -210,7 +211,22 @@
                [:my-attribute (= ?v (:v this))]
                [:foo (= (:id ?v) (:e this))]
                =>
-               (insert! "RHS")))))))
+               (insert! "RHS"))))))
+  (testing "Value match in e position with fact binding"
+    (is (= (macroexpand
+             '(def-tuple-rule action-cleanup-2
+                {:group :cleanup}
+                [?fact <- [:this-tick :all ?v]]
+                =>
+                (trace "CLEANING this-tick fact because transient" ?fact)
+                (cr/retract! ?fact)))
+          (macroexpand
+            '(cr/defrule action-cleanup-2
+               {:group :cleanup}
+               [?fact <- :all (= ?v (:v this)) (= :this-tick (:e this))]
+               =>
+               (trace "CLEANING this-tick fact because transient" ?fact)
+               (cr/retract! ?fact)))))))
 
 (deftest def-tuple-query-test
   (testing "Query with no args"
