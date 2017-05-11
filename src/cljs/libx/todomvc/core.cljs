@@ -36,7 +36,7 @@
 (def facts (into (todo "Hi") (todo "there!")))
 
 (defn ^:export main []
-  (start! {:session app-session :schema app-schema :facts facts})
+  (start! {:session app-session :facts facts})
   (mount-components))
 
 ;@state/store

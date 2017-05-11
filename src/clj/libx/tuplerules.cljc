@@ -6,7 +6,13 @@
                  [clara.rules :as cr]
                  [clara.macros :as cm]
                  [clara.rules.dsl :as dsl]
-                 [clara.rules.compiler :as com])
+                 [clara.rules.compiler :as com]
+                 [libx.schema :as schema]
+                 [libx.util :as util]
+                 [libx.schema :as schema]
+                 [libx.schema :as schema]
+                 [libx.schema :as schema]
+                 [clara.rules :as cr])
 
        :cljs
        (:require-macros libx.tuplerules)))
@@ -31,15 +37,23 @@
 
 #?(:clj
    (defmacro def-tuple-session
-     "Contains defaults for Clara's :fact-type-fn and :ancestors-fn"
+     "Wraps Clara's defsession macro.
+     Contains defaults for :fact-type-fn, :ancestors-fn, :activation-group-fn, :activation-group-sort-fn"
      [name & sources-and-options]
      (if (compiling-cljs?)
        `(libx.macros/def-tuple-session ~name ~@sources-and-options)
        (let [sources (take-while (complement keyword?) sources-and-options)
-             options (mapcat identity
-                       (merge {:fact-type-fn :a
-                               :ancestors-fn '(fn [type] [:all])}
-                         (apply hash-map (drop-while (complement keyword?) sources-and-options))))
+             options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
+             hierarchy (if (:schema options-in) (schema/schema->hierarchy (:schema options-in)) nil)
+             ancestors-fn (if hierarchy
+                            `(util/make-ancestors-fn ~hierarchy)
+                            `(util/make-ancestors-fn))
+             defaults {:fact-type-fn :a
+                       :ancestors-fn ancestors-fn
+                       :activation-group-fn `(util/make-activation-group-fn ~core/default-group)
+                       :activation-group-sort-fn `(util/make-activation-group-sort-fn
+                                                   ~core/groups ~core/default-group)}
+             options (mapcat identity (merge defaults (dissoc options-in :schema)))
              body (into options sources)]
          `(def ~name (com/mk-session `~[~@body]))))))
 

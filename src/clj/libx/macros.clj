@@ -4,6 +4,7 @@
               [clara.macros :as cm]
               [libx.spec.lang :as lang]
               [libx.util :as util]
+              [libx.schema :as schema]
               [clojure.spec :as s]
               [libx.core :as core]
               [clara.rules :as cr]))
@@ -11,17 +12,22 @@
 (defn trace [& args] (comment (apply prn args)))
 
 (defmacro def-tuple-session
-  "For CLJS. Wrapper around Clara's `defsession` macro."
+  "For CLJS. Wraps Clara's `defsession` macro."
   [name & sources-and-options]
   (let [sources (take-while (complement keyword?) sources-and-options)
+        options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
+        ancestors-fn (if (:schema options-in)
+                       `(util/make-ancestors-fn (schema/schema->hierarchy ~(:schema options-in)))
+                       '(util/make-ancestors-fn))
         options (mapcat identity
                  (merge {:fact-type-fn :a
-                         :ancestors-fn '(fn [type] [:all])}
-                   (apply hash-map (drop-while (complement keyword?) sources-and-options))))
+                         :ancestors-fn ancestors-fn
+                         :activation-group-fn `(util/make-activation-group-fn ~core/default-group)
+                         :activation-group-sort-fn `(util/make-activation-group-sort-fn
+                                                      ~core/groups ~core/default-group)}
+                   (dissoc options-in :schema)))
         body (into options sources)]
     `(cm/defsession ~name ~@body)))
-
-;(mapcat identity {:foo "bar" :baz "quux"})
 
 (defn attr-only? [x]
   (trace "Attr only?" x (s/valid? ::lang/attribute-matcher x))

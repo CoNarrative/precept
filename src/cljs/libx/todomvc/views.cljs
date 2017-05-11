@@ -73,7 +73,6 @@
 
 (defn task-entry []
   (let [{:keys [db/id entry/title]} @(subscribe [:task-entry])]
-    ;(prn "New todo title task entry" title)
     [:header#header
       [:h1 "todos"]
       [input
@@ -87,8 +86,7 @@
   [:div
    [:section#todoapp
     [task-entry]
-    (when (seq @(subscribe [:todo-app]))
-      [task-list])
+    [task-list]
     [footer]]
    [:footer#info
     [:p "Double-click to edit a todo"]]])

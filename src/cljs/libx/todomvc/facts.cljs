@@ -1,23 +1,14 @@
 (ns libx.todomvc.facts)
 
-;(defn todo [id title done]
-;  (merge
-;    {:db/id      id
-;     :todo/title title
-;    (when-not (nil? done)
-;      {:todo/done done})
+(defn visibility-filter [v] [:global :ui/visibility-filter v])
 
-(defn visibility-filter [id kw]
-  {:db/id                id
-   :ui/visibility-filter kw})
+(defn entry [v] [:global :entry/title v])
 
-(defn mark-all-done-action []
-  {:db/id              (random-uuid)
-   :ui/toggle-complete :tag})
+(defn done-count [v] [:global :done-count v])
 
-(def clear-completed-action
-  {:db/id              (random-uuid)
-   :ui/clear-completed :tag})
+(defn active-count [v] [:global :active-count v])
+
+(defn todo-edit [e v] [e :todo/edit v])
 
 (defn todo [title]
   (let [id (random-uuid)]
