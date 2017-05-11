@@ -26,12 +26,6 @@
 ;(store-action :ui/set-visibility-filter-action)
 ;(store-action :entry/title-action)
 
-(def-tuple-rule handle-input-keycode--action
-  {:group :action}
-  [[?e :input/key-code-action ?v]]
-  =>
-  (insert! [?e :input/key-code (:input/key-code ?v)]))
-
 (def-tuple-rule handle-set-visibility-filter-action
   {:group :action}
   [[?e :ui/set-visibility-filter-action ?v]]
@@ -267,6 +261,20 @@
   (trace "CLEANING actions" ?action)
   ;(doseq [action ?actions]
   (cr/retract! ?action))
+
+
+;(def-tuple-rule action-cleanup-2 {:group :cleanup}
+;  [?fact <- [:this-tick :all ?v]]
+;  =>
+;  (trace "CLEANING this-tick fact because transient" ?fact)
+;  (cr/retract! ?fact))
+
+(cr/defrule cleanup-transient
+   {:group :action}
+   [?fact <- :all (= (:e this) :this-tick)]
+   =>
+   (trace "CLEANING this-tick fact because..." ?fact)
+   (cr/retract! ?fact))
 
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))

@@ -36,6 +36,7 @@
                  :conditions lhs
                  :consequences rhs}]
       (swap! rules conj entry)
+      (println "RULE" :name lhs)
       (:name entry))))
 
 (defn notify! [sub-name update-fn]
@@ -173,6 +174,11 @@
   ([msg] (then msg {}))
   ([msg facts]
    (dispatch! (fn [session] (util/insert-action session [(util/guid) msg facts])))))
+
+(defn then!
+  "Dispatch tuple facts"
+  ([facts]
+   (dispatch! (fn [session] (util/insert session facts)))))
 
 (defn start! [options]
   (let [opts (or options (hash-map))]

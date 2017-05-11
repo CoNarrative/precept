@@ -1,5 +1,5 @@
 (ns libx.todomvc.views
-  (:require [libx.core :refer [subscribe then]]
+  (:require [libx.core :refer [subscribe then then!]]
             [reagent.core  :as reagent]))
 
 (defn input [{:keys [value on-change on-key-down on-blur] :as props}]
@@ -80,7 +80,7 @@
         {:id "new-todo"
          :placeholder "What needs to be done?"
          :value title
-         :on-key-down #(then :input/key-code-action {:input/key-code (.-which %)})
+         :on-key-down #(then! [:this-tick :input/key-code (.-which %)])
          :on-change #(then :entry/title-action {:entry/title (-> % .-target .-value)})}]]))
 
 (defn todo-app []
