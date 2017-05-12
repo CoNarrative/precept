@@ -1,23 +1,17 @@
 (ns libx.tuplerules
     #?(:clj
        (:require [libx.core :as core]
+                 [libx.impl.rules]
                  [libx.macros :as macros]
+                 [libx.schema :as schema]
                  [libx.util :as util]
                  [clara.rules :as cr]
                  [clara.macros :as cm]
                  [clara.rules.dsl :as dsl]
-                 [clara.rules.compiler :as com]
-                 [libx.schema :as schema]
-                 [libx.util :as util]
-                 [libx.schema :as schema]
-                 [libx.schema :as schema]
-                 [libx.schema :as schema]
-                 [clara.rules :as cr])
+                 [clara.rules.compiler :as com])
 
        :cljs
        (:require-macros libx.tuplerules)))
-
-(def groups [:action :calc :report :cleanup])
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj
@@ -44,7 +38,10 @@
        `(libx.macros/def-tuple-session ~name ~@sources-and-options)
        (let [sources (take-while (complement keyword?) sources-and-options)
              options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
-             hierarchy (if (:schema options-in) (schema/schema->hierarchy (:schema options-in)) nil)
+             impl-sources `['libx.impl.rules]
+             hierarchy (if (:schema options-in)
+                         `(schema/schema->hierarchy ~(:schema options-in))
+                         nil)
              ancestors-fn (if hierarchy
                             `(util/make-ancestors-fn ~hierarchy)
                             `(util/make-ancestors-fn))
@@ -54,7 +51,7 @@
                        :activation-group-sort-fn `(util/make-activation-group-sort-fn
                                                    ~core/groups ~core/default-group)}
              options (mapcat identity (merge defaults (dissoc options-in :schema)))
-             body (into options sources)]
+             body (into options (concat sources impl-sources))]
          `(def ~name (com/mk-session `~[~@body]))))))
 
 #?(:clj

@@ -19,30 +19,28 @@
   =>
   (trace "FACT" (into [] (vals ?fact))))
 
-
-;; Action handlers
-;(store-action :input/key-code-action)
-;(store-action :ui/set-visibility-filter-action)
-;(store-action :entry/title-action)
-
+;; TODO. Insert fact directly (as :transient)
 (def-tuple-rule handle-input-keycode--action
   {:group :action}
   [[?e :input/key-code-action ?v]]
   =>
   (insert! [?e :input/key-code (:input/key-code ?v)]))
 
+;; TODO. Insert fact directly (as :global)
 (def-tuple-rule handle-set-visibility-filter-action
   {:group :action}
   [[?e :ui/set-visibility-filter-action ?v]]
   =>
   (insert-unconditional! (visibility-filter (:ui/visibility-filter ?v))))
 
+;; TODO. Insert fact directly (as :global)
 (def-tuple-rule handle-entry-title-action
   {:group :action}
   [[?e :entry/title-action ?v]]
   =>
   (insert-unconditional! (entry (:entry/title ?v))))
 
+;; TODO. Insert todo/edit directly
 (def-tuple-rule handle-start-todo-edit
   {:group :action}
   [[_ :todo/start-edit-action ?action]]
@@ -51,6 +49,7 @@
   (trace "Responding to edit request" (:id ?action) ?v)
   (insert-unconditional! [(:id ?action) :todo/edit ?v]))
 
+;; TODO. Insert todo/edit directly
 (def-tuple-rule handle-update-edit-action
   {:group :action}
   [[_ :todo/update-edit-action ?params]]
@@ -66,12 +65,17 @@
   (retract! ?edit)
   (insert-unconditional! [(:id ?params) :todo/title ?v]))
 
+;; TODO. Insert todo/done directly
 (def-tuple-rule handle-toggle-done-action
   {:group :action}
-  [[?e :todo/toggle-done-action ?v]]
+  [[_ :todo/toggle-done-action ?v]]
   =>
   (trace "Responding to toggle done action " [(:id ?v) :todo/done (not (:old-val ?v))])
   (insert-unconditional! [(:id ?v) :todo/done (not (:old-val ?v))]))
+
+; TODO. Seems like an improvement to API
+;(defn entity [e]
+;  (acc/all) :from [e :all])
 
 (def-tuple-rule handle-clear-completed-action
   {:group :action}
@@ -155,7 +159,7 @@
 (def-tuple-rule update-list-of-visible-todos
   {:group :report}
   [[_ :todos/by-last-modified*eid ?e]]
-  [?entity <- (acc/all) :from [?e :all]]
+  [?entity <- (acc/all) :from [?e :all]] ;; TODO. Can substitute entity
   =>
   (trace "Entity list!" ?entity)
   (insert! [(guid) :todos/by-last-modified*item ?entity]))
@@ -176,6 +180,7 @@
                                  :all-complete? (= 0 ?active-count)}])))
 
 ;; Subscription handlers
+;; TODO. Because we want to eliminate subscriptions we should invest minimal effort here.
 (def-tuple-rule subs-footer-controls
   {:group :report}
   [:exists [?e ::sub/request :footer]]
@@ -218,22 +223,13 @@
     (retract! tuple)))
 
 ;; TODO. Lib
-(def-tuple-rule action-cleanup
-  {:group :cleanup}
-  [?action <- [_ :action]]
-  =>
-  (trace "CLEANING actions" ?action)
-  (cr/retract! ?action))
-
-;(def groups [:action :calc :report :cleanup])
-;(def activation-group-fn (util/make-activation-group-fn :calc))
-;(def activation-group-sort-fn (util/make-activation-group-sort-fn groups :calc))
-;(def hierarchy (schema/schema->hierarchy app-schema))
-;(def ancestors-fn (util/make-ancestors-fn hierarchy))
+;(def-tuple-rule action-cleanup
+;  {:group :cleanup}
+;  [?action <- [_ :action]]
+;  =>
+;  (trace "CLEANING actions" ?action)
+;  (cr/retract! ?action))
 
 (def-tuple-session app-session 'libx.todomvc.rules :schema app-schema)
-  ;:ancestors-fn ancestors-fn
-  ;:activation-group-fn activation-group-fn
-  ;:activation-group-sort-fn activation-group-sort-fn)
 
 

@@ -2,7 +2,6 @@
   (:require [clara.rules.accumulators :as acc]
             [clara.rules :as cr]
             [libx.spec.sub :as sub]
-            [libx.todomvc.schema :refer [app-schema]]
             [libx.listeners :as l]
             [libx.schema :as schema]
             [libx.util :refer [insert! insert-unconditional! retract! guid] :as util]
@@ -14,7 +13,14 @@
 (defn trace [& args]
   (apply prn args))
 
-(store-action :entry/foo-action)
+;(store-action :entry/foo-action)
+
+(def-tuple-rule handle-action
+  {:group :action}
+  [[_ :entry/foo-action ?v]]
+  =>
+  (insert-unconditional! [[(guid) :foo/id (:foo/id ?v)]
+                          [(guid) :foo/name (:foo/name ?v)]]))
 
 (deflogical [?e :entry/new-title "Hello again!"] :- [[?e :entry/title]])
 
@@ -24,35 +30,9 @@
   =>
   (println "FACTs at the end!" ?facts))
 
-(def-tuple-rule action-cleanup
-  {:group :cleanup}
-  [?action <- [_ :action]]
-  ;[?actions <- (acc/all) :from [:action]]
-  ;[:test (> (count ?actions) 0)]
-  =>
-  (trace "CLEANING action" ?action)
-  ;(doseq [action ?actions]
-  (cr/retract! ?action))
-
-(def groups [:action :calc :report :cleanup])
-(def activation-group-fn (util/make-activation-group-fn :calc))
-(def activation-group-sort-fn (util/make-activation-group-sort-fn groups :calc))
-(def hierarchy (schema/schema->hierarchy app-schema))
-(def ancestors-fn (util/make-ancestors-fn hierarchy))
-
-;(cr/defsession app-session
-;  'libx.todomvc.rules-debug
-;  :fact-type-fn :a
-;  :ancestors-fn ancestors-fn
-;  :activation-group-fn activation-group-fn
-;  :activation-group-sort-fn activation-group-sort-fn)
-
 (def-tuple-session app-session
-  'libx.todomvc.rules-debug
-  :ancestors-fn ancestors-fn
-  :activation-group-fn activation-group-fn
-  :activation-group-sort-fn activation-group-sort-fn)
-
+   'libx.todomvc.rules-debug
+   :schema schema/libx-schema)
 
 (-> app-session
   (l/replace-listener)
