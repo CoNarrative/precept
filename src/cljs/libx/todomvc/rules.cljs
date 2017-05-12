@@ -263,18 +263,20 @@
   (cr/retract! ?action))
 
 
-;(def-tuple-rule action-cleanup-2 {:group :cleanup}
-;  [?fact <- [:this-tick :all ?v]]
-;  =>
-;  (trace "CLEANING this-tick fact because transient" ?fact)
-;  (cr/retract! ?fact))
+;; TODO. Lib
+(def-tuple-rule tick-cleanup-c
+  {:group :cleanup}
+  [?f <- [:this_tick :all]]
+  =>
+  (trace "CLEANING transient tick fact" ?f)
+  (cr/retract! ?f))
 
-(cr/defrule cleanup-transient
-   {:group :action}
-   [?fact <- :all (= (:e this) :this-tick)]
-   =>
-   (trace "CLEANING this-tick fact because..." ?fact)
-   (cr/retract! ?fact))
+;(cr/defrule cleanup-transient
+;   {:group :action}
+;   [?fact <- :all (= (:e this) :this-tick)]
+;   =>
+;   (trace "CLEANING this-tick fact because..." ?fact)
+;   (cr/retract! ?fact))
 
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))
