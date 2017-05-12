@@ -11,6 +11,7 @@
   (testing "Macroexpansion should be the same as equivalent
             arguments to defsession"
       (is (= (macroexpand `(defsession ~'foo
+                            'libx.impl.rules
                             'libx.macros-test
                             :fact-type-fn :a
                             :ancestors-fn (util/make-ancestors-fn)
@@ -22,6 +23,7 @@
 
   (testing "Allow overwrite defaults"
     (let [clara-session `(defsession ~'foo
+                           'libx.impl.rules
                            'libx.macros-test
                            :fact-type-fn ~'(fn [x] (or (:a x)
                                                      (:b x)))
@@ -39,10 +41,11 @@
 
   (testing "Expand schema opt to ancestors fn"
     (is (= (macroexpand `(defsession ~'foo
+                           'libx.impl.rules
                            'libx.macros-test
                            :fact-type-fn :a
-                           :ancestors-fn (util/make-ancestors-fn ~(schema/schema->hierarchy
-                                                                    libx.schema/libx-schema))
+                           :ancestors-fn (util/make-ancestors-fn (schema/schema->hierarchy
+                                                                    ~libx.schema/libx-schema))
                            :activation-group-fn (util/make-activation-group-fn ~core/default-group)
                            :activation-group-sort-fn (util/make-activation-group-sort-fn
                                                        ~core/groups
