@@ -2,6 +2,7 @@
     (:require [clara.rules.compiler :as com]
               [clara.rules.dsl :as dsl]
               [clara.macros :as cm]
+              [clara.rules.accumulators :as acc]
               [precept.spec.lang :as lang]
               [precept.util :as util]
               [precept.schema :as schema]
@@ -36,6 +37,11 @@
 (defn binding? [x]
   (trace "Is a binding?" x (s/valid? ::lang/variable-binding x))
   (s/valid? ::lang/variable-binding x))
+
+(defn special-form? [x]
+  (trace "Found special form "  (when (s/valid? ::lang/special-form x)
+                                  (macroexpand x)))
+  (s/valid? ::lang/special-form x))
 
 (defn sexpr? [x]
   (s/valid? ::lang/s-expr x))
@@ -154,28 +160,33 @@
                          (second expr)
                          (parse-as-tuple (vector (second expr))))))))
 
+(defn rewrite-expr
+  "Returns Clara DSL for single expression"
+  [expr]
+  (let [leftmost        (first expr)
+        op              (keyword? (dsl/ops leftmost))
+        fact-expression (and (not (keyword? leftmost))
+                             (not (vector? leftmost))
+                             (binding? leftmost))
+        binding-to-type-only (and fact-expression
+                                  (attr-only? (first (drop 2 expr))))
+        has-accumulator (and (true? fact-expression)
+                             (has-accumulator? (drop 2 expr)))
+        is-test-expr (is-test-expr? leftmost)
+        special-form (special-form? leftmost)]
+    (cond
+      is-test-expr expr
+      special-form (rewrite-expr (macroexpand leftmost))
+      binding-to-type-only (fact-binding-with-type-only expr)
+      op (parse-with-op expr)
+      has-accumulator (parse-with-accumulator expr)
+      fact-expression (parse-with-fact-expression expr)
+      :else (parse-as-tuple expr))))
+
 (defn rewrite-lhs
-  "Returns Clara DSL"
+  "Returns Clara DSL for rule LHS"
   [exprs]
-  (map (fn [expr]
-          (let [leftmost        (first expr)
-                op              (keyword? (dsl/ops leftmost))
-                fact-expression (and (not (keyword? leftmost))
-                                     (not (vector? leftmost))
-                                     (binding? leftmost))
-                binding-to-type-only (and fact-expression
-                                          (attr-only? (first (drop 2 expr))))
-                has-accumulator (and (true? fact-expression)
-                                     (has-accumulator? (drop 2 expr)))
-                is-test-expr (is-test-expr? leftmost)]
-            (cond
-              is-test-expr expr
-              binding-to-type-only (fact-binding-with-type-only expr)
-              op (parse-with-op expr)
-              has-accumulator (parse-with-accumulator expr)
-              fact-expression (parse-with-fact-expression expr)
-              :else (parse-as-tuple expr))))
-    exprs))
+  (map rewrite-expr exprs))
 
 (defmacro def-tuple-rule
   "CLJS version of def-tuple-rule"
@@ -222,3 +233,9 @@
     (core/register-rule "action-handler" a :default)
     `(cm/defrule ~name ~properties ~@lhs ~'=> ~@rhs)))
 
+(defmacro entity [e]
+  (vector `(acc/all) :from `[~e :all]))
+
+(defmacro <-
+  [fact-binding s-expr]
+  (into [fact-binding '<-] (macroexpand s-expr)))

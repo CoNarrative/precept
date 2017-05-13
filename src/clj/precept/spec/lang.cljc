@@ -30,6 +30,9 @@
   (s/cat :variable-binding #(s/valid? ::variable-binding %)
          :arrow-symbol #{'<-}))
 
+(s/def ::special-form
+  (s/and seq? #(= (first %) '<-)))
+
 (s/def ::tuple-2
   (s/tuple
     (s/and some? #(not (s/valid? ::s-expr %)))

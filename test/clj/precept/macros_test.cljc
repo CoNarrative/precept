@@ -3,8 +3,10 @@
               [precept.util :as util]
               [precept.core :as core]
               [clara.rules :refer [defsession]]
+              [clara.rules.accumulators :as acc]
               [clojure.test :refer [deftest run-tests testing is]]
-              [precept.schema :as schema])
+              [precept.schema :as schema]
+              [precept.macros :refer [<- entity]])
     (:import [precept.util Tuple]))
 
 (deftest def-tuple-session-test
@@ -54,4 +56,12 @@
                           'precept.macros-test
                           :schema ~precept.schema/precept-schema))))))
 
+(deftest entity-test
+  (is (= (macroexpand '(<- ?entity (entity ?e)))
+         '[?entity <- (clara.rules.accumulators/all) :from [?e :all]])))
+
 (run-tests)
+
+
+
+

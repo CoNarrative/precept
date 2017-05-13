@@ -5,15 +5,16 @@
             [precept.listeners :as l]
             [precept.schema :as schema]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
-            #?(:clj [precept.tuplerules :refer [def-tuple-session def-tuple-rule deflogical
-                                             store-action]])
+            #?(:clj [precept.tuplerules :refer [def-tuple-session
+                                                def-tuple-rule
+                                                deflogical
+                                                store-action]])
+            #?(:clj [precept.macros :refer [<- entity]])
             #?(:cljs [precept.tuplerules :refer-macros [deflogical store-action def-tuple-session
-                                                     def-tuple-rule]])))
+                                                        def-tuple-rule]])))
 
 (defn trace [& args]
   (apply prn args))
-
-;(store-action :entry/foo-action)
 
 (def-tuple-rule handle-action
   {:group :action}
@@ -30,6 +31,12 @@
   =>
   (println "FACTs at the end!" ?facts))
 
+(def-tuple-rule print-entity
+  [[?e :todo/title]]
+  [(<- ?entity (entity ?e))]
+  =>
+  (println "Entity!" ?entity))
+
 (def-tuple-session app-session
    'precept.todomvc.rules-debug
    :schema schema/precept-schema)
@@ -39,6 +46,7 @@
   (util/insert [[1 :entry/title "First"]
                 [1 :entry/title "Second"]
                 [2 :todo/title "First"]
+                [:transient :test "foo"]
                 [2 :todo/title "Second"]])
   (util/insert-action [(guid) :entry/foo-action {:foo/id 2 :foo/name "bar"}])
   (cr/fire-rules)
