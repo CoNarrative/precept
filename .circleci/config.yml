@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    working_directory: ~/libx
+    working_directory: ~/precept
     docker:
       - image: openjdk:8
     environment:
@@ -19,7 +19,7 @@ jobs:
             - $HOME/.m2
             - $HOME/.lein
           key: << checksum "project.clj" >>
-      - run: bin/lein do test :only libx.test-runner, uberjar
+      - run: bin/lein do test :only precept.test-runner, uberjar
       - store_artifacts:
-          path: target/libx.jar
+          path: target/precept.jar
           destination: uberjar
