@@ -1,5 +1,5 @@
-(defproject libx "0.1.0"
-  :url          "https://github.com/CoNarrative/libx.git"
+(defproject precept "0.2.0"
+  :url          "https://github.com/CoNarrative/precept.git"
   :license      {:name "Eclipse Public License The Same As Clojure"
                  :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
@@ -46,7 +46,7 @@
      {:app
       {:source-paths ["src/cljs" "dev/cljs"]
        :compiler
-                     {:main "libx.todomvc.app"
+                     {:main "precept.todomvc.app"
                       :asset-path "/js/out"
                       :output-to "target/cljsbuild/public/js/app.js"
                       :output-dir "target/cljsbuild/public/js/out"
@@ -59,7 +59,7 @@
       :test
        {:source-paths ["src/cljs" "test/cljs" "test/cljc"]
         :compiler
-                     {:main "libx.runner"
+                     {:main "precept.runner"
                       :output-to "target/cljsbuild/public/js/test/test.js"
                       :output-dir "target/cljsbuild/public/js/test/out"
                       :asset-path "/js/test/out"
@@ -71,7 +71,7 @@
       :devcards-test
        {:source-paths ["src/cljs" "test/cljs"]
         :compiler
-                      {:main "libx.runner"
+                      {:main "precept.runner"
                        :output-to "target/cljsbuild/public/js/devcards/main.js"
                        :output-dir "target/cljsbuild/public/js/devcards/out"
                        ;:asset-path "target/cljsbuild/public/js/devcards/out"
