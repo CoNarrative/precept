@@ -20,20 +20,19 @@
         [:input.toggle
           {:type "checkbox"
            :checked (if done true false)
-           :on-change #(then :todo/toggle-done-action {:id id
-                                                       :old-val done})}]
+           :on-change #(then [id :todo/done (not done)])}]
         [:label
-          {:on-double-click #(then :todo/start-edit-action {:id id})}
+          {:on-double-click #(then [id :todo/edit title])}
           title]
         [:button.destroy
-          {:on-click #(then :remove-entity-action {:id id})}]]
+          {:on-click #(then [:transient :remove-entity id])}]]
       (when edit
         [input
           {:class "edit"
            :value edit
-           :on-change #(then :todo/update-edit-action {:id id :value (-> % .-target .-value)})
-           :on-key-down #(then :input/key-code-action {:input/key-code (.-which %)})
-           :on-blur #(then :todo/save-edit-action {:id id})}])]))
+           :on-change #(then [id :todo/edit (-> % .-target .-value)])
+           :on-key-down #(then [:transient :input/key-code (.-which %)])
+           :on-blur #(then [:transient :todo/save-edit id])}])]))
 
 (defn task-list
   []
@@ -44,7 +43,7 @@
         [:input#toggle-all
           {:type "checkbox"
            :checked (not all-complete?)
-           :on-change #(then :ui/mark-all-done-action)}]
+           :on-change #(then [:transient :mark-all-done true])}]
         [:label
           {:for "toggle-all"}
           "Mark all as complete"]
@@ -67,7 +66,7 @@
       [:li (a-fn :active "Active")]
       [:li (a-fn :done   "Completed")]]
      (when (pos? done-count)
-       [:button#clear-completed {:on-click #(then :ui/clear-completed-action)}
+       [:button#clear-completed {:on-click #(then [:transient :clear-completed true])}
         "Clear completed"])]))
 
 
@@ -79,8 +78,8 @@
         {:id "new-todo"
          :placeholder "What needs to be done?"
          :value title
-         :on-key-down #(then :input/key-code-action {:input/key-code (.-which %)})
-         :on-change #(then :entry/title-action {:entry/title (-> % .-target .-value)})}]]))
+         :on-key-down #(then [:transient :input/key-code (.-which %)])
+         :on-change #(then [:global :entry/title (-> % .-target .-value)])}]]))
 
 (defn todo-app []
   [:div

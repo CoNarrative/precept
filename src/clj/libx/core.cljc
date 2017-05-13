@@ -169,10 +169,9 @@
      (or (:lens existing) (register req)))))
 
 (defn then
-  "Dispatches action to be inserted into current session"
-  ([msg] (then msg {}))
-  ([msg facts]
-   (dispatch! (fn [session] (util/insert-action session [(util/guid) msg facts])))))
+  "Inserts facts into current session"
+  [facts]
+  (dispatch! (fn [session] (util/insert session facts))))
 
 (defn start! [options]
   (let [opts (or options (hash-map))]

@@ -18,11 +18,9 @@
 ;; Instead of secretary consider:
 ;;   - https://github.com/DomKM/silk
 ;;   - https://github.com/juxt/bidi
-(defroute "/" [] (then :ui/set-visibility-filter-action
-                       {:ui/visibility-filter :all}))
+(defroute "/" [] (then [:global :ui/visibility-filter :all]))
 
-(defroute "/:filter" [filter] (then :ui/set-visibility-filter-action
-                                    {:ui/visibility-filter (keyword filter)}))
+(defroute "/:filter" [filter] (then [:global :ui/visibility-filter (keyword filter)]))
 
 (def history
   (doto (History.)
@@ -38,6 +36,3 @@
 (defn ^:export main []
   (start! {:session app-session :facts facts})
   (mount-components))
-
-;@state/store
-

@@ -3,13 +3,10 @@
             [clara.rules :as cr]
             [libx.spec.sub :as sub]
             [libx.todomvc.schema :refer [app-schema]]
-            [clojure.core.reducers :as r]
-            [libx.util :refer [insert! insert-unconditional! retract! attr-ns guid Tuple]]
+            [libx.util :refer [insert! insert-unconditional! retract! guid] :as util]
             [libx.tuplerules :refer-macros [deflogical store-action def-tuple-session def-tuple-rule]]
             [libx.schema :as schema]
-            [libx.todomvc.facts :refer [todo entry done-count active-count visibility-filter]]
-            [libx.util :as util]
-            [libx.state :as state]))
+            [libx.todomvc.facts :refer [todo entry done-count active-count visibility-filter]]))
 
 (defn trace [& args]
   (apply prn args))
@@ -19,79 +16,43 @@
   =>
   (trace "FACT" (into [] (vals ?fact))))
 
-;; TODO. Insert fact directly (as :transient)
-(def-tuple-rule handle-input-keycode--action
+(def-tuple-rule handle-save-edit-transient
   {:group :action}
-  [[?e :input/key-code-action ?v]]
-  =>
-  (insert! [?e :input/key-code (:input/key-code ?v)]))
-
-;; TODO. Insert fact directly (as :global)
-(def-tuple-rule handle-set-visibility-filter-action
-  {:group :action}
-  [[?e :ui/set-visibility-filter-action ?v]]
-  =>
-  (insert-unconditional! (visibility-filter (:ui/visibility-filter ?v))))
-
-;; TODO. Insert fact directly (as :global)
-(def-tuple-rule handle-entry-title-action
-  {:group :action}
-  [[?e :entry/title-action ?v]]
-  =>
-  (insert-unconditional! (entry (:entry/title ?v))))
-
-;; TODO. Insert todo/edit directly
-(def-tuple-rule handle-start-todo-edit
-  {:group :action}
-  [[_ :todo/start-edit-action ?action]]
-  [[(:id ?action) :todo/title ?v]]
-  =>
-  (trace "Responding to edit request" (:id ?action) ?v)
-  (insert-unconditional! [(:id ?action) :todo/edit ?v]))
-
-;; TODO. Insert todo/edit directly
-(def-tuple-rule handle-update-edit-action
-  {:group :action}
-  [[_ :todo/update-edit-action ?params]]
-  =>
-  (insert-unconditional! [(:id ?params) :todo/edit (:value ?params)]))
-
-(def-tuple-rule handle-save-edit-action
-  {:group :action}
-  [[_ :todo/save-edit-action ?params]]
-  [?edit <- [(:id ?params) :todo/edit ?v]]
+  [[_ :todo/save-edit ?e]]
+  [?edit <- [?e :todo/edit ?v]]
   =>
   (trace "Retracting edit" ?edit)
   (retract! ?edit)
-  (insert-unconditional! [(:id ?params) :todo/title ?v]))
-
-;; TODO. Insert todo/done directly
-(def-tuple-rule handle-toggle-done-action
-  {:group :action}
-  [[_ :todo/toggle-done-action ?v]]
-  =>
-  (trace "Responding to toggle done action " [(:id ?v) :todo/done (not (:old-val ?v))])
-  (insert-unconditional! [(:id ?v) :todo/done (not (:old-val ?v))]))
+  (insert-unconditional! [?e :todo/title ?v]))
 
 ; TODO. Seems like an improvement to API
 ;(defn entity [e]
 ;  (acc/all) :from [e :all])
 
-(def-tuple-rule handle-clear-completed-action
+(def-tuple-rule handle-clear-completed-transient
   {:group :action}
-  [[_ :ui/clear-completed-action]]
+  [[_ :clear-completed]]
   [[?e :todo/done true]]
   [?done-entity <- (acc/all) :from [?e :all]]
   =>
   (retract! ?done-entity))
 
-(def-tuple-rule handle-complete-all-action
+(def-tuple-rule handle-complete-all-transient
   {:group :action}
-  [[_ :ui/mark-all-done-action]]
+  [[_ :mark-all-done]]
   [[?e :todo/done false]]
   =>
   (trace "Marking done " ?e)
   (insert-unconditional! [?e :todo/done true]))
+
+(def-tuple-rule create-todo
+  {:group :action}
+  [[_ :todo/create]]
+  [?entry <- [_ :entry/title ?v]]
+  =>
+  (trace "Creating new todo " ?v)
+  (retract! ?entry)
+  (insert-unconditional! (todo ?v)))
 
 ;; Calculations
 (deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]]
@@ -107,6 +68,14 @@
 (deflogical [?e :entry/save-action :tag] :- [[_ :input/key-code 13]]
                                             [[?e :entry/title]])
 
+;; TODO. These work and should not. Rules that match their consequences are in :action group
+;; which precedes :calc group
+(deflogical [:transient :todo/save-edit ?e] :- [[_ :input/key-code 13]]
+                                               [[?e :todo/edit]])
+
+(deflogical [:transient :todo/create :tag] :- [[_ :input/key-code 13]]
+                                              [[_ :entry/title]])
+
 (def-tuple-rule insert-done-count
   [?n <- (acc/count) :from [_ :todo/done true]]
   =>
@@ -119,15 +88,6 @@
   =>
   (trace "Active count: " (- ?total ?done))
   (insert-unconditional! (active-count (- ?total ?done))))
-
-(def-tuple-rule handle-entry-save-action
-  [[_ :entry/save-action]]
-  [?entry <- [_ :entry/title ?v]]
-  =>
-  (retract! ?entry)
-  (insert-unconditional! (todo ?v)))
-
-(deflogical [(guid) :todo/save-edit-action {:id ?e}] :- [[_ :input/key-code 13]] [[?e :todo/edit]])
 
 (defn by-fact-id
   ([]
@@ -213,23 +173,20 @@
 ;  (trace "Fulfilling remove entity request " ?v ?entity)
 ;  (doseq [tuple ?entity]
 ;    (retract! tuple)))
-(cr/defrule entity-doesnt-exist-when-removal-requested
+(def-tuple-rule remove-entity-transient
   {:group :action}
-  [:remove-entity-action (= ?v (:v this))]
-  [?entity <- (acc/all) :from [:all (= (:e this) (:id ?v))]]
+  [[_ :remove-entity ?e]]
+  [?entity <- (acc/all) :from [?e :all]]
   =>
-  (trace "Fulfilling remove entity request " ?v ?entity)
+  (trace "Fulfilling remove entity request " ?entity)
   (doseq [tuple ?entity]
     (retract! tuple)))
 
-;; TODO. Lib
-;(def-tuple-rule action-cleanup
-;  {:group :cleanup}
-;  [?action <- [_ :action]]
-;  =>
-;  (trace "CLEANING actions" ?action)
-;  (cr/retract! ?action))
+(cr/defrule clean-transients
+  {:group :cleanup}
+  [?fact <- :all (= :transient (:e this))]
+  =>
+  (println "Retracting transient!")
+  (cr/retract! ?fact))
 
 (def-tuple-session app-session 'libx.todomvc.rules :schema app-schema)
-
-
