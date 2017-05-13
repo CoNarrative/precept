@@ -74,7 +74,8 @@
      :v (last tuple)}))
 
 (defn positional-value [tuple]
- (let [match-v (first (drop 2 tuple))
+ (let [match-e (nth tuple 0 nil)
+       match-v (first (drop 2 tuple))
        match-tx (nth tuple 3 nil)]
    (reduce
      (fn [acc [k v]]
@@ -82,7 +83,7 @@
          (assoc acc k (list '= v `(~k ~'this)))
          acc))
      {}
-     {:v match-v :t match-tx})))
+     {:e match-e :v match-v :t match-tx})))
 
 (defn fact-binding-with-type-only [expr]
   (let [fact-binding (take 2 expr)
