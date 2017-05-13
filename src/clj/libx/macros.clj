@@ -4,7 +4,6 @@
               [clara.macros :as cm]
               [libx.spec.lang :as lang]
               [libx.util :as util]
-              [libx.impl.rules]
               [libx.schema :as schema]
               [clojure.spec :as s]
               [libx.core :as core]
@@ -17,10 +16,9 @@
   [name & sources-and-options]
   (let [sources (take-while (complement keyword?) sources-and-options)
         options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
-        impl-sources ['libx.impl.rules]
         ancestors-fn (if (:schema options-in)
                        `(util/make-ancestors-fn (schema/schema->hierarchy ~(:schema options-in)))
-                       '(util/make-ancestors-fn))
+                       `(util/make-ancestors-fn))
         options (mapcat identity
                  (merge {:fact-type-fn :a
                          :ancestors-fn ancestors-fn
@@ -28,9 +26,8 @@
                          :activation-group-sort-fn `(util/make-activation-group-sort-fn
                                                       ~core/groups ~core/default-group)}
                    (dissoc options-in :schema)))
-        body (into options (concat sources impl-sources))]
+        body (into options (conj sources `'libx.impl.rules))]
     `(cm/defsession ~name ~@body)))
-
 
 (defn attr-only? [x]
   (trace "Attr only?" x (s/valid? ::lang/attribute-matcher x))

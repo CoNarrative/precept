@@ -1,7 +1,6 @@
 (ns libx.tuplerules
     #?(:clj
        (:require [libx.core :as core]
-                 [libx.impl.rules]
                  [libx.macros :as macros]
                  [libx.schema :as schema]
                  [libx.util :as util]
@@ -27,6 +26,7 @@
             ;; that dependency.
             (require 'clara.macros)
             (require 'libx.macros)
+            (require 'libx.impl.rules)
             @v)))))
 
 #?(:clj
