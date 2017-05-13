@@ -2,7 +2,7 @@
   (:require-macros [secretary.core :refer [defroute]])
   (:require [goog.events :as events]
             [libx.state :as state]
-            [libx.core :refer [start! then]]
+            [libx.core :refer [start! then then-set]]
             [libx.spec.sub :as sub]
             [libx.todomvc.views]
             [libx.todomvc.facts :refer [todo]]
@@ -18,11 +18,9 @@
 ;; Instead of secretary consider:
 ;;   - https://github.com/DomKM/silk
 ;;   - https://github.com/juxt/bidi
-(defroute "/" [] (then :ui/set-visibility-filter-action
-                       {:ui/visibility-filter :all}))
+(defroute "/" [] (then-set [:global :ui/visibility-filter :all]))
 
-(defroute "/:filter" [filter] (then :ui/set-visibility-filter-action
-                                    {:ui/visibility-filter (keyword filter)}))
+(defroute "/:filter" [filter] (then-set [:global :ui/visibility-filter (keyword filter)]))
 
 (def history
   (doto (History.)

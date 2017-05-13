@@ -175,7 +175,7 @@
   ([msg facts]
    (dispatch! (fn [session] (util/insert-action session [(util/guid) msg facts])))))
 
-(defn then!
+(defn then-set
   "Dispatch tuple facts"
   ([facts]
    (dispatch! (fn [session] (util/insert session facts)))))

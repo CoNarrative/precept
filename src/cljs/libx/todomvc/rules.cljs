@@ -15,36 +15,18 @@
 (defn trace [& args]
   (apply prn args))
 
-(def-tuple-rule all-facts
-  [?fact <- [:all]]
-  =>
-  (println "FACT" (into [] (vals ?fact))))
+;(def-tuple-rule all-facts
+;  [?fact <- [:all]]
+;  =>
+;  (println "FACT" (into [] (vals ?fact))))
 
-
-;; Action handlers
-;(store-action :input/key-code-action)
-;(store-action :ui/set-visibility-filter-action)
-;(store-action :entry/title-action)
-
-(def-tuple-rule handle-set-visibility-filter-action
-  {:group :action}
-  [[?e :ui/set-visibility-filter-action ?v]]
-  =>
-  (insert-unconditional!
-    [:global :ui/visibility-filter (:ui/visibility-filter ?v)]))
-
-(def-tuple-rule handle-entry-title-action
-  {:group :action}
-  [[?e :entry/title-action ?v]]
-  =>
-  (insert-unconditional! [:global :entry/title (:entry/title ?v)]))
+;; Action handlers / Updaters for more than simple property-setting
 
 (def-tuple-rule handle-start-todo-edit
   {:group :action}
   [[_ :todo/start-edit-action ?action]]
   [[(:id ?action) :todo/title ?v]]
   =>
-  (trace "Responding to edit request" (:id ?action) ?v)
   (insert-unconditional! [(:id ?action) :todo/edit ?v]))
 
 (def-tuple-rule handle-update-edit-action
@@ -66,7 +48,6 @@
   {:group :action}
   [[?e :todo/toggle-done-action ?v]]
   =>
-  (trace "Responding to toggle done action " [(:id ?v) :todo/done (not (:old-val ?v))])
   (insert-unconditional! [(:id ?v) :todo/done (not (:old-val ?v))]))
 
 (def-tuple-rule handle-clear-completed-action
@@ -82,7 +63,6 @@
   [[_ :ui/mark-all-done-action]]
   [[?e :todo/done false]]
   =>
-  (println "Marking done " ?e)
   (insert-unconditional! [?e :todo/done true]))
 
 ;; Calculations
@@ -267,16 +247,8 @@
 (def-tuple-rule tick-cleanup-c
   {:group :cleanup}
   [?f <- [:this_tick :all]]
-  =>
-  (trace "CLEANING transient tick fact" ?f)
-  (cr/retract! ?f))
+  => (cr/retract! ?f))
 
-;(cr/defrule cleanup-transient
-;   {:group :action}
-;   [?fact <- :all (= (:e this) :this-tick)]
-;   =>
-;   (trace "CLEANING this-tick fact because..." ?fact)
-;   (cr/retract! ?fact))
 
 (def groups [:action :calc :report :cleanup])
 (def activation-group-fn (util/make-activation-group-fn :calc))
