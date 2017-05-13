@@ -182,11 +182,4 @@
   (doseq [tuple ?entity]
     (retract! tuple)))
 
-(cr/defrule clean-transients
-  {:group :cleanup}
-  [?fact <- :all (= :transient (:e this))]
-  =>
-  (println "Retracting transient!")
-  (cr/retract! ?fact))
-
 (def-tuple-session app-session 'libx.todomvc.rules :schema app-schema)

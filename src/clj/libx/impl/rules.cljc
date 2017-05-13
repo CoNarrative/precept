@@ -8,3 +8,9 @@
   =>
   (cr/retract! ?action))
 
+(cr/defrule clean-transients___impl
+  {:group :cleanup}
+  [?fact <- :all (= :transient (:e this))]
+  =>
+  (println "Retracting transient!")
+  (cr/retract! ?fact))
