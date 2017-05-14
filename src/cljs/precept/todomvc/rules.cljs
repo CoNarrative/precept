@@ -25,10 +25,6 @@
   (retract! ?edit)
   (insert-unconditional! [?e :todo/title ?v]))
 
-; TODO. Seems like an improvement to API
-;(defn entity [e]
-;  (acc/all) :from [e :all])
-
 (def-tuple-rule handle-clear-completed-transient
   {:group :action}
   [[_ :clear-completed]]
@@ -62,7 +58,6 @@
                                        [[?e :todo/done true]])
 
 (deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :active]]
-                                       [[?e :todo/title]]
                                        [[?e :todo/done false]])
 
 (deflogical [?e :entry/save-action :tag] :- [[_ :input/key-code 13]]
@@ -106,6 +101,7 @@
                     (trace "[by-fact-id] returning " (sort-by :t (remove #(= (k cur) %) acc)))
                     (sort-by :t (remove #(= (k cur) %) acc)))})))
 
+;; TODO. Would like to condense since all this does it create/maintain a list
 (def-tuple-rule create-list-of-visible-todos
   {:group :report}
   [?eids <- (by-fact-id :e) :from [:todo/visible]]
@@ -141,6 +137,27 @@
 
 ;; Subscription handlers
 ;; TODO. Because we want to eliminate subscriptions we should invest minimal effort here.
+;'(defsub :task-list
+;   [[_ :visibile-todos-list ?visible-todos]]
+;   [[_ :active-count ?active-count]]
+;   =>
+;   {:visible-todos ?visible-todos
+;    :all-complete? (= ?active-count 0)})
+;
+;'(defsub :footer
+;   [[_ :done-count ?done-count]]
+;   [[_ :active-count ?active-count]]
+;   [[_ :ui/visibility-filter ?visibility-filter]]
+;   =>
+;   {:active-count ?active-count
+;    :done-count ?done-count
+;    :visibility-filter ?visibility-filter})
+;
+;'(defsub :task-entry
+;   [[?e :entry/title ?v]]
+;   =>
+;   {:db/id ?e :entry/title ?v})
+
 (def-tuple-rule subs-footer-controls
   {:group :report}
   [:exists [?e ::sub/request :footer]]
