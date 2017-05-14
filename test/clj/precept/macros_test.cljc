@@ -2,7 +2,7 @@
     (:require [precept.tuplerules :refer [def-tuple-session]]
               [precept.util :as util]
               [precept.core :as core]
-              [clara.rules :refer [defsession]]
+              [clara.rules :refer [defsession defrule]]
               [clara.rules.accumulators :as acc]
               [clojure.test :refer [deftest run-tests testing is]]
               [precept.schema :as schema]

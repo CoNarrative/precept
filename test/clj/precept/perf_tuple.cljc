@@ -1,20 +1,20 @@
 (ns precept.perf-tuple
-    (:require [precept.util :refer [guid
+    (:require [precept.util :refer [guid]
                                  insert
                                  insert!
                                  insert-unconditional!
-                                 retract!] :as util]
+                                 retract!] :as util
               [precept.schema-fixture :refer [test-schema]]
               [precept.state :as state]
               [precept.schema :as schema]
               [clara.rules :as cr]
               [clara.rules.accumulators :as acc]
               [precept.spec.sub :as sub]
-              [precept.tuplerules :refer [store-action
+              [precept.tuplerules :refer [store-action]
                                        def-tuple-session
                                        deflogical
                                        def-tuple-rule
-                                       def-tuple-query]]
+                                       def-tuple-query]
               [precept.listeners :as l]
               [precept.schema :as schema]
       #?(:clj [clara.tools.inspect :as inspect])

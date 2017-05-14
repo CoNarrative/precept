@@ -3,6 +3,7 @@
        (:require [precept.core :as core]
                  [precept.macros :as macros]
                  [precept.schema :as schema]
+                 [precept.spec.sub :as sub]
                  [precept.util :as util]
                  [clara.rules :as cr]
                  [clara.macros :as cm]
@@ -10,6 +11,7 @@
                  [clara.rules.compiler :as com])
 
        :cljs
+       (:require [precept.spec.sub :as sub])
        (:require-macros precept.tuplerules)))
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
@@ -120,3 +122,26 @@
              (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
                ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
                ~doc (assoc :doc ~doc)))))))
+#?(:clj
+    (defmacro defsub
+      [kw & body]
+      (if (compiling-cljs?)
+        `(precept.macros/defsub ~kw ~@body)
+        (let [name (symbol (str (name kw) "-sub___impl"))
+              doc         (if (string? (first body)) (first body) nil)
+              body        (if doc (rest body) body)
+              properties  (if (map? (first body)) (first body) nil)
+              definition  (if properties (rest body) body)
+              {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
+              sub-match `[::sub/request (~'= ~'?e ~'(:e this)) (~'= ~kw ~'(:v this))]
+              rw-lhs      (conj (macros/rewrite-lhs lhs) sub-match)
+              unwrite-rhs (drop-while #(not (map? %)) rw-lhs)
+              rw-rhs `(do (util/insert! [~'?e ::sub/response ~(first (rest rhs))]))]
+          (core/register-rule "subscription" rw-lhs rw-rhs)
+          `(def ~(vary-meta name assoc :rule true :doc doc)
+             (cond-> ~(dsl/parse-rule* rw-lhs rw-rhs {:group :report} {} (meta &form))
+               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
+               ~doc (assoc :doc ~doc)))))))
+
+
+

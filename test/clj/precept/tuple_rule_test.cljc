@@ -2,7 +2,11 @@
     (:require [clojure.test :refer [deftest testing is run-tests]]
               [clara.rules :refer [defrule defquery]]
               [clara.rules.accumulators :as acc]
-              [precept.tuplerules :refer [def-tuple-rule def-tuple-query store-action]]
+              [precept.spec.sub :as sub]
+              [precept.tuplerules :refer [def-tuple-rule
+                                          def-tuple-query
+                                          defsub
+                                          store-action]]
               [precept.util :refer [insert!] :as util]
               [precept.macros :refer [binding?
                                       variable-bindings
@@ -11,7 +15,8 @@
                                       value-expr?
                                       parse-as-tuple
                                       parse-with-fact-expression
-                                      rewrite-lhs]]))
+                                      rewrite-lhs
+                                      <- entity]]))
 
 (deftest tuple-bindings-test
   (let [e1    '[?e :ns/foo 42]
@@ -253,6 +258,40 @@
                 [:foo (= ?v (:v this))]
                 =>
                 (precept.util/action-insert! ?v)))))))
+
+(deftest special-form-test
+  (is (= (macroexpand
+           '(def-tuple-rule my-rule
+              [[?e :some-attr]]
+              [(<- ?the-ent (entity ?e))]
+              =>
+              (insert! "RHS")))
+        (macroexpand
+          '(defrule my-rule
+             [:some-attr (= ?e (:e this))]
+             [?the-ent <- (clara.rules.accumulators/all) :from [:all (= ?e (:e this))]]
+             =>
+             (insert! "RHS"))))))
+
+(deftest defsub-test
+  (is (= (macroexpand
+           '(defsub :task-list
+              [[_ :visible-todos-list ?visible-todos]]
+              [[_ :active-count ?active-count]]
+              =>
+              {:visible-todos ?visible-todos
+               :all-complete? (= ?active-count 0)}))
+         (macroexpand
+            '(defrule task-list-sub___impl
+              {:group :report}
+              [::sub/request (= ?e (:e this)) (= :task-list (:v this))]
+              [:visible-todos-list (= ?visible-todos (:v this))]
+              [:active-count (= ?active-count (:v this))]
+              =>
+              (precept.util/insert!
+                [?e ::sub/response {:all-complete? (= ?active-count 0)
+                                    :visible-todos ?visible-todos}]))))))
+
 
 
 (run-tests)

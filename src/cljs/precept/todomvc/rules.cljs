@@ -4,7 +4,8 @@
             [precept.spec.sub :as sub]
             [precept.todomvc.schema :refer [app-schema]]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
-            [precept.tuplerules :refer-macros [deflogical store-action def-tuple-session def-tuple-rule]]
+            [precept.tuplerules :refer-macros [defsub deflogical store-action def-tuple-session
+                                               def-tuple-rule]]
             [precept.schema :as schema]
             [precept.todomvc.facts :refer [todo entry done-count active-count visibility-filter]]))
 
@@ -137,12 +138,12 @@
 
 ;; Subscription handlers
 ;; TODO. Because we want to eliminate subscriptions we should invest minimal effort here.
-;'(defsub :task-list
-;   [[_ :visibile-todos-list ?visible-todos]]
-;   [[_ :active-count ?active-count]]
-;   =>
-;   {:visible-todos ?visible-todos
-;    :all-complete? (= ?active-count 0)})
+;(defsub :task-list
+;  [[_ :visibile-todos-list ?visible-todos]]
+;  [[_ :active-count ?active-count]]
+;  =>
+;  {:visible-todos ?visible-todos
+;   :all-complete? (= ?active-count 0)})
 ;
 ;'(defsub :footer
 ;   [[_ :done-count ?done-count]]
@@ -153,10 +154,11 @@
 ;    :done-count ?done-count
 ;    :visibility-filter ?visibility-filter})
 ;
-;'(defsub :task-entry
-;   [[?e :entry/title ?v]]
-;   =>
-;   {:db/id ?e :entry/title ?v})
+(macroexpand
+  '(defsub :task-entry
+    [[?e :entry/title ?v]]
+    =>
+    {:db/id ?e :entry/title ?v}))
 
 (def-tuple-rule subs-footer-controls
   {:group :report}
@@ -173,12 +175,13 @@
          :done-count ?done-count
          :visibility-filter ?visibility-filter}]))
 
-(def-tuple-rule subs-task-entry
-  [:exists [?e ::sub/request :task-entry]]
-  [[?eid :entry/title ?v]]
-  =>
-  (trace "[sub-response] Inserting new-todo-title" ?v)
-  (insert! [?e ::sub/response {:db/id ?eid :entry/title ?v}]))
+(macroexpand
+  '(def-tuple-rule subs-task-entry
+    {:group :report}
+    [[?e ::sub/request :task-entry]]
+    [[?eid :entry/title ?v]]
+    =>
+    (precept.util/insert! [?e ::sub/response {:db/id ?eid :entry/title ?v}])))
 
 ;;TODO. Lib?
 ;; TODO. Investigate why sexpr in first position (:id ?v) fails

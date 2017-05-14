@@ -3,14 +3,16 @@
               [clara.rules.dsl :as dsl]
               [clara.macros :as cm]
               [clara.rules.accumulators :as acc]
+              [precept.core :as core]
               [precept.spec.lang :as lang]
+              [precept.spec.sub :as sub]
               [precept.util :as util]
               [precept.schema :as schema]
               [clojure.spec :as s]
-              [precept.core :as core]
               [clara.rules :as cr]))
 
-(defn trace [& args] (comment (apply prn args)))
+(defn trace [& args]
+  (comment (apply prn args)))
 
 (defmacro def-tuple-session
   "For CLJS. Wraps Clara's `defsession` macro."
@@ -174,9 +176,11 @@
                              (has-accumulator? (drop 2 expr)))
         is-test-expr (is-test-expr? leftmost)
         special-form (special-form? leftmost)]
+        ;_ (when special-form (println "Recurring w special form"
+        ;                       (eval leftmost))]
     (cond
       is-test-expr expr
-      special-form (rewrite-expr (macroexpand leftmost))
+      special-form (rewrite-expr (eval leftmost))
       binding-to-type-only (fact-binding-with-type-only expr)
       op (parse-with-op expr)
       has-accumulator (parse-with-accumulator expr)
@@ -234,8 +238,51 @@
     `(cm/defrule ~name ~properties ~@lhs ~'=> ~@rhs)))
 
 (defmacro entity [e]
-  (vector `(acc/all) :from `[~e :all]))
+  (vector ''(acc/all) :from `['~e :all]))
+
+;(defn entity [e]
+;  (vector '(clara.rules.accumulators/all)
+;           :from
+;           (vector e :all))))
+
+
+;(defmacro <-
+;  [fact-binding s-expr]
+;  ;(into [fact-binding '<-] (macroexpand s-expr))
+;  ;(into [fact-binding '<-] (macroexpand-1 s-expr))
+;  ;; Appears to be what CLJS expands to, since error is same (Don't know how to create ISeq from
+;  ;; Symbol)
+;  ;(into [fact-binding '<-] s-expr))
+;  (let [exp# (type s-expr)
+;        _ (println "exp" exp#)
+;        x `[~fact-binding ~'<- exp#]]
+;    x))
 
 (defmacro <-
-  [fact-binding s-expr]
-  (into [fact-binding '<-] (macroexpand s-expr)))
+  [fact-binding form]
+  `(into ['~fact-binding '~'<-] ~form))
+  ;(into [fact-binding '<- form]))
+
+;(defmacro in-a-macro [x]
+;  (let [t (type x)]
+;    (println "Macro body" x)
+;    ;(println "Macro body eval" `(eval ~x))
+;    nil))
+;    ;`(list ~x)))
+;
+;(in-a-macro (<- ?x (entity ?bar)))
+
+(defmacro defsub [kw & body]
+  (let [name (symbol (str (name kw) "-sub___impl"))
+        doc         (if (string? (first body)) (first body) nil)
+        body        (if doc (rest body) body)
+        properties  (if (map? (first body)) (first body) nil)
+        definition  (if properties (rest body) body)
+        passthrough (filter some? (list doc {:group :report} properties))
+        {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
+        sub-match `[::sub/request (~'= ~'?e ~'(:e this)) (~'= ~kw ~'(:v this))]
+        rw-lhs      (conj (rewrite-lhs lhs) sub-match)
+        unwrite-rhs (drop-while #(not (map? %)) rhs)
+        rw-rhs (list `(util/insert! [~'?e ::sub/response ~(first (rest rhs))]))]
+    (core/register-rule "subscription" rw-lhs rw-rhs)
+    `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@rw-rhs)))
