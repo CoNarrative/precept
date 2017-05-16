@@ -124,9 +124,17 @@
   (trace "Entity list!" ?entity)
   (insert! [(guid) :todos/by-last-modified*item ?entity]))
 
-(def-tuple-rule order-list-of-visible-todos
-  {:group :report}
-  [:exists [?e ::sub/request :task-list]]
+;; Subscription handlers
+;; TODO. Because we want to eliminate subscriptions we should invest minimal effort here.
+;; Would like the following for a list sub:
+;'(defsub :task-list
+;   [[_ :visibile-todos-list ?visible-todos]]
+;   [[_ :active-count ?active-count]]
+;   =>
+;   {:visible-todos ?visible-todos
+;    :all-complete? (= ?active-count 0)})
+
+(defsub :task-list
   [[_ :todos/by-last-modified*order ?eids]]
   [?items <- (acc/all :v) :from [:todos/by-last-modified*item]]
   [[_ :active-count ?active-count]]
@@ -136,31 +144,13 @@
         ordered (vals (select-keys items (into [] ?eids)))
         entities (util/entity-Tuples->entity-maps ordered)]
     (trace "Entities" entities)
-    (insert! [?e ::sub/response {:visible-todos entities
-                                 :all-complete? (= 0 ?active-count)}])))
+    {:visible-todos entities
+     :all-complete? (= 0 ?active-count)}))
 
-;; Subscription handlers
-;; TODO. Because we want to eliminate subscriptions we should invest minimal effort here.
-;'(defsub :task-list
-;   [[_ :visibile-todos-list ?visible-todos]]
-;   [[_ :active-count ?active-count]]
-;   =>
-;   {:visible-todos ?visible-todos
-;    :all-complete? (= ?active-count 0)})
-;
-;'(defsub :footer
-;   [[_ :done-count ?done-count]]
-;   [[_ :active-count ?active-count]]
-;   [[_ :ui/visibility-filter ?visibility-filter]]
-;   =>
-;   {:active-count ?active-count
-;    :done-count ?done-count
-;    :visibility-filter ?visibility-filter})
-;
-;'(defsub :task-entry
-;   [[?e :entry/title ?v]]
-;   =>
-;   {:db/id ?e :entry/title ?v})
+(defsub :task-entry
+  [[?e :entry/title ?v]]
+  =>
+  {:db/id ?e :entry/title ?v})
 
 (defsub :footer
   [[_ :done-count ?done-count]]
@@ -170,28 +160,6 @@
   {:active-count ?active-count
    :done-count ?done-count
    :visibility-filter ?visibility-filter})
-
-;(def-tuple-rule subs-footer-controls
-;  {:group :report}
-;  [:exists [?e ::sub/request :footer]]
-;  [[_ :done-count ?done-count]]
-;  [[_ :active-count ?active-count]]
-;  [[_ :ui/visibility-filter ?visibility-filter]]
-;  =>
-;  (trace "Inserting footer response- done active filter" ?done-count ?active-count
-;    ?visibility-filter)
-;  (insert!
-;    [?e ::sub/response
-;        {:active-count ?active-count
-;         :done-count ?done-count
-;         :visibility-filter ?visibility-filter}]))
-
-(def-tuple-rule subs-task-entry
-  [:exists [?e ::sub/request :task-entry]]
-  [[?eid :entry/title ?v]]
-  =>
-  (trace "[sub-response] Inserting new-todo-title" ?v)
-  (insert! [?e ::sub/response {:db/id ?eid :entry/title ?v}]))
 
 ;;TODO. Lib?
 ;; TODO. Investigate why sexpr in first position (:id ?v) fails

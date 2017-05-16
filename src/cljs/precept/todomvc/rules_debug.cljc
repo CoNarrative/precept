@@ -8,9 +8,13 @@
 ;            #?(:clj [precept.tuplerules :refer [def-tuple-session
 ;                                                def-tuple-rule
 ;                                                deflogical
+;                                                defsub
 ;                                                store-action]])
 ;            #?(:clj [precept.macros :refer [<- entity]])
-;            #?(:cljs [precept.tuplerules :refer-macros [deflogical store-action def-tuple-session
+;            #?(:cljs [precept.tuplerules :refer-macros [deflogical
+;                                                        defsub
+;                                                        store-action
+;                                                        def-tuple-session
 ;                                                        def-tuple-rule]])))
 ;
 ;(defn trace [& args]
@@ -37,6 +41,13 @@
 ;  =>
 ;  (println "Entity!" ?entity))
 ;
+;(defsub :my-sub
+;  [?name <- [_ :foo/name]]
+;  =>
+;  (let [my-var "x"]
+;    (println "Heyo")
+;    {:foo/name ?name}))
+;
 ;(def-tuple-session app-session
 ;   'precept.todomvc.rules-debug
 ;   :schema schema/precept-schema)
@@ -46,6 +57,7 @@
 ;  (util/insert [[1 :entry/title "First"]
 ;                [1 :entry/title "Second"]
 ;                [2 :todo/title "First"]
+;                [3 ::sub/request :my-sub]
 ;                [:transient :test "foo"]
 ;                [2 :todo/title "Second"]])
 ;  (util/insert-action [(guid) :entry/foo-action {:foo/id 2 :foo/name "bar"}])

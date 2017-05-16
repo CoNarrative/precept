@@ -133,10 +133,15 @@
              properties  (if (map? (first body)) (first body) nil)
              definition  (if properties (rest body) body)
              {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-             sub-match `[::sub/request (~'= ~'?e ~'(:e this)) (~'= ~kw ~'(:v this))]
-             sub-map (first (drop-while #(not (map? %)) rhs))
-             rw-lhs      (conj (macros/rewrite-lhs lhs) sub-match)
-             rw-rhs `(do (util/insert! [~'?e ::sub/response ~sub-map]))
+             sub-match `[::sub/request (~'= ~'?e___sub___impl ~'(:e this)) (~'= ~kw ~'(:v this))]
+             map-only? (map? (first (rest rhs)))
+             sub-map (if map-only? (first (rest rhs)) (last (last rhs)))
+             rest-rhs (if map-only? nil (butlast (last rhs)))
+             rw-lhs (conj (macros/rewrite-lhs lhs) sub-match)
+             insertion `(util/insert! [~'?e___sub___impl ::sub/response ~sub-map])
+             rw-rhs  (if map-only?
+                       (list 'do insertion)
+                       (list 'do (rest `(cons ~@rest-rhs ~insertion))))
              _ (core/register-rule "subscription" rw-lhs rw-rhs)]
          `(def ~(vary-meta name assoc :rule true :doc doc)
             (cond-> ~(dsl/parse-rule* rw-lhs rw-rhs {:group :report} {} (meta &form))
