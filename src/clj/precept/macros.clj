@@ -1,6 +1,5 @@
 (ns precept.macros
-    (:require [clara.rules.compiler :as com]
-              [clara.rules.dsl :as dsl]
+    (:require [clara.rules.dsl :as dsl]
               [clara.macros :as cm]
               [clara.rules.accumulators :as acc]
               [precept.core :as core]
@@ -8,7 +7,8 @@
               [precept.spec.sub :as sub]
               [precept.util :as util]
               [precept.schema :as schema]
-              [clojure.spec :as s]
+              [clojure.spec.alpha :as s]
+              [precept.dsl :refer [<- entity]]
               [clara.rules :as cr]))
 
 (defn trace [& args]
@@ -147,6 +147,13 @@
           (first expression)
           (parse-as-tuple expression)))))
 
+;#?(:cljs
+;    (defn force-eval-cljs
+;      [namesp form]
+;      (cljs.js/require
+;        namesp
+;        (fn [res] (do (println res) (eval form)))))))
+
 (defn parse-with-op
   "Returns Clara DSL for `[:op x]`, [:op [:op x] where x is
   :keyword, [:keyword] or [tuple]"
@@ -175,9 +182,17 @@
         has-accumulator (and (true? fact-expression)
                              (has-accumulator? (drop 2 expr)))
         is-test-expr (is-test-expr? leftmost)
-        special-form (special-form? leftmost)]
-        ;_ (when special-form (println "Recurring w special form"
-        ;                       (eval leftmost))]
+        special-form (special-form? leftmost)
+        cljs-namespace (clara.rules.compiler/cljs-ns)]
+        ;info (when cljs-namespace (clara.rules.compiler/get-namespace-info cljs-namespace))
+        ;_ (when (precept.tuplerules/compiling-cljs?)
+        ;    (do
+        ;      (println "Compiling CLJS")
+        ;      (intern *ns* <- #'precept.macros/<-)
+        ;  _ (when (and cljs-namespace special-form) (force-eval-cljs cljs-namespace leftmost))]
+                                 ;(println "Recurring w special form")))]
+                               ;(cljs.js cljs-namespace))]
+                               ;(eval (precept.dsl/<- '?entity (precept.dsl/entity '?e)))))]
     (cond
       is-test-expr expr
       special-form (rewrite-expr (eval leftmost))
@@ -236,41 +251,6 @@
         rhs (list `(util/action-insert! ~'?v))]
     (core/register-rule "action-handler" a :default)
     `(cm/defrule ~name ~properties ~@lhs ~'=> ~@rhs)))
-
-(defmacro entity [e]
-  (vector ''(acc/all) :from `['~e :all]))
-
-;(defn entity [e]
-;  (vector '(clara.rules.accumulators/all)
-;           :from
-;           (vector e :all))))
-
-
-;(defmacro <-
-;  [fact-binding s-expr]
-;  ;(into [fact-binding '<-] (macroexpand s-expr))
-;  ;(into [fact-binding '<-] (macroexpand-1 s-expr))
-;  ;; Appears to be what CLJS expands to, since error is same (Don't know how to create ISeq from
-;  ;; Symbol)
-;  ;(into [fact-binding '<-] s-expr))
-;  (let [exp# (type s-expr)
-;        _ (println "exp" exp#)
-;        x `[~fact-binding ~'<- exp#]]
-;    x))
-
-(defmacro <-
-  [fact-binding form]
-  `(into ['~fact-binding '~'<-] ~form))
-  ;(into [fact-binding '<- form]))
-
-;(defmacro in-a-macro [x]
-;  (let [t (type x)]
-;    (println "Macro body" x)
-;    ;(println "Macro body eval" `(eval ~x))
-;    nil))
-;    ;`(list ~x)))
-;
-;(in-a-macro (<- ?x (entity ?bar)))
 
 (defmacro defsub [kw & body]
   (let [name (symbol (str (name kw) "-sub___impl"))

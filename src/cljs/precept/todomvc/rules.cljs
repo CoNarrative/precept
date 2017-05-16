@@ -1,4 +1,5 @@
 (ns precept.todomvc.rules
+  ;(:require-macros [precept.macros :refer [<- entity]])
   (:require [clara.rules.accumulators :as acc]
             [clara.rules :as cr]
             [precept.spec.sub :as sub]
@@ -6,6 +7,7 @@
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
             [precept.tuplerules :refer-macros [defsub deflogical store-action def-tuple-session
                                                def-tuple-rule]]
+            [precept.dsl :refer-macros [<- entity]]
             [precept.schema :as schema]
             [precept.todomvc.facts :refer [todo entry done-count active-count visibility-filter]]))
 
@@ -30,7 +32,8 @@
   {:group :action}
   [[_ :clear-completed]]
   [[?e :todo/done true]]
-  [?done-entity <- (acc/all) :from [?e :all]]
+  [(<- ?done-entity (entity ?e))]
+  ;[?done-entity <- (acc/all) :from [?e :all]]
   =>
   (retract! ?done-entity))
 

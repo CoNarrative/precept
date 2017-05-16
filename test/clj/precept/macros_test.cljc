@@ -6,7 +6,7 @@
               [clara.rules.accumulators :as acc]
               [clojure.test :refer [deftest run-tests testing is]]
               [precept.schema :as schema]
-              [precept.macros :refer [<- entity]])
+              [precept.dsl-ns :refer [<- entity]])
     (:import [precept.util Tuple]))
 
 (deftest def-tuple-session-test

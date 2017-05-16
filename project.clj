@@ -2,8 +2,8 @@
   :url          "https://github.com/CoNarrative/precept.git"
   :license      {:name "Eclipse Public License The Same As Clojure"
                  :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
-                 [org.clojure/clojurescript "1.9.494"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha16"]
+                 [org.clojure/clojurescript "1.9.542"]
                  [org.clojure/core.async "0.3.442"]
                  [com.cerner/clara-rules "0.14.0"]
                  [reagent "0.6.0"]]
@@ -25,6 +25,7 @@
   :profiles
   {:dev
    {:dependencies [[org.clojure/test.check "0.9.0"]
+                   [org.clojure/tools.reader "1.0.0-beta4"]
                    [org.clojure/tools.namespace "0.2.11"]
                    [devcards "0.2.3"]
                    [com.cemerick/piggieback "0.2.2-SNAPSHOT"]
@@ -63,6 +64,19 @@
                       :output-to "target/cljsbuild/public/js/test/test.js"
                       :output-dir "target/cljsbuild/public/js/test/out"
                       :asset-path "/js/test/out"
+                      :optimizations :none
+                      :cache-analysis false
+                      :source-map true
+                      :pretty-print true}}
+
+      :macros
+      {:source-paths ["test/macros"]
+       :compiler
+                     {:main "precept.app-ns"
+                      :output-to "target/cljsbuild/public/js/macros/macros.js"
+                      :output-dir "target/cljsbuild/public/js/macros/out"
+                      :asset-path "/js/macros/out"
+                      :verbose true
                       :optimizations :none
                       :cache-analysis false
                       :source-map true

@@ -28,6 +28,7 @@
             ;; that dependency.
             (require 'clara.macros)
             (require 'precept.macros)
+            (require 'precept.dsl)
             (require 'precept.impl.rules)
             @v)))))
 

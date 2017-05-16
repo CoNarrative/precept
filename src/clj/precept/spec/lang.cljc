@@ -1,5 +1,5 @@
 (ns precept.spec.lang
-  (:require [clojure.spec :as s]))
+  (:require [clojure.spec.alpha :as s]))
 
 (s/def ::variable-binding
   (s/and some? symbol?
