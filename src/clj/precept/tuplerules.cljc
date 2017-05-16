@@ -8,10 +8,10 @@
                  [clara.rules :as cr]
                  [clara.macros :as cm]
                  [clara.rules.dsl :as dsl]
-                 [clara.rules.compiler :as com])
+                 [clara.rules.compiler :as com]))
 
-       :cljs
-       (:require-macros precept.tuplerules)))
+     #?(:cljs (:require [precept.spec.sub :as sub]))
+     #?(:cljs (:require-macros precept.tuplerules)))
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj
@@ -134,10 +134,10 @@
              definition  (if properties (rest body) body)
              {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
              sub-match `[::sub/request (~'= ~'?e ~'(:e this)) (~'= ~kw ~'(:v this))]
+             sub-map (first (drop-while #(not (map? %)) rhs))
              rw-lhs      (conj (macros/rewrite-lhs lhs) sub-match)
-             unwrite-rhs (drop-while #(not (map? %)) rw-lhs)
-             rw-rhs `(do (util/insert! [~'?e ::sub/response ~(first (rest rhs))]))]
-         (core/register-rule "subscription" rw-lhs rw-rhs)
+             rw-rhs `(do (util/insert! [~'?e ::sub/response ~sub-map]))
+             _ (core/register-rule "subscription" rw-lhs rw-rhs)]
          `(def ~(vary-meta name assoc :rule true :doc doc)
             (cond-> ~(dsl/parse-rule* rw-lhs rw-rhs {:group :report} {} (meta &form))
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
