@@ -4,7 +4,11 @@
             [precept.spec.sub :as sub]
             [precept.todomvc.schema :refer [app-schema]]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
-            [precept.tuplerules :refer-macros [deflogical store-action def-tuple-session def-tuple-rule]]
+            [precept.tuplerules :refer-macros [deflogical
+                                               defsub
+                                               store-action
+                                               def-tuple-session
+                                               def-tuple-rule]]
             [precept.schema :as schema]
             [precept.todomvc.facts :refer [todo entry done-count active-count visibility-filter]]))
 
@@ -158,20 +162,29 @@
 ;   =>
 ;   {:db/id ?e :entry/title ?v})
 
-(def-tuple-rule subs-footer-controls
-  {:group :report}
-  [:exists [?e ::sub/request :footer]]
+(defsub :footer
   [[_ :done-count ?done-count]]
   [[_ :active-count ?active-count]]
   [[_ :ui/visibility-filter ?visibility-filter]]
   =>
-  (trace "Inserting footer response- done active filter" ?done-count ?active-count
-    ?visibility-filter)
-  (insert!
-    [?e ::sub/response
-        {:active-count ?active-count
-         :done-count ?done-count
-         :visibility-filter ?visibility-filter}]))
+  {:active-count ?active-count
+   :done-count ?done-count
+   :visibility-filter ?visibility-filter})
+
+;(def-tuple-rule subs-footer-controls
+;  {:group :report}
+;  [:exists [?e ::sub/request :footer]]
+;  [[_ :done-count ?done-count]]
+;  [[_ :active-count ?active-count]]
+;  [[_ :ui/visibility-filter ?visibility-filter]]
+;  =>
+;  (trace "Inserting footer response- done active filter" ?done-count ?active-count
+;    ?visibility-filter)
+;  (insert!
+;    [?e ::sub/response
+;        {:active-count ?active-count
+;         :done-count ?done-count
+;         :visibility-filter ?visibility-filter}]))
 
 (def-tuple-rule subs-task-entry
   [:exists [?e ::sub/request :task-entry]]

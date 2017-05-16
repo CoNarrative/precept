@@ -240,13 +240,13 @@
         body        (if doc (rest body) body)
         properties  (if (map? (first body)) (first body) nil)
         definition  (if properties (rest body) body)
-        passthrough (filter some? (list doc {:group :report} properties))
+        passthrough (filter some? (list doc (merge {:group :report} properties)))
         {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
         sub-match `[::sub/request (~'= ~'?e ~'(:e this)) (~'= ~kw ~'(:v this))]
+        sub-map (first (drop-while #(not (map? %)) rhs))
         rw-lhs      (conj (rewrite-lhs lhs) sub-match)
-        unwrite-rhs (drop-while #(not (map? %)) rhs)
-        rw-rhs (list `(util/insert! [~'?e ::sub/response ~(first (rest rhs))]))]
-    (core/register-rule "subscription" rw-lhs rw-rhs)
+        rw-rhs (list `(util/insert! [~'?e ::sub/response ~sub-map]))
+        _ (core/register-rule "subscription" rw-lhs rw-rhs)]
     `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@rw-rhs)))
 
 (defmacro entity [e]
@@ -255,3 +255,4 @@
 (defmacro <-
   [fact-binding s-expr]
   (into [fact-binding '<-] (macroexpand s-expr)))
+
