@@ -6,6 +6,7 @@
               [precept.spec.lang :as lang]
               [precept.util :as util]
               [precept.schema :as schema]
+              [precept.spec.sub :as sub]
               [clojure.spec :as s]
               [precept.core :as core]
               [clara.rules :as cr]))
@@ -232,6 +233,21 @@
         rhs (list `(util/action-insert! ~'?v))]
     (core/register-rule "action-handler" a :default)
     `(cm/defrule ~name ~properties ~@lhs ~'=> ~@rhs)))
+
+(defmacro defsub [kw & body]
+  (let [name (symbol (str (name kw) "-sub___impl"))
+        doc         (if (string? (first body)) (first body) nil)
+        body        (if doc (rest body) body)
+        properties  (if (map? (first body)) (first body) nil)
+        definition  (if properties (rest body) body)
+        passthrough (filter some? (list doc {:group :report} properties))
+        {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
+        sub-match `[::sub/request (~'= ~'?e ~'(:e this)) (~'= ~kw ~'(:v this))]
+        rw-lhs      (conj (rewrite-lhs lhs) sub-match)
+        unwrite-rhs (drop-while #(not (map? %)) rhs)
+        rw-rhs (list `(util/insert! [~'?e ::sub/response ~(first (rest rhs))]))]
+    (core/register-rule "subscription" rw-lhs rw-rhs)
+    `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@rw-rhs)))
 
 (defmacro entity [e]
   (vector `(acc/all) :from `[~e :all]))
