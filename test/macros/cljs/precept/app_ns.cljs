@@ -5,6 +5,5 @@
 
 (enable-console-print!)
 
-(macro-context
-  (outer-macro ?sym-a (inner-macro ?sym-b)))
+(macro-context (outer-macro ?sym-a (inner-macro ?sym-b)))
 
