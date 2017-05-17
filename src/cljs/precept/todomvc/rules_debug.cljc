@@ -9,8 +9,6 @@
 ;                                                def-tuple-rule
 ;                                                deflogical
 ;                                                store-action]])
-;            #?(:clj [precept.macros :refer [<- entity]])
-;            #?(:cljs [precept.macros :refer [<- entity]])
 ;            #?(:cljs [precept.tuplerules :refer-macros [deflogical
 ;                                                        store-action
 ;                                                        def-tuple-session
@@ -40,7 +38,7 @@
 ;
 ;(def-tuple-rule print-entity
 ;  [[?e :todo/title]]
-;  ;[(<- ?entity (entity ?e))]
+;  [(<- ?entity (entity ?e))]
 ;  =>
 ;  (do nil))
 ;  ;(println "Entity!" ?entity))

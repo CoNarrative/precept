@@ -1,5 +1,5 @@
 (ns precept.spec.core
-  (:require [clojure.spec.alpha :as s]))
+  (:require [clojure.spec :as s]))
 
 (defn validate [spec value]
   (let [msg (s/explain-str spec value)]

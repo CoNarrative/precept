@@ -8,7 +8,6 @@
   (let [_ (println "CLJS NS outer macro" (com/cljs-ns))])
   `(into ['~y '~'<-] ~xs))
 
-
 (def special-forms #{'inner-macro 'outer-macro})
 
 (defn add-ns-if-special-form [x]

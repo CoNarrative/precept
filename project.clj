@@ -2,8 +2,9 @@
   :url          "https://github.com/CoNarrative/precept.git"
   :license      {:name "Eclipse Public License The Same As Clojure"
                  :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0-alpha16"]
-                 [org.clojure/clojurescript "1.9.542"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
+                 ;[org.clojure/clojurescript "1.9.542"]
+                 [org.clojure/clojurescript "1.9.494"]
                  [org.clojure/core.async "0.3.442"]
                  [com.cerner/clara-rules "0.14.0"]
                  [reagent "0.6.0"]]

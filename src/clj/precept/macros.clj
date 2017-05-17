@@ -7,8 +7,7 @@
               [precept.spec.sub :as sub]
               [precept.util :as util]
               [precept.schema :as schema]
-              [clojure.spec.alpha :as s]
-              [precept.dsl :refer [<- entity]]
+              [clojure.spec :as s]
               [clara.rules :as cr]))
 
 (defn trace [& args]
@@ -32,6 +31,17 @@
         body (into options (conj sources `'precept.impl.rules))]
     `(cm/defsession ~name ~@body)))
 
+
+(def special-forms #{'<- 'entity})
+
+(defn add-ns-if-special-form [x]
+  (let [special-form? (special-forms x)]
+    (if (list? x)
+      (map add-ns-if-special-form x)
+      (if special-form?
+        (symbol (str "precept.dsl/" (name x)))
+        x))))
+
 (defn attr-only? [x]
   (trace "Attr only?" x (s/valid? ::lang/attribute-matcher x))
   (s/valid? ::lang/attribute-matcher x))
@@ -41,8 +51,7 @@
   (s/valid? ::lang/variable-binding x))
 
 (defn special-form? [x]
-  (trace "Found special form "  (when (s/valid? ::lang/special-form x)
-                                  (macroexpand x)))
+  (trace "Found special form " x)
   (s/valid? ::lang/special-form x))
 
 (defn sexpr? [x]
@@ -147,13 +156,6 @@
           (first expression)
           (parse-as-tuple expression)))))
 
-;#?(:cljs
-;    (defn force-eval-cljs
-;      [namesp form]
-;      (cljs.js/require
-;        namesp
-;        (fn [res] (do (println res) (eval form)))))))
-
 (defn parse-with-op
   "Returns Clara DSL for `[:op x]`, [:op [:op x] where x is
   :keyword, [:keyword] or [tuple]"
@@ -184,18 +186,9 @@
         is-test-expr (is-test-expr? leftmost)
         special-form (special-form? leftmost)
         cljs-namespace (clara.rules.compiler/cljs-ns)]
-        ;info (when cljs-namespace (clara.rules.compiler/get-namespace-info cljs-namespace))
-        ;_ (when (precept.tuplerules/compiling-cljs?)
-        ;    (do
-        ;      (println "Compiling CLJS")
-        ;      (intern *ns* <- #'precept.macros/<-)
-        ;  _ (when (and cljs-namespace special-form) (force-eval-cljs cljs-namespace leftmost))]
-                                 ;(println "Recurring w special form")))]
-                               ;(cljs.js cljs-namespace))]
-                               ;(eval (precept.dsl/<- '?entity (precept.dsl/entity '?e)))))]
     (cond
       is-test-expr expr
-      special-form (rewrite-expr (eval leftmost))
+      special-form (rewrite-expr (eval (map add-ns-if-special-form leftmost)))
       binding-to-type-only (fact-binding-with-type-only expr)
       op (parse-with-op expr)
       has-accumulator (parse-with-accumulator expr)
