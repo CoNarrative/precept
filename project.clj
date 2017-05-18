@@ -12,6 +12,11 @@
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-codox "0.10.3"]]
 
+  :codox {:namespaces [precept.core precept.dsl precept.listeners precept.macros precept.query
+                       precept.schema precept.state precept.tuplerules precept.util
+                       precept.spec.lang precept.spec.sub]
+          :metadata {:doc/format :markdown}}
+
   :source-paths ["src/clj"]
 
   :test-paths ["test/clj" "test/cljc"]
