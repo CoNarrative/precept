@@ -3,8 +3,8 @@
        (:require [precept.core :as core]
                  [precept.macros :as macros]
                  [precept.schema :as schema]
-                 [precept.util :as util]
                  [precept.spec.sub :as sub]
+                 [precept.util :as util]
                  [clara.rules :as cr]
                  [clara.macros :as cm]
                  [clara.rules.dsl :as dsl]
@@ -27,6 +27,7 @@
             ;; that dependency.
             (require 'clara.macros)
             (require 'precept.macros)
+            (require 'precept.dsl)
             (require 'precept.impl.rules)
             @v)))))
 

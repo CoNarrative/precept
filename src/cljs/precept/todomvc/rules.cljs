@@ -1,4 +1,5 @@
 (ns precept.todomvc.rules
+  (:require-macros [precept.dsl :refer [<- entity]])
   (:require [clara.rules.accumulators :as acc]
             [clara.rules :as cr]
             [precept.spec.sub :as sub]
@@ -33,7 +34,7 @@
   {:group :action}
   [[_ :clear-completed]]
   [[?e :todo/done true]]
-  [?done-entity <- (acc/all) :from [?e :all]]
+  [(<- ?done-entity (entity ?e))]
   =>
   (retract! ?done-entity))
 
@@ -119,7 +120,7 @@
 (def-tuple-rule update-list-of-visible-todos
   {:group :report}
   [[_ :todos/by-last-modified*eid ?e]]
-  [?entity <- (acc/all) :from [?e :all]] ;; TODO. Can substitute entity
+  [(<- ?entity (entity ?e))]
   =>
   (trace "Entity list!" ?entity)
   (insert! [(guid) :todos/by-last-modified*item ?entity]))
@@ -174,7 +175,7 @@
 (def-tuple-rule remove-entity-transient
   {:group :action}
   [[_ :remove-entity ?e]]
-  [?entity <- (acc/all) :from [?e :all]]
+  [(<- ?entity (entity ?e))]
   =>
   (trace "Fulfilling remove entity request " ?entity)
   (doseq [tuple ?entity]

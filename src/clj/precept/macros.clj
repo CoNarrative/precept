@@ -1,17 +1,17 @@
 (ns precept.macros
-    (:require [clara.rules.compiler :as com]
-              [clara.rules.dsl :as dsl]
+    (:require [clara.rules.dsl :as dsl]
               [clara.macros :as cm]
               [clara.rules.accumulators :as acc]
+              [precept.core :as core]
               [precept.spec.lang :as lang]
+              [precept.spec.sub :as sub]
               [precept.util :as util]
               [precept.schema :as schema]
-              [precept.spec.sub :as sub]
               [clojure.spec :as s]
-              [precept.core :as core]
               [clara.rules :as cr]))
 
-(defn trace [& args] (comment (apply prn args)))
+(defn trace [& args]
+  (comment (apply prn args)))
 
 (defmacro def-tuple-session
   "For CLJS. Wraps Clara's `defsession` macro."
@@ -31,6 +31,17 @@
         body (into options (conj sources `'precept.impl.rules))]
     `(cm/defsession ~name ~@body)))
 
+
+(def special-forms #{'<- 'entity})
+
+(defn add-ns-if-special-form [x]
+  (let [special-form? (special-forms x)]
+    (if (list? x)
+      (map add-ns-if-special-form x)
+      (if special-form?
+        (symbol (str "precept.dsl/" (name x)))
+        x))))
+
 (defn attr-only? [x]
   (trace "Attr only?" x (s/valid? ::lang/attribute-matcher x))
   (s/valid? ::lang/attribute-matcher x))
@@ -40,8 +51,7 @@
   (s/valid? ::lang/variable-binding x))
 
 (defn special-form? [x]
-  (trace "Found special form "  (when (s/valid? ::lang/special-form x)
-                                  (macroexpand x)))
+  (trace "Found special form " x)
   (s/valid? ::lang/special-form x))
 
 (defn sexpr? [x]
@@ -174,10 +184,11 @@
         has-accumulator (and (true? fact-expression)
                              (has-accumulator? (drop 2 expr)))
         is-test-expr (is-test-expr? leftmost)
-        special-form (special-form? leftmost)]
+        special-form (special-form? leftmost)
+        cljs-namespace (clara.rules.compiler/cljs-ns)]
     (cond
       is-test-expr expr
-      special-form (rewrite-expr (macroexpand leftmost))
+      special-form (rewrite-expr (eval (map add-ns-if-special-form leftmost)))
       binding-to-type-only (fact-binding-with-type-only expr)
       op (parse-with-op expr)
       has-accumulator (parse-with-accumulator expr)
@@ -253,11 +264,3 @@
                   (list (rest `(cons ~@rest-rhs ~insertion))))
         _ (core/register-rule "subscription" rw-lhs rw-rhs)]
     `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@rw-rhs)))
-
-(defmacro entity [e]
-  (vector `(acc/all) :from `[~e :all]))
-
-(defmacro <-
-  [fact-binding s-expr]
-  (into [fact-binding '<-] (macroexpand s-expr)))
-

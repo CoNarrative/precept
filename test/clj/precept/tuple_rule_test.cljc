@@ -3,7 +3,10 @@
               [clara.rules :refer [defrule defquery]]
               [clara.rules.accumulators :as acc]
               [precept.spec.sub :as sub]
-              [precept.tuplerules :refer [defsub def-tuple-rule def-tuple-query store-action]]
+              [precept.tuplerules :refer [def-tuple-rule
+                                          def-tuple-query
+                                          defsub
+                                          store-action]]
               [precept.util :refer [insert!] :as util]
               [precept.macros :refer [binding?
                                       variable-bindings
@@ -298,7 +301,19 @@
                    {:all-complete? (= ?active-count 0)
                     :visible-todos ?visible-todos}])))))))
 
+(deftest special-form-test
+  (is (= (macroexpand
+           '(def-tuple-rule my-rule
+              [[?e :some-attr]]
+              [(<- ?the-ent (entity ?e))]
+              =>
+              (insert! "RHS")))
+        (macroexpand
+          '(defrule my-rule
+             [:some-attr (= ?e (:e this))]
+             [?the-ent <- (clara.rules.accumulators/all) :from [:all (= ?e (:e this))]]
+             =>
+             (insert! "RHS"))))))
 
 (run-tests)
 
-(cons '() '(:foo))

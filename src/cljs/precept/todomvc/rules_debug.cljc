@@ -10,12 +10,12 @@
 ;                                                deflogical
 ;                                                defsub
 ;                                                store-action]])
-;            #?(:clj [precept.macros :refer [<- entity]])
 ;            #?(:cljs [precept.tuplerules :refer-macros [deflogical
 ;                                                        defsub
 ;                                                        store-action
 ;                                                        def-tuple-session
 ;                                                        def-tuple-rule]])))
+;  ;#?(:cljs (:require-macros [precept.dsl :refer [<- entity]])))
 ;
 ;(defn trace [& args]
 ;  (apply prn args))
