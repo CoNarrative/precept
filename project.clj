@@ -15,6 +15,7 @@
   :codox {:namespaces [precept.core precept.dsl precept.listeners precept.macros precept.query
                        precept.schema precept.state precept.tuplerules precept.util
                        precept.spec.lang precept.spec.sub]
+          :output-path "docs"
           :metadata {:doc/format :markdown}}
 
   :source-paths ["src/clj"]
