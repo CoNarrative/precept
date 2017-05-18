@@ -217,7 +217,6 @@
 (deftest ancestors-fn-test
   (let [h (schema/schema->hierarchy test-schema)
         ancestors-fn (util/make-ancestors-fn h)]
-    (is (= #{:all :action} (ancestors-fn :foo-action)))
     (is (= #{:all :one-to-one :unique} (ancestors-fn :todo/title)))
     (is (= #{:all :one-to-one} (ancestors-fn :todo/done)))
     (is (= #{:all :one-to-one} (ancestors-fn :no-match)))

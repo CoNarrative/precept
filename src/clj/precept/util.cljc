@@ -296,29 +296,21 @@
           (= group-a group-b) (> (:salience a) (:salience b))
           :else false)))))
 
-(defn action? [a] (> (.indexOf (name a) "-action") -1))
-
 (defn make-ancestors-fn
   "To be used when defining a session. Stored in atom for auto truth maintenance
   and schema enforcement."
   ([]
-   (let [cr-ancestors-fn #(cond
-                            (action? %) #{:all :action}
-                            :else #{:all :one-to-one})]
+   (let [cr-ancestors-fn (fn [_] #{:all :one-to-one})]
      (reset! state/ancestors-fn (memoize cr-ancestors-fn))
      cr-ancestors-fn))
   ([hierarchy]
    (let [cr-ancestors-fn #(or ((:ancestors hierarchy) %)
-                            (cond
-                              (action? %) #{:all :action}
-                              :else #{:all :one-to-one}))]
+                              #{:all :one-to-one})]
       (reset! state/ancestors-fn (memoize cr-ancestors-fn))
       cr-ancestors-fn))
   ([hierarchy root-fact-type]
    (let [cr-ancestors-fn #(or ((:ancestors hierarchy) %)
-                            (cond
-                              (action? %) #{root-fact-type :action}
-                              :else #{root-fact-type :one-to-one}))]
+                             #{root-fact-type :one-to-one})]
       (reset! state/ancestors-fn (memoize cr-ancestors-fn))
       cr-ancestors-fn)))
 
