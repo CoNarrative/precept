@@ -8,11 +8,9 @@
 ;            #?(:clj [precept.tuplerules :refer [def-tuple-session
 ;                                                def-tuple-rule
 ;                                                deflogical
-;                                                defsub
-;                                                store-action]])
+;                                                defsub]])
 ;            #?(:cljs [precept.tuplerules :refer-macros [deflogical
 ;                                                        defsub
-;                                                        store-action
 ;                                                        def-tuple-session
 ;                                                        def-tuple-rule]])))
 ;  ;#?(:cljs (:require-macros [precept.dsl :refer [<- entity]])))

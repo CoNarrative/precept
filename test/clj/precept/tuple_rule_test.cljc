@@ -5,8 +5,7 @@
               [precept.spec.sub :as sub]
               [precept.tuplerules :refer [def-tuple-rule
                                           def-tuple-query
-                                          defsub
-                                          store-action]]
+                                          defsub]]
               [precept.util :refer [insert!] :as util]
               [precept.macros :refer [binding?
                                       variable-bindings
@@ -246,17 +245,6 @@
           (macroexpand
             '(defquery my-query [:?e]
                [:foo (= ?e (:e this)) (= ?v (:v this))]))))))
-
-(deftest store-action-test
-  (testing "Expansion should be the same as equivalent defrule"
-    (is (= (macroexpand
-             '(store-action :foo))
-           (macroexpand
-             '(defrule action-handler-foo
-                {:group :action}
-                [:foo (= ?v (:v this))]
-                =>
-                (precept.util/action-insert! ?v)))))))
 
 (deftest defsub-test
   (is (= (macroexpand

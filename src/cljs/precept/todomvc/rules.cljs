@@ -7,7 +7,6 @@
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
             [precept.tuplerules :refer-macros [deflogical
                                                defsub
-                                               store-action
                                                def-tuple-session
                                                def-tuple-rule]]
             [precept.schema :as schema]

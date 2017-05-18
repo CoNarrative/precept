@@ -108,22 +108,6 @@
               ~doc (assoc :doc ~doc)))))))
 
 #?(:clj
-    (defmacro store-action
-      [a]
-      (if (compiling-cljs?)
-        `(precept.macros/store-action ~a)
-        (let [name (symbol (str "action-handler-" (clojure.string/replace (subs (str a) 1) \/ \*)))
-              doc nil
-              properties {:group :action}
-              lhs (list `[~a (~'= ~'?v ~'(:v this))])
-              rhs `(do (precept.util/action-insert! ~'?v))]
-          (core/register-rule "action-handler" a :default)
-          `(def ~(vary-meta name assoc :rule true :doc doc)
-             (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
-               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
-               ~doc (assoc :doc ~doc)))))))
-
-#?(:clj
    (defmacro defsub
      [kw & body]
      (if (compiling-cljs?)

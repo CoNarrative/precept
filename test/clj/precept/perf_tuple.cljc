@@ -10,11 +10,10 @@
               [clara.rules :as cr]
               [clara.rules.accumulators :as acc]
               [precept.spec.sub :as sub]
-              [precept.tuplerules :refer [store-action]
-                                       def-tuple-session
-                                       deflogical
-                                       def-tuple-rule
-                                       def-tuple-query]
+              [precept.tuplerules :refer [def-tuple-session
+                                          deflogical
+                                          def-tuple-rule
+                                          def-tuple-query]]
               [precept.listeners :as l]
               [precept.schema :as schema]
       #?(:clj [clara.tools.inspect :as inspect])
@@ -29,8 +28,6 @@
 ;; that takes all nses in which they are rules and unmaps everything in them.
 (deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]]
                                        [[?e :todo/title]])
-
-(store-action :add-todo-action-2)
 
 (cr/defrule add-item-handler
   ;; Works with maps

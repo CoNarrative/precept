@@ -234,18 +234,9 @@
         rhs (list `(precept.util/insert! ~head))]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
 
-(defmacro store-action
-  "CLJS version of store-action"
-  [a]
-  (let [name (symbol (str "action-handler-" (clojure.string/replace (subs (str a) 1) \/ \*)))
-        doc nil
-        properties {:group :action}
-        lhs (list `[~a (~'= ~'?v ~'(:v this))])
-        rhs (list `(util/action-insert! ~'?v))]
-    (core/register-rule "action-handler" a :default)
-    `(cm/defrule ~name ~properties ~@lhs ~'=> ~@rhs)))
-
-(defmacro defsub [kw & body]
+(defmacro defsub
+  [kw & body]
+  "CLJS version of defsub"
   (let [name (symbol (str (name kw) "-sub___impl"))
         doc         (if (string? (first body)) (first body) nil)
         body        (if doc (rest body) body)
