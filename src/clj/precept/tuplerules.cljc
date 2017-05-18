@@ -33,8 +33,29 @@
 
 #?(:clj
    (defmacro def-tuple-session
-     "Wraps Clara's defsession macro.
-     Contains defaults for :fact-type-fn, :ancestors-fn, :activation-group-fn, :activation-group-sort-fn"
+     "Defines a session.
+
+     (def-tuple-session my-session 'my-proj/my-ns :schema my-schema)
+
+     Accepts same arguments as Clara's defsession plus an additional :schema option. Rules and
+     queries are loaded from the provided namespace.
+
+     :schema - A Datomic schema. Attributes with defined cardinality and uniqueness are be
+     maintained at insertion time. Unlike Datomic, facts that are :db.unique/value and
+     :db.unique/identity attributes are both upserted.
+
+     Default options:
+       :fact-type-fn - :a
+         Tells Clara to index fact-types by the attribute slot of provided eav tuples
+       :ancestors-fn - util/make-ancestors-fn
+         If :schema provided, returns a function with the provided Datomic schema. Else called
+         with no arguments in which case all facts will be treated as cardinality :one-to-one.
+       :activation-group-fn - (util/make-activation-group-fn :calc)
+          Orders rules by :group, :salience, and :super propertes given as first argument to
+          def-tuple-rule. Rules marked :super are active across all groups. :salience determines
+          precedence within the same group.
+       :activation-group-sort-fn - (util/make-activation-group-fn [:action :calc :report :cleanup])
+         Sets group order. Rules with :group property :action fire first, :calc second, and so on."
      [name & sources-and-options]
      (if (compiling-cljs?)
        `(precept.macros/def-tuple-session ~name ~@sources-and-options)
@@ -59,6 +80,16 @@
 #?(:clj
    (defmacro def-tuple-rule
      [name & body]
+     "Defines a rule.
+
+     (def-tuple-rule my-rule
+       {:group :action}
+       [[_ :my-fact ?v]]
+       =>
+       (insert! [(guid) :my-other-fact ?v])
+
+       Behaves identically to Clara's defrule. Supports positional syntax for 4-arity
+       [e a v fact-id] tuples."
      (if (compiling-cljs?)
        `(precept.macros/def-tuple-rule ~name ~@body)
        (let [doc             (if (string? (first body)) (first body) nil)
@@ -78,6 +109,13 @@
 
 #?(:clj
    (defmacro def-tuple-query
+     "Clara's defquery with precept DSL.
+
+     (def-tuple-query my-query [:v]
+       [?fact <- [_ :my-fact ?v]])
+
+      Defines a named query that can be called with Clara's `query` function with optional
+      arguments."
      [name & body]
      (if (compiling-cljs?)
        `(precept.macros/def-tuple-query ~name ~@body)
@@ -93,6 +131,14 @@
 
 #?(:clj
    (defmacro deflogical
+     "Prolog-style rule.
+
+     (deflogical [?e :derived-fact ?v] :- [[?e :my-fact ?v]])
+
+     Head/consequence is declared first followed by body/conditions.
+     Uses :- as separator. Name is auto-generated. Auto-assigned to default activation group.
+     Inserts are always logical.
+     Does not support non-DSL syntax (e.g. println, let)."
      [& forms]
      (if (compiling-cljs?)
        `(precept.macros/deflogical ~@forms)
@@ -109,6 +155,16 @@
 
 #?(:clj
    (defmacro defsub
+     "Defines subscription response.
+
+     (defsub :my-sub-name
+       [[_ :my-fact ?v]]
+       =>
+       {:my-fact ?v}
+
+       sub-name - keyword of subscription registered with `subscribe`
+       LHS - any valid LHS syntax
+       RHS - a hash-map to be passed to subscribers of sub-name"
      [kw & body]
      (if (compiling-cljs?)
        `(precept.macros/defsub ~kw ~@body)

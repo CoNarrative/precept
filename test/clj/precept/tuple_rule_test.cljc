@@ -289,6 +289,29 @@
                    {:all-complete? (= ?active-count 0)
                     :visible-todos ?visible-todos}])))))))
 
+  ;; TODO. Not clear how to solve every possible case here. Considering supporting
+  ;; a let block or map on RHS only
+  ;(is (= (macroexpand
+  ;         '(defsub :task-list
+  ;            [[_ :visible-todos-list ?visible-todos]]
+  ;            [[_ :active-count ?active-count]]
+  ;            =>
+  ;            (println "foo")
+  ;            {:visible-todos ?visible-todos
+  ;             :all-complete? (= ?active-count 0)}))
+  ;      (macroexpand
+  ;        '(defrule task-list-sub___impl
+  ;           {:group :report}
+  ;           [::sub/request (= ?e___sub___impl (:e this)) (= :task-list (:v this))]
+  ;           [:visible-todos-list (= ?visible-todos (:v this))]
+  ;           [:active-count (= ?active-count (:v this))]
+  ;           =>
+  ;           (println "foo")
+  ;           (precept.util/insert!
+  ;             [?e___sub___impl ::sub/response
+  ;              {:all-complete? (= ?active-count 0)
+  ;               :visible-todos ?visible-todos}]))))))
+
 (deftest special-form-test
   (is (= (macroexpand
            '(def-tuple-rule my-rule
