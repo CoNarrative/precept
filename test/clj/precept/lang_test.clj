@@ -2,7 +2,7 @@
     (:require [clojure.test :refer [deftest is testing run-tests]]
               [precept.spec.lang :as lang]
               [clojure.spec :as s]
-              [clojure.spec.gen.alpha :as gen]))
+              [clojure.spec.gen :as gen]))
 
 (deftest lang-test
   (testing "Variable binding"

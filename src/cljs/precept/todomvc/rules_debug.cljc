@@ -8,18 +8,17 @@
 ;            #?(:clj [precept.tuplerules :refer [def-tuple-session
 ;                                                def-tuple-rule
 ;                                                deflogical
+;                                                defsub
 ;                                                store-action]])
 ;            #?(:cljs [precept.tuplerules :refer-macros [deflogical
+;                                                        defsub
 ;                                                        store-action
 ;                                                        def-tuple-session
 ;                                                        def-tuple-rule]])))
-;  ;#?(:cljs (:require-macros [precept.macros :refer [<- entity]])))
+;  ;#?(:cljs (:require-macros [precept.dsl :refer [<- entity]])))
 ;
 ;(defn trace [& args]
 ;  (apply prn args))
-;
-;;(macroexpand '(<- ?entity (entity ?e)))
-;;(macroexpand '(entity ?e))
 ;
 ;(def-tuple-rule handle-action
 ;  {:group :action}
@@ -40,8 +39,14 @@
 ;  [[?e :todo/title]]
 ;  [(<- ?entity (entity ?e))]
 ;  =>
-;  (do nil))
-;  ;(println "Entity!" ?entity))
+;  (println "Entity!" ?entity))
+;
+;(defsub :my-sub
+;  [?name <- [_ :foo/name]]
+;  =>
+;  (let [my-var "x"]
+;    (println "Heyo")
+;    {:foo/name ?name}))
 ;
 ;(def-tuple-session app-session
 ;   'precept.todomvc.rules-debug
@@ -52,6 +57,7 @@
 ;  (util/insert [[1 :entry/title "First"]
 ;                [1 :entry/title "Second"]
 ;                [2 :todo/title "First"]
+;                [3 ::sub/request :my-sub]
 ;                [:transient :test "foo"]
 ;                [2 :todo/title "Second"]])
 ;  (util/insert-action [(guid) :entry/foo-action {:foo/id 2 :foo/name "bar"}])

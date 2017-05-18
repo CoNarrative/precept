@@ -251,11 +251,16 @@
         body        (if doc (rest body) body)
         properties  (if (map? (first body)) (first body) nil)
         definition  (if properties (rest body) body)
-        passthrough (filter some? (list doc {:group :report} properties))
+        passthrough (filter some? (list doc (merge {:group :report} properties)))
         {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-        sub-match `[::sub/request (~'= ~'?e ~'(:e this)) (~'= ~kw ~'(:v this))]
-        rw-lhs      (conj (rewrite-lhs lhs) sub-match)
-        unwrite-rhs (drop-while #(not (map? %)) rhs)
-        rw-rhs (list `(util/insert! [~'?e ::sub/response ~(first (rest rhs))]))]
-    (core/register-rule "subscription" rw-lhs rw-rhs)
+        sub-match `[::sub/request (~'= ~'?e___sub___impl ~'(:e this)) (~'= ~kw ~'(:v this))]
+        map-only? (map? (first (rest rhs)))
+        sub-map (if map-only? (first (rest rhs)) (last (last rhs)))
+        rest-rhs (if map-only? nil (butlast (last rhs)))
+        rw-lhs (conj (rewrite-lhs lhs) sub-match)
+        insertion `(util/insert! [~'?e___sub___impl ::sub/response ~sub-map])
+        rw-rhs  (if map-only?
+                  (list insertion)
+                  (list (rest `(cons ~@rest-rhs ~insertion))))
+        _ (core/register-rule "subscription" rw-lhs rw-rhs)]
     `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@rw-rhs)))

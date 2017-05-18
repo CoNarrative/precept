@@ -15,8 +15,7 @@
                                       value-expr?
                                       parse-as-tuple
                                       parse-with-fact-expression
-                                      rewrite-lhs
-                                      <- entity]]))
+                                      rewrite-lhs]]))
 
 (deftest tuple-bindings-test
   (let [e1    '[?e :ns/foo 42]
@@ -259,6 +258,49 @@
                 =>
                 (precept.util/action-insert! ?v)))))))
 
+(deftest defsub-test
+  (is (= (macroexpand
+           '(defsub :task-list
+              [[_ :visible-todos-list ?visible-todos]]
+              [[_ :active-count ?active-count]]
+              =>
+              {:visible-todos ?visible-todos
+               :all-complete? (= ?active-count 0)}))
+        (macroexpand
+          '(defrule task-list-sub___impl
+             {:group :report}
+             [::sub/request (= ?e___sub___impl (:e this)) (= :task-list (:v this))]
+             [:visible-todos-list (= ?visible-todos (:v this))]
+             [:active-count (= ?active-count (:v this))]
+             =>
+             (precept.util/insert!
+               [?e___sub___impl ::sub/response
+                {:all-complete? (= ?active-count 0)
+                 :visible-todos ?visible-todos}])))))
+
+  (is (= (macroexpand
+           '(defsub :task-list
+              [[_ :visible-todos-list ?visible-todos]]
+              [[_ :active-count ?active-count]]
+              =>
+              (let [foo "bar"]
+                (println "Hi")
+                {:visible-todos ?visible-todos
+                 :all-complete? (= ?active-count 0)})))
+         (macroexpand
+           '(defrule task-list-sub___impl
+              {:group :report}
+              [::sub/request (= ?e___sub___impl (:e this)) (= :task-list (:v this))]
+              [:visible-todos-list (= ?visible-todos (:v this))]
+              [:active-count (= ?active-count (:v this))]
+              =>
+              (let [foo "bar"]
+                (println "Hi")
+                (precept.util/insert!
+                  [?e___sub___impl ::sub/response
+                   {:all-complete? (= ?active-count 0)
+                    :visible-todos ?visible-todos}])))))))
+
 (deftest special-form-test
   (is (= (macroexpand
            '(def-tuple-rule my-rule
@@ -272,27 +314,6 @@
              [?the-ent <- (clara.rules.accumulators/all) :from [:all (= ?e (:e this))]]
              =>
              (insert! "RHS"))))))
-
-(deftest defsub-test
-  (is (= (macroexpand
-           '(defsub :task-list
-              [[_ :visible-todos-list ?visible-todos]]
-              [[_ :active-count ?active-count]]
-              =>
-              {:visible-todos ?visible-todos
-               :all-complete? (= ?active-count 0)}))
-         (macroexpand
-            '(defrule task-list-sub___impl
-              {:group :report}
-              [::sub/request (= ?e (:e this)) (= :task-list (:v this))]
-              [:visible-todos-list (= ?visible-todos (:v this))]
-              [:active-count (= ?active-count (:v this))]
-              =>
-              (precept.util/insert!
-                [?e ::sub/response {:all-complete? (= ?active-count 0)
-                                    :visible-todos ?visible-todos}]))))))
-
-
 
 (run-tests)
 
