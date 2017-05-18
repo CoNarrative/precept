@@ -3,6 +3,8 @@ A functional relational programming framework
 
 [![CircleCI](https://circleci.com/gh/CoNarrative/precept.svg?style=shield&circle-token=b23498670888edf670832326d50f9d8fab60b2e3)](https://circleci.com/gh/CoNarrative/todomvc)
 
+| [Docs](https://conarrative.github.io/precept/) |
+
 ### Truly declarative
 
 > "You need only specify what you require, not how it must
