@@ -1,9 +1,5 @@
 (ns precept.perf-tuple
-    (:require [precept.util :refer [guid]
-                                 insert
-                                 insert!
-                                 insert-unconditional!
-                                 retract!] :as util
+    (:require [precept.util :refer [guid insert insert! insert-unconditional! retract!] :as util]
               [precept.schema-fixture :refer [test-schema]]
               [precept.state :as state]
               [precept.schema :as schema]
@@ -116,8 +112,8 @@
         (reset! session
           (-> @session
             (l/replace-listener)
-            (util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
-            (util/insert-action [(guid) :add-todo-action {:title "hey"}])
+            ;(util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
+            ;(util/insert-action [(guid) :add-todo-action {:title "hey"}])
             (insert [[1 :done-count 5]
                      [1 :done-count 6]])
             (cr/fire-rules)))))

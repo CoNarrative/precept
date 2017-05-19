@@ -67,12 +67,6 @@
            (third vec)
            (nth vec 3 (next-fact-id!))))
 
-(defn tuple-vec->action-hash-map
-  "Puts ks in x into e-a-v map and assigns m to :v"
-  [x]
-  (let [m (nth x 2)]
-    (into m {:e (first x) :a (second x) :v m :t (next-fact-id!)})))
-
 (defn gen-Tuples-from-map [m]
   (reduce
     (fn [acc [k v]] (conj acc (->Tuple (guid) k v (next-fact-id!))))
@@ -183,13 +177,6 @@
             inserted
             to-retract)))))
 
-(defn insert-action
-  "Inserts hash-map from outside rule context.
-  Accepts [e a v] where v is {} with ks that become part of inserted map"
-  [session action]
-  (trace "[insert-action] : inserting" (tuple-vec->action-hash-map action))
-  (cr/insert session (tuple-vec->action-hash-map action)))
-
 (defn insert!
   "Insert facts logically within rule context"
   [facts]
@@ -217,9 +204,6 @@
       (cr/insert-all-unconditional! to-insert)
       (do (cr/insert-all-unconditional! to-insert)
           (doseq [x to-retract] (cr/retract! x))))))
-
-(defn action-insert! [m]
-  (insert-unconditional! (gen-Tuples-from-map m)))
 
 (defn retract!
   "Wrapper around Clara's `retract!`.

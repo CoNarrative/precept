@@ -58,7 +58,7 @@
 ;                [3 ::sub/request :my-sub]
 ;                [:transient :test "foo"]
 ;                [2 :todo/title "Second"]])
-;  (util/insert-action [(guid) :entry/foo-action {:foo/id 2 :foo/name "bar"}])
+;;  (util/insert-action [(guid) :entry/foo-action {:foo/id 2 :foo/name "bar"}])
 ;  (cr/fire-rules)
 ;  (l/vec-ops))
 ;

@@ -103,8 +103,8 @@
         (reset! session
           (-> @session
             (l/replace-listener)
-            (util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
-            (util/insert-action [(guid) :add-todo-action {:title "hey"}])
+            ;(util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
+            ;(util/insert-action [(guid) :add-todo-action {:title "hey"}])
             (insert [[1 :done-count 5] [1 :done-count 6]])
             (cr/fire-rules)))))))
 
