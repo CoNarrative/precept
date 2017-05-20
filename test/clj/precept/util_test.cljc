@@ -93,11 +93,18 @@
 (deftest Tuples->maps-test
   (let [tuples (conj (repeatedly 5 #(->Tuple 1 :test-attr/one-to-many 42 1))
                      (->Tuple 1 :test-attr/one-to-one "bar" 2)
-                     (->Tuple 2 :test-attr/one-to-one "baz" 2))]
+                     (->Tuple 2 :test-attr/one-to-one "baz" 2))
+        nested (->Tuple 1 :ents tuples 1)]
     (is (= (Tuples->maps tuples)
           [{:db/id 2 :test-attr/one-to-one "baz"}
            {:db/id 1 :test-attr/one-to-many '(42 42 42 42 42)
-            :test-attr/one-to-one "bar"}]))))
+            :test-attr/one-to-one "bar"}]))
+    (is (= (Tuples->maps nested)
+           {:ents [{:db/id 2 :test-attr/one-to-one "baz"}
+                   {:db/id 1
+                    :test-attr/one-to-many '(42 42 42 42 42)
+                    :test-attr/one-to-one "bar"}]
+            :db/id 1}))))
 
 (deftest insertable-test
   (testing "Single vector"

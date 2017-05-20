@@ -244,7 +244,7 @@
 (defn Tuples->maps [xs]
   (letfn [(recur-or-val [ys] (if (any-Tuple? ys) (Tuples->maps ys) ys))]
     (if (= Tuple (type xs))
-      {:db/id (:e xs) (:a xs) (:v (recur-or-val xs))}
+      {:db/id (:e xs) (:a xs) (recur-or-val (:v xs))}
       (let [keyed (reduce
                     (fn [m {:keys [e a v]}]
                       (if ((@state/ancestors-fn a) :one-to-many)
