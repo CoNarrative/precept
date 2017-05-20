@@ -93,19 +93,45 @@
         (recur)))
     out))
 
+(defmulti apply-op-to-view-model!
+  (fn [op a _ _]
+    [op (first (clojure.set/intersection
+                 #{:one-to-many :one-to-one}
+                 (@s/ancestors-fn a)))]))
+
+(defmethod apply-op-to-view-model! [:add :one-to-one] [_ _ ks v]
+  (swap! s/store assoc-in ks v))
+
+(defmethod apply-op-to-view-model! [:add :one-to-many] [_ _ ks v]
+  (swap! s/store update-in ks conj v))
+
+(defmethod apply-op-to-view-model! [:remove :one-to-one] [_ _ ks _]
+  (swap! s/store util/dissoc-in ks))
+
+(defmethod apply-op-to-view-model! [:remove :one-to-many] [_ _ ks v]
+  (let [prop (get-in @s/store ks)
+        applied (remove #(= v %) prop)]
+    (if (empty? applied)
+      (swap! s/store util/dissoc-in ks)
+      (swap! s/store assoc-in ks applied))))
+
 (defn apply-additions-to-view-model! [tuples]
   (doseq [[e a v] tuples]
-    (let [ancestry (@s/ancestors-fn a)]
-      (cond
-        (ancestry :one-to-one) (swap! s/store assoc-in [e a] v)
-        (ancestry :one-to-many) (swap! s/store update-in [e a] conj v)))))
+    (if (not= a ::sub/response)
+      (apply-op-to-view-model! :add a [e a] v)
+      (doseq [[sub-a sub-v] v]
+        (if (util/any-Tuple? sub-v)
+          (apply-op-to-view-model! :add sub-a [e a sub-a] (util/Tuples->maps sub-v))
+          (apply-op-to-view-model! :add sub-a [e a sub-a] sub-v))))))
 
 (defn apply-removals-to-view-model! [tuples]
   (doseq [[e a v] tuples]
-    (let [ancestry (@s/ancestors-fn a)]
-      (cond
-        (ancestry :one-to-one) (swap! s/store util/dissoc-in [e a])
-        (ancestry :one-to-many) (swap! s/store update-in [e a] (fn [xs] (remove #(= v %) xs)))))))
+    (if (not= a ::sub/response)
+      (apply-op-to-view-model! :remove a [e a] v)
+      (doseq [[sub-a sub-v] v]
+        (if (util/any-Tuple? sub-v)
+          (apply-op-to-view-model! :remove sub-a [e a sub-a] (util/Tuples->maps sub-v))
+          (apply-op-to-view-model! :remove sub-a [e a sub-a] sub-v))))))
 
 (defn apply-removals-to-store
   "Reads ops from in channel and applies removals to store"

@@ -30,11 +30,14 @@
 (defn fact-id? [n]
   (and (> n -1) (<= n @state/fact-id)))
 
-(defn reset-globals [_]
-  (reset! state/fact-index {})
-  (make-ancestors-fn))
+(@state/ancestors-fn :test-attr/one-to-many)
 
-;(use-fixtures :once reset-globals)
+(defn reset-globals [f]
+  (reset! state/fact-index {})
+  (make-ancestors-fn (schema/schema->hierarchy test-schema))
+  (f))
+
+(use-fixtures :each reset-globals)
 
 (deftest map->tuples-test
   (testing "Converting an entity map to a vector of tuples"
@@ -86,6 +89,15 @@
   (testing "Record with record in third slot"
     (is (= (record->vec (->Tuple -1 :attr (->Tuple -2 :nested "foo" -1) -1))
            [-1 :attr [-2 :nested "foo"]]))))
+
+(deftest Tuples->maps-test
+  (let [tuples (conj (repeatedly 5 #(->Tuple 1 :test-attr/one-to-many 42 1))
+                     (->Tuple 1 :test-attr/one-to-one "bar" 2)
+                     (->Tuple 2 :test-attr/one-to-one "baz" 2))]
+    (is (= (Tuples->maps tuples)
+          [{:db/id 2 :test-attr/one-to-one "baz"}
+           {:db/id 1 :test-attr/one-to-many '(42 42 42 42 42)
+            :test-attr/one-to-one "bar"}]))))
 
 (deftest insertable-test
   (testing "Single vector"
@@ -162,6 +174,7 @@
       (is (vector? (:facts (first trace))))
       (is (every? #(= Tuple (type %)) (:facts (first trace)))
           "Each inserted fact should be a Tuple"))))
+
 
   ;; TODO. Reinstate
   ;(testing "Insert single map"

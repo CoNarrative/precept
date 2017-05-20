@@ -63,8 +63,9 @@
              options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
              impl-sources `['precept.impl.rules]
              hierarchy (if (:schema options-in)
-                         `(schema/schema->hierarchy ~(:schema options-in))
-                         nil)
+                         `(schema/schema->hierarchy (concat ~(:schema options-in)
+                                                           ~precept.schema/precept-schema))
+                         `(schema/schema->hierarchy ~precept.schema/precept-schema))
              ancestors-fn (if hierarchy
                             `(util/make-ancestors-fn ~hierarchy)
                             `(util/make-ancestors-fn))
