@@ -47,14 +47,15 @@
   [
    (attribute ::sub/request
      :db.type/vector
-     :db/unique :db.unique/value)
+     :db/unique :db.unique/identity)
 
    (attribute ::sub/response
      :db.type/any
-     :db/unique :db.unique/value)])
+     :db/unique :db.unique/identity)])
 
 (defn schema->hierarchy
-  "Takes a Datomic schema"
+  "Creates a hierarchy from a Datomic schmea by cardinality and uniqueness. Used by
+  implementation to enforce both."
   [schema]
   (let [h (atom (make-hierarchy))
         cardinality (group-by :db/cardinality schema)
@@ -69,4 +70,3 @@
     (swap! h derive :unique :one-to-one)
     (reset! session-hierarchy h)
     @h))
-

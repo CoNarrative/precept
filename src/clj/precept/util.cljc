@@ -226,6 +226,10 @@
       session
       insertables)))
 
+(defn any-Tuple? [x]
+  (or (= Tuple (type x))
+      (and (coll? x) (= Tuple (type (first x))))))
+
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn clara-tups->maps
   "Takes seq of ms with keys :?e :?a :?v, joins on :?e and returns
@@ -236,6 +240,18 @@
             (into {:db/id id}
               (reduce (fn [m tup] (assoc m (:?a tup) (:?v tup)))
                 {} ent))))))
+
+(defn Tuples->maps [xs]
+  (letfn [(recur-or-val [ys] (if (any-Tuple? ys) (Tuples->maps ys) ys))]
+    (if (= Tuple (type xs))
+      {:db/id (:e xs) (:a xs) (recur-or-val (:v xs))}
+      (let [keyed (reduce
+                    (fn [m {:keys [e a v]}]
+                      (if ((@state/ancestors-fn a) :one-to-many)
+                        (update-in m [e a] conj (recur-or-val v))
+                        (assoc-in m [e a] (recur-or-val v))))
+                    {} xs)]
+        (mapv (fn [[eid m]] (assoc m :db/id eid)) keyed)))))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn tuple-entity->hash-map-entity

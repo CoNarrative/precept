@@ -12,7 +12,7 @@
 (defn mk-fact-fn
   "Returns fn that will generate n facts with a when called with eid"
   [n a]
-  (fn [e] (repeatedly n #(util/vec->record [e a (rand-str)]))))
+  (fn [e] (repeatedly n #(util/vec->record [e a 42]))))
 
 (defn mk-facts [n eids]
   (let [mk-one-to-one (mk-fact-fn n :test-attr/one-to-one)

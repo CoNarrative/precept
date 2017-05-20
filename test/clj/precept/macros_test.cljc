@@ -16,7 +16,8 @@
                             'precept.impl.rules
                             'precept.macros-test
                             :fact-type-fn :a
-                            :ancestors-fn (util/make-ancestors-fn)
+                            :ancestors-fn (util/make-ancestors-fn
+                                            (schema/schema->hierarchy ~precept.schema/precept-schema))
                             :activation-group-fn (util/make-activation-group-fn ~core/default-group)
                             :activation-group-sort-fn (util/make-activation-group-sort-fn
                                                         ~core/groups
@@ -42,19 +43,22 @@
       (is (= (macroexpand clara-session) (macroexpand wrapper)))))
 
   (testing "Expand schema opt to ancestors fn"
-    (is (= (macroexpand `(defsession ~'foo
-                           'precept.impl.rules
-                           'precept.macros-test
-                           :fact-type-fn :a
-                           :ancestors-fn (util/make-ancestors-fn (schema/schema->hierarchy
-                                                                    ~precept.schema/precept-schema))
-                           :activation-group-fn (util/make-activation-group-fn ~core/default-group)
-                           :activation-group-sort-fn (util/make-activation-group-sort-fn
-                                                       ~core/groups
-                                                       ~core/default-group)))
-          (macroexpand `(def-tuple-session ~'foo
-                          'precept.macros-test
-                          :schema ~precept.schema/precept-schema))))))
+    (let [schemas (list precept.schema-fixture/test-schema
+                        precept.schema/precept-schema)]
+      (is (= (macroexpand `(defsession ~'foo
+                             'precept.impl.rules
+                             'precept.macros-test
+                             :fact-type-fn :a
+                             :ancestors-fn (util/make-ancestors-fn
+                                             (schema/schema->hierarchy
+                                               ~`(concat ~@schemas)))
+                             :activation-group-fn (util/make-activation-group-fn ~core/default-group)
+                             :activation-group-sort-fn (util/make-activation-group-sort-fn
+                                                         ~core/groups
+                                                         ~core/default-group)))
+            (macroexpand `(def-tuple-session ~'foo
+                            'precept.macros-test
+                            :schema ~precept.schema-fixture/test-schema)))))))
 
 (run-tests)
 

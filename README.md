@@ -10,15 +10,16 @@ A functional relational programming framework
 > "You need only specify what you require, not how it must
 be achieved." - Out of the Tar Pit
 
-The first thing the authors of React say about their library is that is it
+The first thing the authors of React say about their library is that it's
 declarative. Regardless of whether that's an accurate statement, we find it
-significant. Declarative is desirable. And we agree.
+significant. Declarative is desirable. We agree.
 
 ```clj
 (rule inc-count-when-tick
   [[_ :tick]]
-  [[_ :count ?v]]
-  => (insert! [:global :count (inc ?v)]))
+  [[?e :count ?v]]
+  =>
+  (insert! [?e :count (inc ?v)]))
 
 (session my-session 'counter-ns)
 
@@ -46,16 +47,21 @@ have accomplished this in earnest, and that a truly declarative approach to
 front-end web development would have already become popular if the underlying
 technology they've developed was previously available.
 
-The Rete algorithm creates and maintains optimized indexes for any data set that
-allow efficient processing of incremental changes.
+The Rete algorithm creates and maintains efficient indexes for any data set. This
+allows fast processing of incremental changes.
 
 ### Global state
 
-State in precept is more or less a "bag of facts". In this way test test
-it is no different from rules engines like Drools, Clara, and Jess. There is
-no tree structure to reason over or organize. The session just contains a
-bunch of tuples that can be grabbed at will. The fact of a key-code is on
-the same level as a username.
+State in Precept is more or less a "bag of facts". There is no tree structure to reason over or 
+organize. The session just contains a bunch of tuples that can be grabbed at will. The fact of a 
+key-code is on the same level as a username.
+
+### Synchronized Reactive View Model
+
+Because most view libraries and programming languages tend to operate more naturally with 
+associative data structures than eav tuples, Precept converts and syncs all facts from the rules 
+session to a view model. Components that subscribe to it are automatically rerendered when the data 
+they're subscribed to changes.
 
 ### Persistence
 
@@ -64,8 +70,5 @@ engines have historically made themselves irrelevant is their inability to
 effectively write out to a database. This was something we wanted to solve
 from the start.
 
-We share the same data structure and even enforce the cardinality and uniqueness
-of facts according to a Datomic schema. Our design makes separation of
-persistent data from client-side only data trivial, and serialization to Datomic
-in particular even more trivial, especially for those who supply a Datomic
-schema to def-tuple-session. API helpers for this are forthcoming.
+Because Precept shares the same data structure and schema format, reading and writing with  
+ Datomic is trivial. That said, we're committed to being database agnostic. 
