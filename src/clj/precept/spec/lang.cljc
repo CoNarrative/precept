@@ -7,13 +7,14 @@
 
 (s/def ::s-expr list?)
 
-(s/def ::test-expr
-   #{:test})
+(s/def ::test-expr #{:test})
+
+(s/def ::ignore-slot #{"_" '_})
 
 (s/def ::value-equals-matcher
   (s/and some?
     #(not (coll? %))
-    #(not (#{"_" '_} %))
+    #(not (s/valid? ::ignore-slot %))
     #(not (s/valid? ::variable-binding %))))
 
 (s/def ::attribute-matcher
@@ -30,8 +31,14 @@
   (s/cat :variable-binding #(s/valid? ::variable-binding %)
          :arrow-symbol #{'<-}))
 
+(s/def ::special-forms #{'entity 'entities})
+
 (s/def ::special-form
-  (s/and seq? #(= (first %) '<-)))
+  (s/and seq?
+        #(= (first %) '<-)
+        #(s/valid? ::variable-binding (second (flatten %)))
+        #(s/valid? ::special-forms (nth (flatten %) 2))))
+
 
 (s/def ::tuple-2
   (s/tuple

@@ -89,6 +89,11 @@
   (insert-unconditional! (active-count (- ?total ?done))))
 
 (defn by-fact-id
+  "Custsom accumulator.
+
+  Like acc/all ewxcept sorts tuples by :t slot (fact-id). Since fact ids are created sequentially
+  this orders facts by they were created.
+  Returns list of facts. Optional `k` arg maps `k` over facts."
   ([]
    (acc/accum
      {:initial-value []
@@ -104,6 +109,26 @@
                     (trace "[by-fact-id] retract fn acc cur" acc cur)
                     (trace "[by-fact-id] returning " (sort-by :t (remove #(= (k cur) %) acc)))
                     (sort-by :t (remove #(= (k cur) %) acc)))})))
+
+(defn list-of
+  "Custom accumulator.
+  Calls fact-f on facts being accumulated.
+  If provided, calls list-f on accumulated list result."
+  ([fact-f]
+   (acc/accum
+     {:initial-value []
+      :reduce-fn (fn [acc cur] (fact-f (conj acc cur)))
+      :retract-fn (fn [acc cur] (fact-f (remove #(= cur %) acc)))}))
+  ([fact-f list-f]
+   (acc/accum
+     {:initial-value []
+      :reduce-fn (fn [acc cur]
+                   (trace "[mk-list] reduce fn acc cur" acc cur)
+                   (list-f (conj acc (fact-f cur))))
+      :retract-fn (fn [acc cur]
+                    (trace "[mk-list] retract fn acc cur" acc cur)
+                    (trace "[mk-list] returning " (list-f (remove #(= (fact-f cur) %) acc)))
+                    (list-f (remove #(= (fact-f cur) %) acc)))})))
 
 ;; TODO. Would like to condense since all this does it create/maintain a list
 (def-tuple-rule create-list-of-visible-todos
@@ -123,17 +148,61 @@
   =>
   (trace "Entity list!" ?entity)
   (insert! [(guid) :todos/by-last-modified*item ?entity]))
+;; Determining required rule structure, whether we need multiple or can expand inline per normal
+;; ...looks like we need to support rules that generate rules
+
+;;; Impl:
+;
+;;; `entities` should expand to:
+;(rule impl-a
+;  [[?req ::gen-fact/request :entities]]
+;  [[?req :entities/eid ?e]]
+;  [[(<- ?entity (entity ?e))]]
+; =>
+; (insert! [?req :entities/entity ?e]))
+;
+;(rule impl-b
+;  [[?req :entities/order ?order]]
+;  [?ents <- (acc/all :v) :from [?req :entities/entity]]
+; =>
+; (insert! [?req :entities/list ?e]))
+;
+;;; Usage:
+;(rule my-rule
+;  [?eids <- (acc/all :e) :from [:interesting-fact]]
+;  [(<- ?interesting-entities (entities ?eids))]
+;  =>
+;  ;; Prints list of Tuples
+;  (println "Found entities with interesting fact" ?interesting-entities))
+;
+;;; Should expand to:
+;(rule my-rule___split-0
+;  [?eids <- (acc/all :e) :from [:interesting-fact]
+;   =>
+;   (let [req-id (guid)]
+;     (insert! [req-id ::gen-fact/request :entities])
+;     (doseq [eid ?eids] (insert! [req-id :entities/eid ?eid])))])
+;
+;(rule my-rule
+;  ;; ...rest LHS
+;   [[req-id ::gen-fact/response ?interesting-entities]]
+;   =>
+;   ;; ...rest RHS
+;   (println "Found entities with interesting fact" ?interesting-entities))
+;
+
+
+[?eids <- (list-of :e #(sort-by :t %)) :from [:todo/visible]]
+[?eids <- (by-fact-id :e) :from [:todo/visible]]
+[[_ :todos/by-last-modified*eid ?e]]
+[(<- ?entity (entity ?e))]
+
+
+'[(mk-list :todos/by-last-modified (by-fact-id :e) :from [:todo/visible])]
+'[(<- ?ordered-visible-todos (entities (by-fact-id :e) :from [:todo/visible]))]
+'[(<- ?ordered-visible-todos (order :asc (entities [:todo/visible])))]
 
 ;; Subscription handlers
-;; TODO. Because we want to eliminate subscriptions we should invest minimal effort here.
-;; Would like the following for a list sub:
-;'(defsub :task-list
-;   [[_ :visibile-todos-list ?visible-todos]]
-;   [[_ :active-count ?active-count]]
-;   =>
-;   {:visible-todos ?visible-todos
-;    :all-complete? (= ?active-count 0)})
-
 (defsub :task-list
   [[_ :todos/by-last-modified*order ?eids]]
   [?items <- (acc/all :v) :from [:todos/by-last-modified*item]]
