@@ -5,11 +5,21 @@
   [e]
   `['(clara.rules.accumulators/all) :from ['~e :all]])
 
-;(defmacro entities
-;  [es])
-  ;(doseq))
+(defmacro entities
+  "Generates rules and facts as indicated by *"
+  [es]
+  {:gen {:name-suffix "___impl_split-0"
+         :join `'~es}})
 
 (defmacro <-
   "Binds the result of `form` to `fact-binding`"
   [fact-binding form]
   `(into ['~fact-binding '~'<-] ~form))
+
+(defmacro mk-rules [rules]
+  `(do ~@(for [rule rules]
+           `(def ~(:name rule) ~(:body rule)))))
+
+(mk-rules [{:name foo :body "fooob"}
+           {:name bar :body "baz"}])
+

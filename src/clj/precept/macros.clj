@@ -1,9 +1,11 @@
 (ns precept.macros
-    (:require [clara.rules.dsl :as dsl]
+    (:require [clara.rules.dsl :as cr-dsl]
               [clara.macros :as cm]
               [clara.rules.accumulators :as acc]
               [precept.core :as core]
               [precept.spec.lang :as lang]
+              [precept.spec.factgen :as factgen]
+              [precept.dsl :as dsl]
               [precept.spec.sub :as sub]
               [precept.util :as util]
               [precept.schema :as schema]
@@ -53,6 +55,10 @@
 (defn special-form? [x]
   (trace "Found special form " x)
   (s/valid? ::lang/special-form x))
+
+(defn contains-rule-generator? [x]
+  (trace "Found rule generator " x)
+  (s/valid? ::lang/contains-rule-generator x))
 
 (defn sexpr? [x]
   (s/valid? ::lang/s-expr x))
@@ -160,8 +166,8 @@
   "Returns Clara DSL for `[:op x]`, [:op [:op x] where x is
   :keyword, [:keyword] or [tuple]"
   [expr]
-  (let [outer-op (dsl/ops (first expr))
-        inner-op (dsl/ops (first (second expr)))]
+  (let [outer-op (cr-dsl/ops (first expr))
+        inner-op (cr-dsl/ops (first (second expr)))]
     (if inner-op
       (vector outer-op (vector inner-op
                          (if (= 1 (count (second (second expr)))) ;;attribute only
@@ -171,11 +177,12 @@
                          (second expr)
                          (parse-as-tuple (vector (second expr))))))))
 
+
 (defn rewrite-expr
   "Returns Clara DSL for single expression"
-  [expr]
+  [expr exprs idx]
   (let [leftmost        (first expr)
-        op              (keyword? (dsl/ops leftmost))
+        op              (keyword? (cr-dsl/ops leftmost))
         fact-expression (and (not (keyword? leftmost))
                              (not (vector? leftmost))
                              (binding? leftmost))
@@ -188,17 +195,58 @@
         cljs-namespace (clara.rules.compiler/cljs-ns)]
     (cond
       is-test-expr expr
-      special-form (rewrite-expr (eval (map add-ns-if-special-form leftmost)))
+      special-form (rewrite-expr (eval (map add-ns-if-special-form leftmost)) exprs idx)
       binding-to-type-only (fact-binding-with-type-only expr)
       op (parse-with-op expr)
       has-accumulator (parse-with-accumulator expr)
       fact-expression (parse-with-fact-expression expr)
       :else (parse-as-tuple expr))))
 
+
+(defmacro foob [x] x)
+;; TODO. pass in name, salience so we can generate rules with salience relative
+;; to subject and access name here. Also RHS....basically everything
+(defn generate-rules [expr exprs idx props rhs]
+  (let [var-binding (:join (:gen expr))
+        nom (:name props)
+        ;; This assumes the binding we're looking for exists in accumulator syntax
+        matching-expr (first (filter #(and (has-accumulator? (drop 2 %))
+                                        (= var-binding (first %))
+                                        (> idx (.indexOf exprs %)))
+                               exprs))
+        lhs-mod (assoc (vec exprs) idx (parse-as-tuple`[[~'_ ::factgen/response ~var-binding]]))]
+    [{:name (symbol (str nom (-> expr :gen :name-suffix)))
+      :lhs (parse-with-accumulator matching-expr)
+      :rhs `(let [req-id# (precept.util/guid)]
+              (precept.util/insert! [[req-id# ::factgen/request :entities]
+                                     [req-id# :entities/order ~var-binding]])
+              (doseq [eid# ~var-binding]
+                (precept.util/insert! [req-id# :entities/eid eid#])))}
+     {:name nom
+      :lhs (seq lhs-mod)
+      :rhs rhs}]))
+
+(foob
+  (generate-rules
+    (dsl/entities ?eids)
+    '([?eids <- (acc/all :e) :from [:interesting-fact]]
+      [[(<- ?interesting-facts (dsl/entities ?eids))]])
+    1
+    {:name 'hi}
+    '(do nil)))
+
+
+
+
+
 (defn rewrite-lhs
   "Returns Clara DSL for rule LHS"
   [exprs]
-  (map rewrite-expr exprs))
+  (let [generative (first (filter contains-rule-generator? exprs))]
+    (if generative
+      (generate-rules generative exprs (.indexOf exprs generative))
+      (map-indexed (fn [idx expr] (rewrite-expr expr exprs idx))
+                   exprs))))
 
 (defmacro def-tuple-rule
   "CLJS version of def-tuple-rule"
@@ -207,7 +255,7 @@
         body        (if doc (rest body) body)
         properties  (if (map? (first body)) (first body) nil)
         definition  (if properties (rest body) body)
-        {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
+        {:keys [lhs rhs]} (cr-dsl/split-lhs-rhs definition)
         rw-lhs      (rewrite-lhs lhs)
         passthrough (filter some? (list doc properties))
         unwrite-rhs (rest rhs)]
@@ -243,7 +291,7 @@
         properties  (if (map? (first body)) (first body) nil)
         definition  (if properties (rest body) body)
         passthrough (filter some? (list doc (merge {:group :report} properties)))
-        {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
+        {:keys [lhs rhs]} (cr-dsl/split-lhs-rhs definition)
         sub-match `[::sub/request (~'= ~'?e___sub___impl ~'(:e this)) (~'= ~kw ~'(:v this))]
         map-only? (map? (first (rest rhs)))
         sub-map (if map-only? (first (rest rhs)) (last (last rhs)))

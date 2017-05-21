@@ -47,11 +47,11 @@
 
 (def-tuple-rule my-rule
   [?eids <- (acc/all :e) :from [:interesting-fact]] ;; Maybe new special form `(eids [:interesting-fact])`
-  ;[(<- ?interesting-entities (entities ?eids))]
+  [(<- ?interesting-entities (entities ?eids))]
   =>
   ;; Prints list of Tuples
-  ;(println "Found entities with interesting fact" ?interesting-entities)
-  (println "Found entities with interesting fact" ?eids))
+  (println "Found entities with interesting fact" ?interesting-entities))
+  ;(println "Found entities with interesting fact" ?eids))
 
 ;; We generate:
 

@@ -6,6 +6,7 @@
               [clara.rules.accumulators :as acc]
               [clojure.test :refer [deftest run-tests testing is]]
               [precept.schema :as schema]
+              [precept.schema-fixture :refer [test-schema]]
               [precept.dsl :refer [<- entity]])
     (:import [precept.util Tuple]))
 

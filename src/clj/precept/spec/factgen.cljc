@@ -1,6 +1,5 @@
 (ns precept.spec.factgen
-  (:require [clojure.spec :as s]
-            [precept.spec.lang :as lang]))
+  (:require [clojure.spec :as s]))
 
 
 (s/def ::generators #{'entities})

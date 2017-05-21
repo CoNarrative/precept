@@ -1,5 +1,6 @@
 (ns precept.spec.lang
-  (:require [clojure.spec :as s]))
+  (:require [clojure.spec :as s]
+            [precept.spec.factgen :as factgen]))
 
 (s/def ::variable-binding
   (s/and some? symbol?
@@ -39,6 +40,9 @@
         #(s/valid? ::variable-binding (second (flatten %)))
         #(s/valid? ::special-forms (nth (flatten %) 2))))
 
+(s/def ::contains-rule-generator
+  (s/and ::special-form
+         #(s/valid? ::factgen/generators (nth (flatten %) 2))))
 
 (s/def ::tuple-2
   (s/tuple
