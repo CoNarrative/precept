@@ -223,41 +223,23 @@
         gen-conds (list [['?id ::factgen/request-params var-binding]]
                         [['?id ::factgen/for-macro :entities]]
                         [['?id ::factgen/response fact-binding]])
-        rw-lhs (map rewrite-expr (replace-at-index idx gen-conds lhs))
-        _ (println "Conditions" rw-lhs)]
+        rw-lhs (map rewrite-expr (replace-at-index idx gen-conds lhs))]
+        ;_ (println "Conditions" rw-lhs)]
     [{:name (symbol (str nom (-> ast :gen :name-suffix)))
       :lhs (list (parse-with-accumulator matching-expr))
-      :rhs `(let [req-id# (precept.util/guid)]
-              (println "Gen rule inserting facts!" req-id# ~var-binding)
-              (precept.util/insert-unconditional!
-                [[req-id# ::factgen/for-macro :entities]
-                 [req-id# ::factgen/request-params ~var-binding]
-                 [req-id# :entities/order ~var-binding]])
-              (doseq [eid# ~var-binding]
-                (println "Inserting eid fact!" eid#)
-                (precept.util/insert-unconditional! [req-id# :entities/eid eid#])))}
+      :rhs (list
+             `(let [req-id# (precept.util/guid)]
+              ;(println "Gen rule inserting facts!" req-id# ~var-binding)
+                (precept.util/insert-unconditional!
+                  [[req-id# ::factgen/for-macro :entities]
+                   [req-id# ::factgen/request-params ~var-binding]
+                   [req-id# :entities/order ~var-binding]])
+                (doseq [eid# ~var-binding]
+                  ;(println "Inserting eid fact!" eid#)
+                  (precept.util/insert-unconditional! [req-id# :entities/eid eid#]))))}
      {:name nom
       :lhs rw-lhs
-      :rhs rhs}]))
-
-(def lhs '([0]
-           [?eids <- (acc/all :e) :from [:interesting-fact]]
-           [(<- ?interesting-facts (entities ?eids))]
-           [1] [2]))
-;(let [[as bs] (split-at 2 lhs)
-;      _ (println "As Bs" as bs)
-;      added [[:x] [:y] [:z]]]
-;  (concat (concat as added) (rest bs)))
-(defmacro foob [x] x)
-;(foob
-;  (generate-rules
-;    '(entities ?eids)
-;    1
-;    '([?eids <- (acc/all :e) :from [:interesting-fact]]
-;      [(<- ?interesting-facts (entities ?eids))]
-;    '(do nil)
-;    {:name 'hi})
-
+      :rhs (rest rhs)}]))
 
 (defn find-gen-in-lhs [lhs]
   (first
@@ -269,7 +251,6 @@
                [idx (last form)]
                []))))
       (filter seq))))
-
 
 (defn rewrite-lhs
   "Returns Clara DSL for rule LHS"
@@ -288,11 +269,28 @@
         properties  (if (map? (first body)) (first body) nil)
         definition  (if properties (rest body) body)
         {:keys [lhs rhs]} (cr-dsl/split-lhs-rhs definition)
-        rw-lhs      (rewrite-lhs lhs)
+        rw-lhs      (rewrite-lhs lhs rhs {:props properties :name name})
         passthrough (filter some? (list doc properties))
         unwrite-rhs (rest rhs)]
     (core/register-rule "rule" lhs rhs)
-    `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@unwrite-rhs)))
+    (if (not (map? (first rw-lhs)))
+      `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@unwrite-rhs)
+      `(do
+         ~@(for [{:keys [name lhs rhs]} rw-lhs]
+            `(cm/defrule ~name ~@passthrough ~@lhs ~'=> ~@rhs))))))
+
+
+;(macroexpand
+;  '(def-tuple-rule create-list-of-visible-todos
+;    {:group :report}
+;    [?eids <- (by-fact-id :e) :from [:todo/visible]]
+;    [(<- ?visible-todos (entities ?eids))]
+;    =>
+;    (trace "List!" ?visible-todos)))
+
+
+
+
 
 (defmacro def-tuple-query
   "CLJS version of def-tuple-query"

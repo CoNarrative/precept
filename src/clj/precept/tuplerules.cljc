@@ -78,12 +78,6 @@
              body (into options (concat sources impl-sources))]
          `(def ~name (com/mk-session `~[~@body]))))))
 
-(defn mk-rule [name doc lhs rhs properties form-env ns]
-  `(def ~(vary-meta name assoc :rule true :doc doc)
-     (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta form-env))
-       ~name (assoc :name ~(str (clojure.core/name (ns-name ns)
-                                  "/" (clojure.core/name name))))
-       ~doc (assoc :doc ~doc))))
 #?(:clj
    (defmacro def-tuple-rule
      [name & body]
@@ -109,7 +103,6 @@
            (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).")
                     {})))
          (core/register-rule "rule" lhs rhs)
-         (println lhs-detuplified)
          (if (not (map? (first lhs-detuplified)))
            `(def ~(vary-meta name assoc :rule true :doc doc)
               (cond-> ~(dsl/parse-rule* lhs-detuplified rhs properties {} (meta &form))

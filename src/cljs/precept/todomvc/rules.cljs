@@ -1,5 +1,5 @@
 (ns precept.todomvc.rules
-  (:require-macros [precept.dsl :refer [<- entity]])
+  (:require-macros [precept.dsl :refer [<- entity entities]])
   (:require [clara.rules.accumulators :as acc]
             [clara.rules :as cr]
             [precept.spec.sub :as sub]
@@ -130,90 +130,14 @@
                     (trace "[mk-list] returning " (list-f (remove #(= (fact-f cur) %) acc)))
                     (list-f (remove #(= (fact-f cur) %) acc)))})))
 
-;; TODO. Would like to condense since all this does it create/maintain a list
-(def-tuple-rule create-list-of-visible-todos
-  {:group :report}
-  [?eids <- (by-fact-id :e) :from [:todo/visible]]
-  [:test (seq ?eids)]
-  =>
-  (trace "List!" ?eids)
-  (insert! [(guid) :todos/by-last-modified*order ?eids])
-  (doseq [x ?eids]
-    (insert! [(guid) :todos/by-last-modified*eid x])))
-
-(def-tuple-rule update-list-of-visible-todos
-  {:group :report}
-  [[_ :todos/by-last-modified*eid ?e]]
-  [(<- ?entity (entity ?e))]
-  =>
-  (trace "Entity list!" ?entity)
-  (insert! [(guid) :todos/by-last-modified*item ?entity]))
-;; Determining required rule structure, whether we need multiple or can expand inline per normal
-;; ...looks like we need to support rules that generate rules
-
-;;; Impl:
-;
-;;; `entities` should expand to:
-;(rule impl-a
-;  [[?req ::gen-fact/request :entities]]
-;  [[?req :entities/eid ?e]]
-;  [[(<- ?entity (entity ?e))]]
-; =>
-; (insert! [?req :entities/entity ?e]))
-;
-;(rule impl-b
-;  [[?req :entities/order ?order]]
-;  [?ents <- (acc/all :v) :from [?req :entities/entity]]
-; =>
-; (insert! [?req :entities/list ?e]))
-;
-;;; Usage:
-;(rule my-rule
-;  [?eids <- (acc/all :e) :from [:interesting-fact]]
-;  [(<- ?interesting-entities (entities ?eids))]
-;  =>
-;  ;; Prints list of Tuples
-;  (println "Found entities with interesting fact" ?interesting-entities))
-;
-;;; Should expand to:
-;(rule my-rule___split-0
-;  [?eids <- (acc/all :e) :from [:interesting-fact]
-;   =>
-;   (let [req-id (guid)]
-;     (insert! [req-id ::gen-fact/request :entities])
-;     (doseq [eid ?eids] (insert! [req-id :entities/eid ?eid])))])
-;
-;(rule my-rule
-;  ;; ...rest LHS
-;   [[req-id ::gen-fact/response ?interesting-entities]]
-;   =>
-;   ;; ...rest RHS
-;   (println "Found entities with interesting fact" ?interesting-entities))
-;
-
-
-[?eids <- (list-of :e #(sort-by :t %)) :from [:todo/visible]]
-[?eids <- (by-fact-id :e) :from [:todo/visible]]
-[[_ :todos/by-last-modified*eid ?e]]
-[(<- ?entity (entity ?e))]
-
-
-'[(mk-list :todos/by-last-modified (by-fact-id :e) :from [:todo/visible])]
-'[(<- ?ordered-visible-todos (entities (by-fact-id :e) :from [:todo/visible]))]
-'[(<- ?ordered-visible-todos (order :asc (entities [:todo/visible])))]
-
 ;; Subscription handlers
 (defsub :task-list
-  [[_ :todos/by-last-modified*order ?eids]]
-  [?items <- (acc/all :v) :from [:todos/by-last-modified*item]]
+  [?eids <- (by-fact-id :e) :from [:todo/visible]]
+  [(<- ?visible-todos (entities ?eids))]
   [[_ :active-count ?active-count]]
-  [:test (seq ?eids)]
   =>
-  (let [items (group-by :e (flatten ?items))
-        ordered (vals (select-keys items (into [] ?eids)))
-        entities (util/entity-Tuples->entity-maps ordered)]
-    (trace "Entities" entities)
-    {:visible-todos entities
+  (let [_ (println "Visible todos" ?visible-todos)]
+    {:visible-todos ?visible-todos
      :all-complete? (= 0 ?active-count)}))
 
 (defsub :task-entry

@@ -15,8 +15,7 @@
   (cr/retract! ?fact))
 
 (cr/defrule entities___impl-a
-  ;{:group :calc :salience 100}
-  [::factgen/for-macro (= ?req (:e this)) #_(= :entities (:v this))]
+  [::factgen/for-macro (= ?req (:e this)) (= :entities (:v this))]
   [:entities/eid (= ?req (:e this)) (= ?e (:v this))]
   [?entity <- (acc/all) :from [:all (= ?e (:e this))]]
   =>
