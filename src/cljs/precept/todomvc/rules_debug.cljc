@@ -8,7 +8,7 @@
             [precept.schema :as schema]
             [precept.todomvc.schema :refer [app-schema]]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
-            #?(:clj [precept.dsl :refer [<- entity]])
+            #?(:clj [precept.dsl :refer [<- entity entities]])
             #?(:clj [precept.tuplerules :refer [def-tuple-session
                                                 def-tuple-rule
                                                 deflogical
@@ -56,47 +56,51 @@
 ;; We generate:
 
 ;; A rule that contains the accumulator expression with the binding provided in `(entities)`
-(def-tuple-rule my-rule___split-0
-  [?eids <- (acc/all :e) :from [:interesting-fact]]
-  =>
-  (let [req-id (guid)
-        gen-fact-req [req-id ::factgen/request :entities]]
-    ;_ (swap! state/generated-facts assoc req-id {:req gen-fact-req :rule-name ???})
-    (insert! gen-fact-req)
-    (insert! [req-id :entities/order ?eids])
-    (doseq [eid ?eids]
-      (insert! [req-id :entities/eid eid]))))
+;(def-tuple-rule my-rule___split-0
+;  [?eids <- (acc/all :e) :from [:interesting-fact]]
+;  =>
+;  (let [req-id (guid)
+;        gen-fact-req [req-id ::factgen/request :entities]]
+;    ;_ (swap! state/generated-facts assoc req-id {:req gen-fact-req :rule-name ???})
+;    (insert! gen-fact-req)
+;    (insert! [req-id :entities/order ?eids])
+;    (doseq [eid ?eids]
+;      (insert! [req-id :entities/eid eid]))))
 
 ;: ...and the original, rewritten to match on the ::gen-fact/response, keeping the same name
-(def-tuple-rule my-rule
-  ;; ...rest LHS
-  ;; Want to remove acc expr (it exists in a genned rule),
-  ;; but then no access to its bound variable inside this rule...
-  [?eids <- (acc/all :e) :from [:interesting-fact]]
-  ;; Replaces `entities` on same "line" as original
-  [[_ ::factgen/response ?interesting-entities]]
-  =>
-  (println "Found genned response" ?interesting-entities))
+;(def-tuple-rule my-rule
+;  ;; ...rest LHS
+;  ;; Want to remove acc expr (it exists in a genned rule),
+;  ;; but then no access to its bound variable inside this rule...
+;  [?eids <- (acc/all :e) :from [:interesting-fact]]
+;  ;; Replaces `entities` on same "line" as original
+;;;;;;;;;;;;;;;;;;;; Edit ;;;;;;;;;;;;;;;;;
+;  [[?id ::factgen/request ?eids]]
+;  [[?id ::factgen/response ?interesting-entities]]
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  [[_ ::factgen/response ?interesting-entities]]
+;  =>
+;  (println "Found genned response" ?interesting-entities))
    ;; ...original RHS
 
 ;; precept.rules.impl:
 
 ;; These are "always on", waiting for an :entity request
 
-(def-tuple-rule entities___impl-a
-  [[?req ::factgen/request :entities]]
-  [[?req :entities/eid ?e]]
-  [(<- ?entity (entity ?e))]
-  =>
-  (insert! [?req :entities/entity ?entity]))
-
-(def-tuple-rule entities___impl-b
-  [[?req :entities/order ?eids]]
-  [?ents <- (acc/all :v) :from [?req :entities/entity]]
-  =>
-  (let [items (group-by :e (flatten ?ents))
-        ordered (vals (select-keys items (into [] ?eids)))]
-     (insert! [?req ::factgen/response ordered])))
+;(def-tuple-rule entities___impl-a
+;  [[?req ::factgen/request :entities]]
+;  [[?req :entities/eid ?e]]
+;  [(<- ?entity (entity ?e))]
+;  =>
+;  (insert! [?req :entities/entity ?entity]))
+;
+;(def-tuple-rule entities___impl-b
+;  [[?req :entities/order ?eids]]
+;  [?ents <- (acc/all :v) :from [?req :entities/entity]]
+;  =>
+;  (let [items (group-by :e (flatten ?ents))
+;        ordered (vals (select-keys items (into [] ?eids)))]
+;     (insert! [?req ::factgen/response ordered])))
 
 (def-tuple-session app-session
    'precept.todomvc.rules-debug

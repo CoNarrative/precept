@@ -14,7 +14,7 @@
                                       value-expr?
                                       parse-as-tuple
                                       parse-with-fact-expression
-                                      rewrite-lhs]]))
+                                      rewrite-lhs] :as macros]))
 
 (deftest tuple-bindings-test
   (let [e1    '[?e :ns/foo 42]
@@ -313,18 +313,27 @@
   ;               :visible-todos ?visible-todos}]))))))
 
 (deftest special-form-test
-  (is (= (macroexpand
-           '(def-tuple-rule my-rule
-              [[?e :some-attr]]
-              [(<- ?the-ent (entity ?e))]
-              =>
-              (insert! "RHS")))
-        (macroexpand
-          '(defrule my-rule
-             [:some-attr (= ?e (:e this))]
-             [?the-ent <- (clara.rules.accumulators/all) :from [:all (= ?e (:e this))]]
-             =>
-             (insert! "RHS"))))))
+  (testing "entity"
+    (is (= (macroexpand
+             '(def-tuple-rule my-rule
+                [[?e :some-attr]]
+                [(<- ?the-ent (entity ?e))]
+                =>
+                (insert! "RHS")))
+          (macroexpand
+            '(defrule my-rule
+               [:some-attr (= ?e (:e this))]
+               [?the-ent <- (clara.rules.accumulators/all) :from [:all (= ?e (:e this))]]
+               =>
+               (insert! "RHS"))))))
+  (testing "entities"
+    (is (= (macroexpand
+             '(def-tuple-rule my-rule
+                [?eids <- (acc/all :e) :from [:interesting-fact]]
+                [(<- ?interesting-facts (entities ?eids))]
+                =>
+                (do nil)))
+          true))))
 
 (run-tests)
 

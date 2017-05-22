@@ -17,9 +17,17 @@
   `(into ['~fact-binding '~'<-] ~form))
 
 (defmacro mk-rules [rules]
-  `(do ~@(for [rule rules]
-           `(def ~(:name rule) ~(:body rule)))))
+  (let [rs [{:name 'foo :body "fooob"}
+            {:name 'bar :body "baz"}]
+        _ (println "rs" rs)]
+    `(do
+       ~@(for [{:keys [name body]} rs]
+           `(def ~name
+              (cond-> ~(first rs)))))))
 
 (mk-rules [{:name foo :body "fooob"}
            {:name bar :body "baz"}])
+
+bar
+
 

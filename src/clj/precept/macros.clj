@@ -34,7 +34,8 @@
     `(cm/defsession ~name ~@body)))
 
 
-(def special-forms #{'<- 'entity})
+;;TODO. Duplicates what we have in spec
+(def special-forms #{'<- 'entity 'entities})
 
 (defn add-ns-if-special-form [x]
   (let [special-form? (special-forms x)]
@@ -55,10 +56,6 @@
 (defn special-form? [x]
   (trace "Found special form " x)
   (s/valid? ::lang/special-form x))
-
-(defn contains-rule-generator? [x]
-  (trace "Found rule generator " x)
-  (s/valid? ::lang/contains-rule-generator x))
 
 (defn sexpr? [x]
   (s/valid? ::lang/s-expr x))
@@ -180,7 +177,7 @@
 
 (defn rewrite-expr
   "Returns Clara DSL for single expression"
-  [expr exprs idx]
+  [expr]
   (let [leftmost        (first expr)
         op              (keyword? (cr-dsl/ops leftmost))
         fact-expression (and (not (keyword? leftmost))
@@ -195,7 +192,7 @@
         cljs-namespace (clara.rules.compiler/cljs-ns)]
     (cond
       is-test-expr expr
-      special-form (rewrite-expr (eval (map add-ns-if-special-form leftmost)) exprs idx)
+      special-form (rewrite-expr (eval (map add-ns-if-special-form leftmost)))
       binding-to-type-only (fact-binding-with-type-only expr)
       op (parse-with-op expr)
       has-accumulator (parse-with-accumulator expr)
@@ -203,20 +200,23 @@
       :else (parse-as-tuple expr))))
 
 
-(defmacro foob [x] x)
 ;; TODO. pass in name, salience so we can generate rules with salience relative
 ;; to subject and access name here. Also RHS....basically everything
-(defn generate-rules [expr exprs idx props rhs]
-  (let [var-binding (:join (:gen expr))
+(defn generate-rules [expr idx lhs rhs props]
+  (let [ast (eval (add-ns-if-special-form expr))
+        var-binding (:join (:gen ast))
+        fact-binding nil
         nom (:name props)
         ;; This assumes the binding we're looking for exists in accumulator syntax
         matching-expr (first (filter #(and (has-accumulator? (drop 2 %))
                                         (= var-binding (first %))
-                                        (> idx (.indexOf exprs %)))
-                               exprs))
-        lhs-mod (assoc (vec exprs) idx (parse-as-tuple`[[~'_ ::factgen/response ~var-binding]]))]
-    [{:name (symbol (str nom (-> expr :gen :name-suffix)))
-      :lhs (parse-with-accumulator matching-expr)
+                                        (> idx (.indexOf lhs %)))
+                               lhs))
+        lhs-mod (assoc (vec lhs) idx
+                                 (parse-as-tuple
+                                   `[~fact-binding ~'<- [~'_ ::factgen/response] ~var-binding]))]
+    [{:name (symbol (str nom (-> ast :gen :name-suffix)))
+      :lhs (list (parse-with-accumulator matching-expr))
       :rhs `(let [req-id# (precept.util/guid)]
               (precept.util/insert! [[req-id# ::factgen/request :entities]
                                      [req-id# :entities/order ~var-binding]])
@@ -226,14 +226,40 @@
       :lhs (seq lhs-mod)
       :rhs rhs}]))
 
-(foob
-  (generate-rules
-    (dsl/entities ?eids)
-    '([?eids <- (acc/all :e) :from [:interesting-fact]]
-      [[(<- ?interesting-facts (dsl/entities ?eids))]])
-    1
-    {:name 'hi}
-    '(do nil)))
+(defmacro foob [x] x)
+;(foob
+;  (generate-rules
+;    (dsl/entities ?eids)
+;    1
+;    '([?eids <- (acc/all :e) :from [:interesting-fact]]
+;      [(<- ?interesting-facts (entities ?eids))]
+;    '(do nil)
+;    {:name 'hi})
+
+(def lhs '([?eids <- (acc/all :e) :from [:interesting-fact]]
+           [(<- ?interesting-facts (entities ?eids))]))
+
+(defn matching-expr [lhs var-binding idx]
+  (first (filter #(and (has-accumulator? (drop 2 %))
+                    (= var-binding (first %))
+                    (> idx (.indexOf lhs %)))
+           lhs)))
+(matching-expr lhs '?eids 1)
+
+(defn find-gen-in-lhs [lhs]
+  (first
+    (->> lhs
+      (map-indexed
+         (fn [idx expr]
+           (let [form (s/conform ::lang/special-form (first expr))]
+             (if (s/valid? ::lang/contains-rule-generator form)
+               [idx (last form)]
+               []))))
+      (filter seq))))
+
+;(find-gen-in-lhs lhs)
+
+
 
 
 
@@ -241,12 +267,12 @@
 
 (defn rewrite-lhs
   "Returns Clara DSL for rule LHS"
-  [exprs]
-  (let [generative (first (filter contains-rule-generator? exprs))]
-    (if generative
-      (generate-rules generative exprs (.indexOf exprs generative))
-      (map-indexed (fn [idx expr] (rewrite-expr expr exprs idx))
-                   exprs))))
+  ([lhs] (map rewrite-expr lhs))
+  ([lhs rhs props]
+   (let [[idx generative-expr] (find-gen-in-lhs lhs)]
+     (if generative-expr
+       (generate-rules generative-expr idx lhs rhs props)
+       (map rewrite-expr lhs)))))
 
 (defmacro def-tuple-rule
   "CLJS version of def-tuple-rule"
