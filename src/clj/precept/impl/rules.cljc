@@ -4,6 +4,8 @@
             [precept.util :as util]
             [precept.spec.factgen :as factgen]))
 
+;;TODO. Figure out if we can avoid a circular dependency with tuplerules so we can use
+;; positional rules syntax
 
 (cr/defrule clean-transients___impl
   {:group :cleanup}

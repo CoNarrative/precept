@@ -60,9 +60,11 @@
 ;  [?eids <- (acc/all :e) :from [:interesting-fact]]
 ;  =>
 ;  (let [req-id (guid)
-;        gen-fact-req [req-id ::factgen/request :entities]]
+;        gen-fact-req [[req-id ::factgen/for-macro 'entities]
+;                      [req-id ::factgen/request-params ?eids]]
 ;    ;_ (swap! state/generated-facts assoc req-id {:req gen-fact-req :rule-name ???})
 ;    (insert! gen-fact-req)
+;; TODO. Use namespaced keywords so we only match on impl-level attrs
 ;    (insert! [req-id :entities/order ?eids])
 ;    (doseq [eid ?eids]
 ;      (insert! [req-id :entities/eid eid]))))
@@ -75,7 +77,8 @@
 ;  [?eids <- (acc/all :e) :from [:interesting-fact]]
 ;  ;; Replaces `entities` on same "line" as original
 ;;;;;;;;;;;;;;;;;;;; Edit ;;;;;;;;;;;;;;;;;
-;  [[?id ::factgen/request ?eids]]
+;  [[?id ::factgen/request-params ?eids]]
+;  [[?id ::factgen/for-macro 'entities]]
 ;  [[?id ::factgen/response ?interesting-entities]]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  [[_ ::factgen/response ?interesting-entities]]
@@ -88,11 +91,11 @@
 ;; These are "always on", waiting for an :entity request
 
 ;(def-tuple-rule entities___impl-a
-;  [[?req ::factgen/request :entities]]
-;  [[?req :entities/eid ?e]]
+;  [[?req-id ::factgen/for-macro 'entities]]
+;  [[?req-id :entities/eid ?e]]
 ;  [(<- ?entity (entity ?e))]
 ;  =>
-;  (insert! [?req :entities/entity ?entity]))
+;  (insert! [?req-id :entities/entity ?entity]))
 ;
 ;(def-tuple-rule entities___impl-b
 ;  [[?req :entities/order ?eids]]

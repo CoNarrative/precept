@@ -200,51 +200,61 @@
       :else (parse-as-tuple expr))))
 
 
-;; TODO. pass in name, salience so we can generate rules with salience relative
-;; to subject and access name here. Also RHS....basically everything
-(defn generate-rules [expr idx lhs rhs props]
+(defn replace-at-index
+  "Removes item at idx of coll and adds new list members (xs) starting at idx"
+  [idx xs coll]
+  (let [[as bs] (split-at idx coll)]
+    (concat (concat as xs) (rest bs))))
+
+;; TODO. Generate rules with salience relative to subject
+(defn generate-rules
+  [expr idx lhs rhs props]
   (let [ast (eval (add-ns-if-special-form expr))
         var-binding (:join (:gen ast))
-        fact-binding nil
+        fact-binding (second (first (nth lhs idx)))
+        _ (println "Fact binding" fact-binding)
         nom (:name props)
         ;; This assumes the binding we're looking for exists in accumulator syntax
         matching-expr (first (filter #(and (has-accumulator? (drop 2 %))
                                         (= var-binding (first %))
                                         (> idx (.indexOf lhs %)))
                                lhs))
-        lhs-mod (assoc (vec lhs) idx
-                                 (parse-as-tuple
-                                   `[~fact-binding ~'<- [~'_ ::factgen/response] ~var-binding]))]
+        lhs-mod (assoc (vec lhs) idx (parse-as-tuple `[[~'_ ::factgen/response ~var-binding]]))
+        conditions (list [['?id ::factgen/request-params var-binding]]
+                         [['?id ::factgen/for-macro :entities]]
+                         [['?id ::factgen/response fact-binding]])
+        cr-conditions (map parse-as-tuple conditions)
+        _ (println "Conditions" cr-conditions)]
     [{:name (symbol (str nom (-> ast :gen :name-suffix)))
       :lhs (list (parse-with-accumulator matching-expr))
       :rhs `(let [req-id# (precept.util/guid)]
-              (precept.util/insert! [[req-id# ::factgen/request :entities]
+              (precept.util/insert! [[req-id# ::factgen/for-macro :entities]
+                                     [req-id# ::factgen/request-params ~var-binding]
                                      [req-id# :entities/order ~var-binding]])
               (doseq [eid# ~var-binding]
                 (precept.util/insert! [req-id# :entities/eid eid#])))}
      {:name nom
-      :lhs (seq lhs-mod)
+      :lhs cr-conditions
       :rhs rhs}]))
 
+(def lhs '([0]
+           [?eids <- (acc/all :e) :from [:interesting-fact]]
+           [(<- ?interesting-facts (entities ?eids))]
+           [1] [2]))
+;(let [[as bs] (split-at 2 lhs)
+;      _ (println "As Bs" as bs)
+;      added [[:x] [:y] [:z]]]
+;  (concat (concat as added) (rest bs)))
 (defmacro foob [x] x)
 ;(foob
 ;  (generate-rules
-;    (dsl/entities ?eids)
+;    '(entities ?eids)
 ;    1
 ;    '([?eids <- (acc/all :e) :from [:interesting-fact]]
 ;      [(<- ?interesting-facts (entities ?eids))]
 ;    '(do nil)
 ;    {:name 'hi})
 
-(def lhs '([?eids <- (acc/all :e) :from [:interesting-fact]]
-           [(<- ?interesting-facts (entities ?eids))]))
-
-(defn matching-expr [lhs var-binding idx]
-  (first (filter #(and (has-accumulator? (drop 2 %))
-                    (= var-binding (first %))
-                    (> idx (.indexOf lhs %)))
-           lhs)))
-(matching-expr lhs '?eids 1)
 
 (defn find-gen-in-lhs [lhs]
   (first
@@ -256,13 +266,6 @@
                [idx (last form)]
                []))))
       (filter seq))))
-
-;(find-gen-in-lhs lhs)
-
-
-
-
-
 
 
 (defn rewrite-lhs
