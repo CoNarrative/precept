@@ -212,7 +212,6 @@
   (let [ast (eval (add-ns-if-special-form expr))
         var-binding (:join (:gen ast))
         fact-binding (second (first (nth lhs idx)))
-        _ (println "Fact binding" fact-binding)
         nom (:name props)
         ;; This assumes the binding we're looking for exists in accumulator syntax
         matching-expr (first (filter #(and (has-accumulator? (drop 2 %))

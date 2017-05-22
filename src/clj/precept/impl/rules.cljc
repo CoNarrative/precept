@@ -11,21 +11,21 @@
   {:group :cleanup}
   [?fact <- :all (= :transient (:e this))]
   =>
-  (println "Retracting transient!")
+  (println "Retracting transient!?")
   (cr/retract! ?fact))
 
 (cr/defrule entities___impl-a
-  {:group :calc :salience 100}
-  [::factgen/for-macro (= ?req (:e this)) (= :entities (:v this))]
-  ;[:entities/eid (= ?req (:e this) (= ?e (:v this)))]
-  ;[?entity <- (acc/all) :from [:all (= ?e (:e this))]]
+  ;{:group :calc :salience 100}
+  [::factgen/for-macro (= ?req (:e this)) #_(= :entities (:v this))]
+  [:entities/eid (= ?req (:e this)) (= ?e (:v this))]
+  [?entity <- (acc/all) :from [:all (= ?e (:e this))]]
   =>
-  (println "inserting entity entry"))
- ;(util/insert! [?req :entities/entity ?entity]))
+  (println "--------------------inserting entity entry")
+ (util/insert! [?req :entities/entity ?entity]))
 
 (cr/defrule entities___impl-b
   {:group :calc}
-  [:entities/order (= ?req (:e this) (= ?eids (:v this)))]
+  [:entities/order (= ?req (:e this)) (= ?eids (:v this))]
   [?ents <- (acc/all :v) :from [:entities/entity (= ?req (:e this))]]
   =>
   (let [items (group-by :e (flatten ?ents))
