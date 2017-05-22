@@ -220,21 +220,23 @@
                                         (> idx (.indexOf lhs %)))
                                lhs))
         lhs-mod (assoc (vec lhs) idx (parse-as-tuple `[[~'_ ::factgen/response ~var-binding]]))
-        conditions (list [['?id ::factgen/request-params var-binding]]
-                         [['?id ::factgen/for-macro :entities]]
-                         [['?id ::factgen/response fact-binding]])
-        cr-conditions (map parse-as-tuple conditions)
-        _ (println "Conditions" cr-conditions)]
+        ;;TODO. Gensym for ?id
+        gen-conds (list [['?id ::factgen/request-params var-binding]]
+                        [['?id ::factgen/for-macro :entities]]
+                        [['?id ::factgen/response fact-binding]])
+        rw-lhs (map rewrite-expr (replace-at-index idx gen-conds lhs))
+        _ (println "Conditions" rw-lhs)]
     [{:name (symbol (str nom (-> ast :gen :name-suffix)))
       :lhs (list (parse-with-accumulator matching-expr))
       :rhs `(let [req-id# (precept.util/guid)]
+              (println "Gen rule inserting facts!" req-id#)
               (precept.util/insert! [[req-id# ::factgen/for-macro :entities]
                                      [req-id# ::factgen/request-params ~var-binding]
                                      [req-id# :entities/order ~var-binding]])
               (doseq [eid# ~var-binding]
                 (precept.util/insert! [req-id# :entities/eid eid#])))}
      {:name nom
-      :lhs cr-conditions
+      :lhs rw-lhs
       :rhs rhs}]))
 
 (def lhs '([0]

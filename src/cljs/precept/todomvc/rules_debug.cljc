@@ -27,7 +27,8 @@
   {:group :report}
   [?facts <- (acc/all) :from [:all]]
   =>
-  (println "FACTs at the end!" ?facts))
+  (do nil))
+  ;(println "FACTs at the end!" ?facts))
 
 (def-tuple-rule print-entity
   [[?e :todo/title]]
@@ -91,7 +92,7 @@
 ;; These are "always on", waiting for an :entity request
 
 ;(def-tuple-rule entities___impl-a
-;  [[?req-id ::factgen/for-macro 'entities]]
+;  [[?req-id ::factgen/for-macro :entities]]
 ;  [[?req-id :entities/eid ?e]]
 ;  [(<- ?entity (entity ?e))]
 ;  =>

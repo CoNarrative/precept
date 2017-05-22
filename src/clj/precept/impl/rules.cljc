@@ -15,11 +15,12 @@
   (cr/retract! ?fact))
 
 (cr/defrule entities___impl-a
-  [::factgen/request (= ?req (:e this) (= :entities (:a this)))]
-  [:entities/eid (= ?req (:e this) (= ?e (:v this)))]
-  [?entity <- (acc/all) :from [:all (= ?e (:e this))]]
+  [::factgen/for-macro (= ?req (:e this) (= :entities (:a this)))]
+  ;[:entities/eid (= ?req (:e this) (= ?e (:v this)))]
+  ;[?entity <- (acc/all) :from [:all (= ?e (:e this))]]
   =>
- (util/insert! [?req :entities/entity ?entity]))
+  (println "inserting entity entry"))
+ ;(util/insert! [?req :entities/entity ?entity]))
 
 (cr/defrule entities___impl-b
   [:entities/order (= ?req (:e this) (= ?eids (:v this)))]
