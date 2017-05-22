@@ -51,7 +51,11 @@
 
    (attribute ::sub/response
      :db.type/any
-     :db/unique :db.unique/identity)])
+     :db/unique :db.unique/identity)
+
+   (attribute :entities/eid
+     :db.type/any
+     :db/cardinality :db.cardinality/many)])
 
 (defn schema->hierarchy
   "Creates a hierarchy from a Datomic schmea by cardinality and uniqueness. Used by

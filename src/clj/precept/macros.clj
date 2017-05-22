@@ -229,12 +229,14 @@
     [{:name (symbol (str nom (-> ast :gen :name-suffix)))
       :lhs (list (parse-with-accumulator matching-expr))
       :rhs `(let [req-id# (precept.util/guid)]
-              (println "Gen rule inserting facts!" req-id#)
-              (precept.util/insert! [[req-id# ::factgen/for-macro :entities]
-                                     [req-id# ::factgen/request-params ~var-binding]
-                                     [req-id# :entities/order ~var-binding]])
+              (println "Gen rule inserting facts!" req-id# ~var-binding)
+              (precept.util/insert-unconditional!
+                [[req-id# ::factgen/for-macro :entities]
+                 [req-id# ::factgen/request-params ~var-binding]
+                 [req-id# :entities/order ~var-binding]])
               (doseq [eid# ~var-binding]
-                (precept.util/insert! [req-id# :entities/eid eid#])))}
+                (println "Inserting eid fact!" eid#)
+                (precept.util/insert-unconditional! [req-id# :entities/eid eid#])))}
      {:name nom
       :lhs rw-lhs
       :rhs rhs}]))

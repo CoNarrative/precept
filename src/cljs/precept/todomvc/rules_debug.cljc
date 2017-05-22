@@ -1,22 +1,25 @@
 (ns precept.todomvc.rules-debug
     #?(:cljs (:require-macros [precept.dsl :refer [<- entity]]))
-  (:require [clara.rules.accumulators :as acc]
-            [clara.rules :as cr]
-            [precept.spec.sub :as sub]
-            [precept.spec.factgen :as factgen]
-            [precept.listeners :as l]
-            [precept.schema :as schema]
-            [precept.todomvc.schema :refer [app-schema]]
-            [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
-            #?(:clj [precept.dsl :refer [<- entity entities]])
-            #?(:clj [precept.tuplerules :refer [def-tuple-session
-                                                def-tuple-rule
-                                                deflogical
-                                                defsub]])
-            #?(:cljs [precept.tuplerules :refer-macros [deflogical
-                                                        defsub
-                                                        def-tuple-session
-                                                        def-tuple-rule]])))
+    (:require [clara.rules.accumulators :as acc]
+              [clara.rules :as cr]
+              [precept.spec.sub :as sub]
+              [precept.spec.factgen :as factgen]
+              [precept.listeners :as l]
+              [precept.schema :as schema]
+              [precept.todomvc.schema :refer [app-schema]]
+              [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
+      #?(:clj
+              [precept.dsl :refer [<- entity entities]])
+      #?(:clj
+              [precept.tuplerules :refer [def-tuple-session
+                                          def-tuple-rule
+                                          deflogical
+                                          defsub]])
+      #?(:cljs [precept.tuplerules :refer-macros [deflogical
+                                                  defsub
+                                                  def-tuple-session
+                                                  def-tuple-rule]])
+        [precept.state :as state]))
 
 (defn trace [& args]
   (apply prn args))
@@ -109,6 +112,7 @@
 (def-tuple-session app-session
    'precept.todomvc.rules-debug
    :schema app-schema)
+(reset! precept.state/fact-index {})
 
 (-> app-session
   (l/replace-listener)
@@ -124,4 +128,6 @@
                 [2 :todo/title "Second"]])
   (cr/fire-rules)
   (l/vec-ops))
+
+(l/vec-ops app-session)
 
