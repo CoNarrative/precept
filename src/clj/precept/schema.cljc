@@ -55,6 +55,10 @@
 
    (attribute :entities/eid
      :db.type/any
+     :db/cardinality :db.cardinality/many)
+
+   (attribute :entities/entity
+     :db.type/any
      :db/cardinality :db.cardinality/many)])
 
 (defn schema->hierarchy

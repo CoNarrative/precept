@@ -136,7 +136,8 @@
   [(<- ?visible-todos (entities ?eids))]
   [[_ :active-count ?active-count]]
   =>
-  (let [_ (println "Visible todos" ?visible-todos)]
+  (let [_ (println "Visible todos" ?visible-todos)
+        _ (println "Accum eids!" ?eids)]
     {:visible-todos ?visible-todos
      :all-complete? (= 0 ?active-count)}))
 

@@ -223,6 +223,7 @@
 ;; TODO.
 ;; - Generate rules with salience relative to subject
 ;; - Use namespaced keywords for :entities so we only match on impl-level attrs
+;; - Add test
 (defn generate-rules
   [expr idx lhs rhs props]
   (let [ast (eval (add-ns-if-special-form expr))
@@ -239,16 +240,19 @@
         gen-conds (list [[id ::factgen/request-params var-binding]]
                         [[id ::factgen/for-macro :entities]]
                         [[id ::factgen/response fact-binding]])
-        rw-lhs (map rewrite-expr (replace-at-index idx gen-conds lhs))]
+        rw-lhs (map rewrite-expr (replace-at-index idx gen-conds lhs))
+        req-id (precept.util/guid)]
     [{:name (symbol (str nom (-> ast :gen :name-suffix)))
       :lhs (list (parse-with-accumulator matching-expr))
-      :rhs `(let [req-id# (precept.util/guid)]
-                (precept.util/insert-unconditional!
-                  [[req-id# ::factgen/for-macro :entities]
-                   [req-id# ::factgen/request-params ~var-binding]
-                   [req-id# :entities/order ~var-binding]])
-                (doseq [eid# ~var-binding]
-                  (precept.util/insert-unconditional! [req-id# :entities/eid eid#])))}
+      :rhs `(do
+              (println "[rulegen] Inserting params/order for req" ~var-binding ~req-id)
+              (precept.util/insert!
+                [[~req-id ::factgen/for-macro :entities]
+                 [~req-id ::factgen/request-params ~var-binding]
+                 [~req-id :entities/order ~var-binding]])
+              (doseq [eid# ~var-binding]
+                (println "[rulegen] Inserting eid fact for req" eid# ~req-id)
+                (precept.util/insert! [~req-id :entities/eid eid#])))}
      {:name nom
       :lhs rw-lhs
       :rhs rhs}]))

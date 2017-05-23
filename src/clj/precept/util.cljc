@@ -49,16 +49,8 @@
 #?(:cljs
     (extend-protocol IPrintWithWriter
       precept.util/Tuple
-      (-pr-writer [x writer _]
-        (write-all writer "\n["
-          (subs (str (:e x)) 0 6)
-          " "
-          (:a x)
-          " "
-          (:v x)
-          " "
-          (:t x)
-          "]\n"))))
+      (-pr-writer [{:keys [e a v t]} writer _]
+        (write-all writer "\n[" (subs (str e) 0 6) " " a " " v " " t "]\n"))))
 
 (defn third [xs]
   #?(:cljs (nth xs 2)

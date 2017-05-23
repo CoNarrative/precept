@@ -15,6 +15,7 @@
   (cr/retract! ?fact))
 
 (cr/defrule entities___impl-a
+  {:salience 1}
   [::factgen/for-macro (= ?req (:e this)) (= :entities (:v this))]
   [:entities/eid (= ?req (:e this)) (= ?e (:v this))]
   [?entity <- (acc/all) :from [:all (= ?e (:e this))]]
@@ -23,7 +24,7 @@
  (util/insert! [?req :entities/entity ?entity]))
 
 (cr/defrule entities___impl-b
-  {:group :calc}
+  {:salience 0}
   [:entities/order (= ?req (:e this)) (= ?eids (:v this))]
   [?ents <- (acc/all :v) :from [:entities/entity (= ?req (:e this))]]
   =>
