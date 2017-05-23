@@ -261,17 +261,17 @@
               =>
               {:visible-todos ?visible-todos
                :all-complete? (= ?active-count 0)}))
-        (macroexpand
-          '(defrule task-list-sub___impl
-             {:group :report}
-             [::sub/request (= ?e___sub___impl (:e this)) (= :task-list (:v this))]
-             [:visible-todos-list (= ?visible-todos (:v this))]
-             [:active-count (= ?active-count (:v this))]
-             =>
-             (precept.util/insert!
-               [?e___sub___impl ::sub/response
-                {:all-complete? (= ?active-count 0)
-                 :visible-todos ?visible-todos}])))))
+        `(do ~(macroexpand
+                '(defrule task-list-sub___impl
+                   {:group :report}
+                   [::sub/request (= ?e___sub___impl (:e this)) (= :task-list (:v this))]
+                   [:visible-todos-list (= ?visible-todos (:v this))]
+                   [:active-count (= ?active-count (:v this))]
+                   =>
+                   (precept.util/insert!
+                     [?e___sub___impl ::sub/response
+                      {:all-complete? (= ?active-count 0)
+                       :visible-todos ?visible-todos}]))))))
 
   (is (= (macroexpand
            '(defsub :task-list
@@ -282,19 +282,19 @@
                 (println "Hi")
                 {:visible-todos ?visible-todos
                  :all-complete? (= ?active-count 0)})))
-         (macroexpand
-           '(defrule task-list-sub___impl
-              {:group :report}
-              [::sub/request (= ?e___sub___impl (:e this)) (= :task-list (:v this))]
-              [:visible-todos-list (= ?visible-todos (:v this))]
-              [:active-count (= ?active-count (:v this))]
-              =>
-              (let [foo "bar"]
-                (println "Hi")
-                (precept.util/insert!
-                  [?e___sub___impl ::sub/response
-                   {:all-complete? (= ?active-count 0)
-                    :visible-todos ?visible-todos}])))))))
+         `(do ~(macroexpand
+                 '(defrule task-list-sub___impl
+                    {:group :report}
+                    [::sub/request (= ?e___sub___impl (:e this)) (= :task-list (:v this))]
+                    [:visible-todos-list (= ?visible-todos (:v this))]
+                    [:active-count (= ?active-count (:v this))]
+                    =>
+                    (let [foo "bar"]
+                      (println "Hi")
+                      (precept.util/insert!
+                        [?e___sub___impl ::sub/response
+                         {:all-complete? (= ?active-count 0)
+                          :visible-todos ?visible-todos}]))))))))
 
   ;; TODO. Not clear how to solve every possible case here. Considering supporting
   ;; a let block or map on RHS only

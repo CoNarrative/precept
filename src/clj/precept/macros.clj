@@ -34,6 +34,15 @@
     `(cm/defsession ~name ~@body)))
 
 
+(defn parse-sub-rhs [rhs]
+  (let [map-only? (map? (first (rest rhs)))
+        sub-map (if map-only? (first (rest rhs)) (last (last rhs)))
+        rest-rhs (if map-only? nil (butlast (last rhs)))
+        insertion `(util/insert! [~'?e___sub___impl ::sub/response ~sub-map])]
+    (if map-only?
+      (list 'do insertion)
+      (list 'do (rest `(cons ~@rest-rhs ~insertion))))))
+
 ;;TODO. Duplicates what we have in spec
 (def special-forms #{'<- 'entity 'entities})
 
@@ -308,18 +317,8 @@
         definition  (if properties (rest body) body)
         passthrough (filter some? (list doc (merge {:group :report} properties)))
         {:keys [lhs rhs]} (cr-dsl/split-lhs-rhs definition)
-        sub-match `[::sub/request (~'= ~'?e___sub___impl ~'(:e this)) (~'= ~kw ~'(:v this))]
-        map-only? (map? (first (rest rhs)))
-        sub-map (if map-only? (first (rest rhs)) (last (last rhs)))
-        rest-rhs (if map-only? nil (butlast (last rhs)))
-        rw-lhs (conj (rewrite-lhs lhs) sub-match)
-        insertion `(util/insert! [~'?e___sub___impl ::sub/response ~sub-map])
-        rw-rhs  (if map-only?
-                  (list insertion)
-                  (list (rest `(cons ~@rest-rhs ~insertion))))
-        _ (core/register-rule "subscription" rw-lhs rw-rhs)]
-    (if (not (map? (first rw-lhs)))
-      `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@rw-rhs)
-      `(do ~@(for [{:keys [name lhs rhs]} rw-lhs]
-               `(cm/defrule ~name ~@passthrough ~@lhs ~'=> ~@rhs))))))
-    ;`(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@rw-rhs)))
+        sub-rhs (parse-sub-rhs rhs)
+        sub-cond `[[[~'?e___sub___impl ::sub/request ~kw]]]
+        rule-defs (get-rule-defs (into lhs sub-cond) sub-rhs {:name name :props properties})]
+      `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
+               `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
