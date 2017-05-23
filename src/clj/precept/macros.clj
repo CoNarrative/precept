@@ -199,6 +199,11 @@
       fact-expression (parse-with-fact-expression expr)
       :else (parse-as-tuple expr))))
 
+(defn rewrite-lhs
+  "Returns Clara DSL for rule LHS"
+  [lhs]
+  (map rewrite-expr lhs))
+
 
 (defn replace-at-index
   "Removes item at idx of coll and adds new list members (xs) starting at idx"
@@ -206,7 +211,9 @@
   (let [[as bs] (split-at idx coll)]
     (concat (concat as xs) (rest bs))))
 
-;; TODO. Generate rules with salience relative to subject
+;; TODO.
+;; - Generate rules with salience relative to subject
+;; - Use namespaced keywords for :entities so we only match on impl-level attrs
 (defn generate-rules
   [expr idx lhs rhs props]
   (let [ast (eval (add-ns-if-special-form expr))
@@ -219,27 +226,23 @@
                                         (> idx (.indexOf lhs %)))
                                lhs))
         lhs-mod (assoc (vec lhs) idx (parse-as-tuple `[[~'_ ::factgen/response ~var-binding]]))
-        ;;TODO. Gensym for ?id
-        gen-conds (list [['?id ::factgen/request-params var-binding]]
-                        [['?id ::factgen/for-macro :entities]]
-                        [['?id ::factgen/response fact-binding]])
+        id (gensym "?")
+        gen-conds (list [[id ::factgen/request-params var-binding]]
+                        [[id ::factgen/for-macro :entities]]
+                        [[id ::factgen/response fact-binding]])
         rw-lhs (map rewrite-expr (replace-at-index idx gen-conds lhs))]
-        ;_ (println "Conditions" rw-lhs)]
     [{:name (symbol (str nom (-> ast :gen :name-suffix)))
       :lhs (list (parse-with-accumulator matching-expr))
-      :rhs (list
-             `(let [req-id# (precept.util/guid)]
-              ;(println "Gen rule inserting facts!" req-id# ~var-binding)
+      :rhs `(let [req-id# (precept.util/guid)]
                 (precept.util/insert-unconditional!
                   [[req-id# ::factgen/for-macro :entities]
                    [req-id# ::factgen/request-params ~var-binding]
                    [req-id# :entities/order ~var-binding]])
                 (doseq [eid# ~var-binding]
-                  ;(println "Inserting eid fact!" eid#)
-                  (precept.util/insert-unconditional! [req-id# :entities/eid eid#]))))}
+                  (precept.util/insert-unconditional! [req-id# :entities/eid eid#])))}
      {:name nom
       :lhs rw-lhs
-      :rhs (rest rhs)}]))
+      :rhs rhs}]))
 
 (defn find-gen-in-lhs [lhs]
   (first
@@ -252,14 +255,13 @@
                []))))
       (filter seq))))
 
-(defn rewrite-lhs
-  "Returns Clara DSL for rule LHS"
-  ([lhs] (map rewrite-expr lhs))
-  ([lhs rhs props]
-   (let [[idx generative-expr] (find-gen-in-lhs lhs)]
-     (if generative-expr
-       (generate-rules generative-expr idx lhs rhs props)
-       (map rewrite-expr lhs)))))
+(defn get-rule-defs [lhs rhs props]
+  (let [[idx generative-expr] (find-gen-in-lhs lhs)]
+    (if generative-expr
+      (generate-rules generative-expr idx lhs rhs props)
+      [{:name (:name props)
+        :lhs (rewrite-lhs lhs)
+        :rhs rhs}])))
 
 (defmacro def-tuple-rule
   "CLJS version of def-tuple-rule"
@@ -269,28 +271,12 @@
         properties  (if (map? (first body)) (first body) nil)
         definition  (if properties (rest body) body)
         {:keys [lhs rhs]} (cr-dsl/split-lhs-rhs definition)
-        rw-lhs      (rewrite-lhs lhs rhs {:props properties :name name})
+        rule-defs      (get-rule-defs lhs rhs {:props properties :name name})
         passthrough (filter some? (list doc properties))
         unwrite-rhs (rest rhs)]
     (core/register-rule "rule" lhs rhs)
-    (if (not (map? (first rw-lhs)))
-      `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@unwrite-rhs)
-      `(do
-         ~@(for [{:keys [name lhs rhs]} rw-lhs]
-            `(cm/defrule ~name ~@passthrough ~@lhs ~'=> ~@rhs))))))
-
-
-;(macroexpand
-;  '(def-tuple-rule create-list-of-visible-todos
-;    {:group :report}
-;    [?eids <- (by-fact-id :e) :from [:todo/visible]]
-;    [(<- ?visible-todos (entities ?eids))]
-;    =>
-;    (trace "List!" ?visible-todos)))
-
-
-
-
+    `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
+            `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
 
 (defmacro def-tuple-query
   "CLJS version of def-tuple-query"
@@ -332,4 +318,8 @@
                   (list insertion)
                   (list (rest `(cons ~@rest-rhs ~insertion))))
         _ (core/register-rule "subscription" rw-lhs rw-rhs)]
-    `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@rw-rhs)))
+    (if (not (map? (first rw-lhs)))
+      `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@rw-rhs)
+      `(do ~@(for [{:keys [name lhs rhs]} rw-lhs]
+               `(cm/defrule ~name ~@passthrough ~@lhs ~'=> ~@rhs))))))
+    ;`(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@rw-rhs)))

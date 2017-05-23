@@ -6,6 +6,7 @@
 ;              [precept.spec.factgen :as factgen]
 ;              [precept.listeners :as l]
 ;              [precept.schema :as schema]
+;              [precept.state :as state]
 ;              [precept.todomvc.schema :refer [app-schema]]
 ;              [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
 ;      #?(:clj
@@ -18,8 +19,7 @@
 ;      #?(:cljs [precept.tuplerules :refer-macros [deflogical
 ;                                                  defsub
 ;                                                  def-tuple-session
-;                                                  def-tuple-rule]])
-;        [precept.state :as state]))
+;                                                  def-tuple-rule]])))
 ;
 ;(defn trace [& args]
 ;  (apply prn args))
@@ -48,7 +48,6 @@
 ;
 ;
 ;;; User writes
-;
 ;(def-tuple-rule my-rule
 ;  [?eids <- (acc/all :e) :from [:interesting-fact]] ;; Maybe new special form `(eids [:interesting-fact])`
 ;  [(<- ?interesting-entities (entities ?eids))]
@@ -57,6 +56,12 @@
 ;  (println "Found entities with interesting fact" ?interesting-entities))
 ;  ;(println "Found entities with interesting fact" ?eids))
 ;
+;(defsub :my-sub-2
+;  [?eids <- (acc/all :e) :from [:interesting-fact]] ;; Maybe new special form `(eids [:interesting-fact])`
+;  [(<- ?interesting-entities (entities ?eids))]
+;  =>
+;  (let [_ (println "Sub with entities -----" ?interesting-entities)]
+;    {:entities-sub ?interesting-entities}))
 ;;; We generate:
 ;
 ;;; A rule that contains the accumulator expression with the binding provided in `(entities)`
@@ -68,7 +73,6 @@
 ;;                      [req-id ::factgen/request-params ?eids]]
 ;;    ;_ (swap! state/generated-facts assoc req-id {:req gen-fact-req :rule-name ???})
 ;;    (insert! gen-fact-req)
-;;; TODO. Use namespaced keywords so we only match on impl-level attrs
 ;;    (insert! [req-id :entities/order ?eids])
 ;;    (doseq [eid ?eids]
 ;;      (insert! [req-id :entities/eid eid]))))
@@ -112,7 +116,7 @@
 ;(def-tuple-session app-session
 ;   'precept.todomvc.rules-debug
 ;   :schema app-schema)
-;(reset! precept.state/fact-index {})
+;;(reset! precept.state/fact-index {})
 ;
 ;(-> app-session
 ;  (l/replace-listener)
@@ -125,7 +129,8 @@
 ;                [2 :interesting-fact 42]
 ;                [3 :interesting-fact 42]
 ;                [4 :interesting-fact 42]
-;                [2 :todo/title "Second"]])
+;                [2 :todo/title "Second"]
+;                [5 ::sub/request :my-sub-2]])
 ;  (cr/fire-rules)
 ;  (l/vec-ops))
 ;

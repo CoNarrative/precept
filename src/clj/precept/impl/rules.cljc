@@ -19,7 +19,6 @@
   [:entities/eid (= ?req (:e this)) (= ?e (:v this))]
   [?entity <- (acc/all) :from [:all (= ?e (:e this))]]
   =>
-  (println "--------------------inserting entity entry")
  (util/insert! [?req :entities/entity ?entity]))
 
 (cr/defrule entities___impl-b

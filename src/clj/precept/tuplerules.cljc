@@ -98,25 +98,15 @@
              properties      (if (map? (first body)) (first body) nil)
              definition      (if properties (rest body) body)
              {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-             lhs-detuplified (seq (macros/rewrite-lhs lhs rhs {:props properties :name name}))]
-         (when-not rhs
-           (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).")
-                    {})))
+             rule-defs (macros/get-rule-defs lhs rhs {:props properties :name name})]
+         (when-not rhs (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).") {})))
          (core/register-rule "rule" lhs rhs)
-         (if (not (map? (first lhs-detuplified)))
-           `(def ~(vary-meta name assoc :rule true :doc doc)
-              (cond-> ~(dsl/parse-rule* lhs-detuplified rhs properties {} (meta &form))
-                ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
-                ~doc (assoc :doc ~doc)))
-           `(do
-              ~@(for [{:keys [name lhs rhs]} lhs-detuplified]
-                  `(def
-                     ~(vary-meta name assoc :rule true :doc doc)
+         `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
+                  `(def ~(vary-meta name assoc :rule true :doc doc)
                      (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
                        ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/"
                                              (clojure.core/name name)))
-                       ~doc (assoc :doc ~doc))))))))))
-
+                       ~doc (assoc :doc ~doc)))))))))
 
 #?(:clj
    (defmacro def-tuple-query
