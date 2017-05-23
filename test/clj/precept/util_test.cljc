@@ -90,11 +90,28 @@
     (is (= (record->vec (->Tuple -1 :attr (->Tuple -2 :nested "foo" -1) -1))
            [-1 :attr [-2 :nested "foo"]]))))
 
+(deftest any-Tuple?-test
+  (let [tuples (conj (repeatedly 5 #(->Tuple 1 :test-attr/one-to-many 42 1))
+                 (->Tuple 2 :test-attr/one-to-one "bar" 2)
+                 (->Tuple 3 :test-attr/one-to-one "baz" 2))
+        nested (->Tuple 1 :ents tuples 1)
+        entity-tuples (list (vec (conj (repeatedly 5 #(->Tuple 1 :test-attr/one-to-many 42 1))
+                                   (->Tuple 1 :test-attr/one-to-one 42 1)))
+                            (vec (conj (repeatedly 5 #(->Tuple 2 :test-attr/one-to-many 42 1))
+                                   (->Tuple 2 :test-attr/one-to-one 42 1))))]
+    (is (= true (any-Tuple? tuples)))
+    (is (= true (any-Tuple? entity-tuples)))
+    (is (= true (any-Tuple? nested)))))
+
 (deftest Tuples->maps-test
   (let [tuples (conj (repeatedly 5 #(->Tuple 1 :test-attr/one-to-many 42 1))
                      (->Tuple 1 :test-attr/one-to-one "bar" 2)
                      (->Tuple 2 :test-attr/one-to-one "baz" 2))
-        nested (->Tuple 1 :ents tuples 1)]
+        nested (->Tuple 1 :ents tuples 1)
+        entity-tuples (list (vec (conj (repeatedly 5 #(->Tuple 1 :test-attr/one-to-many 42 1))
+                                   (->Tuple 1 :test-attr/one-to-one 42 1)))
+                            (vec (conj (repeatedly 5 #(->Tuple 2 :test-attr/one-to-many 42 1))
+                                   (->Tuple 2 :test-attr/one-to-one 42 1))))]
     (is (= (Tuples->maps tuples)
           [{:db/id 2 :test-attr/one-to-one "baz"}
            {:db/id 1 :test-attr/one-to-many '(42 42 42 42 42)
@@ -104,7 +121,10 @@
                    {:db/id 1
                     :test-attr/one-to-many '(42 42 42 42 42)
                     :test-attr/one-to-one "bar"}]
-            :db/id 1}))))
+            :db/id 1}))
+    (is (= (Tuples->maps entity-tuples)
+           [{:db/id 1 :test-attr/one-to-many '(42 42 42 42 42) :test-attr/one-to-one 42}
+            {:db/id 2 :test-attr/one-to-many '(42 42 42 42 42) :test-attr/one-to-one 42}]))))
 
 (deftest insertable-test
   (testing "Single vector"
