@@ -199,8 +199,9 @@
   [facts]
   (dispatch! (fn [session] (util/insert session facts))))
 
-(defn start! [options]
+(defn start! [options cb]
   (let [opts (or options (hash-map))]
     (swap-session! (l/replace-listener (:session opts)))
-    (dispatch! (fn [session] (util/insert session (:facts opts))))))
+    (dispatch! (fn [session] (util/insert session (:facts opts))))
+    (cb)))
 

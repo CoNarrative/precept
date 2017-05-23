@@ -46,6 +46,11 @@
 (defn reset-fact-id! [] (reset! state/fact-id -1))
 
 (defrecord Tuple [e a v t])
+#?(:cljs
+    (extend-protocol IPrintWithWriter
+      precept.util/Tuple
+      (-pr-writer [{:keys [e a v t]} writer _]
+        (write-all writer "\n[" (subs (str e) 0 6) " " a " " v " " t "]\n"))))
 
 (defn third [xs]
   #?(:cljs (nth xs 2)
@@ -228,7 +233,7 @@
 
 (defn any-Tuple? [x]
   (or (= Tuple (type x))
-      (and (coll? x) (= Tuple (type (first x))))))
+      (and (coll? x) (some any-Tuple? x))))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn clara-tups->maps
@@ -243,15 +248,17 @@
 
 (defn Tuples->maps [xs]
   (letfn [(recur-or-val [ys] (if (any-Tuple? ys) (Tuples->maps ys) ys))]
-    (if (= Tuple (type xs))
-      {:db/id (:e xs) (:a xs) (recur-or-val (:v xs))}
-      (let [keyed (reduce
-                    (fn [m {:keys [e a v]}]
-                      (if ((@state/ancestors-fn a) :one-to-many)
-                        (update-in m [e a] conj (recur-or-val v))
-                        (assoc-in m [e a] (recur-or-val v))))
-                    {} xs)]
-        (mapv (fn [[eid m]] (assoc m :db/id eid)) keyed)))))
+    (if (record? (ffirst xs))
+      (into [] (mapcat Tuples->maps xs))
+      (if (= Tuple (type xs))
+        {:db/id (:e xs) (:a xs) (recur-or-val (:v xs))}
+        (let [keyed (reduce
+                      (fn [m {:keys [e a v]}]
+                        (if ((@state/ancestors-fn a) :one-to-many)
+                          (update-in m [e a] conj (recur-or-val v))
+                          (assoc-in m [e a] (recur-or-val v))))
+                      {} xs)]
+          (mapv (fn [[eid m]] (assoc m :db/id eid)) keyed))))))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn tuple-entity->hash-map-entity

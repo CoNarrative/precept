@@ -3,6 +3,7 @@
               [clara.rules :refer [defrule defquery]]
               [clara.rules.accumulators :as acc]
               [precept.spec.sub :as sub]
+              [precept.spec.factgen :as factgen]
               [precept.tuplerules :refer [def-tuple-rule
                                           def-tuple-query
                                           defsub]]
@@ -14,7 +15,7 @@
                                       value-expr?
                                       parse-as-tuple
                                       parse-with-fact-expression
-                                      rewrite-lhs]]))
+                                      rewrite-lhs] :as macros]))
 
 (deftest tuple-bindings-test
   (let [e1    '[?e :ns/foo 42]
@@ -83,111 +84,117 @@
                 [:exists [:todo/done]]
                 =>
                 (insert! "RHS")))
-          (macroexpand
-            '(defrule my-rule
-               [:todo/title (= ?e (:e this))]
-               [:exists [:todo/done]]
-               =>
-               (insert! "RHS"))))))
+          `(do
+            ~(macroexpand
+              '(defrule my-rule
+                 [:todo/title (= ?e (:e this))]
+                 [:exists [:todo/done]]
+                 =>
+                 (insert! "RHS")))))))
   (testing "Match on a value"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 [[?e :todo/title "Hello"]]
                 =>
                 (insert! "RHS")))
-          (macroexpand
-            '(defrule my-rule
-               [:todo/title (= ?e (:e this)) (= "Hello" (:v this))]
-               =>
-               (insert! "RHS"))))))
+          `(do
+            ~(macroexpand
+              '(defrule my-rule
+                 [:todo/title (= ?e (:e this)) (= "Hello" (:v this))]
+                 =>
+                 (insert! "RHS")))))))
   (testing "With accumulator, fact-type only"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 [?foo <- (acc/all) from [:todo/title]]
                 =>
                 (insert! "RHS")))
-           (macroexpand
-             '(defrule my-rule
-                [?foo <- (acc/all) from [:todo/title]]
-                =>
-                (insert! "RHS"))))))
+         `(do
+            ~(macroexpand
+               '(defrule my-rule
+                  [?foo <- (acc/all) from [:todo/title]]
+                  =>
+                  (insert! "RHS")))))))
   (testing "With op that contains tuple expression"
     (is (= (macroexpand
             '(def-tuple-rule my-rule
               [:not [?e :todo/done]]
               =>
               (insert! "RHS")))
-          (macroexpand
-           '(defrule my-rule
-             [:not [:todo/done (= ?e (:e this))]]
-             =>
-             (insert! "RHS"))))))
+          `(do
+            ~(macroexpand
+               '(defrule my-rule
+                 [:not [:todo/done (= ?e (:e this))]]
+                 =>
+                 (insert! "RHS")))))))
   (testing "With nested ops"
       (is (= (macroexpand
               '(def-tuple-rule my-rule
                  [:not [:exists [:todo/done]]]
                  =>
                  (insert! "RHS")))
-            (macroexpand
-              '(defrule my-rule
-                [:not [:exists [:todo/done]]]
-                =>
-                (insert! "RHS"))))))
+            `(do
+              ~(macroexpand
+                '(defrule my-rule
+                  [:not [:exists [:todo/done]]]
+                  =>
+                  (insert! "RHS")))))))
   (testing "Accum with fact assignment"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 [?entity <- (acc/all) :from [?e :all]]
                 =>
                 (insert! "RHS")))
-          (macroexpand
-            '(defrule my-rule
-               [?entity <- (acc/all) :from [:all (= ?e (:e this))]]
-               =>
-               (insert! "RHS"))))))
+          `(do
+            ~(macroexpand
+              '(defrule my-rule
+                 [?entity <- (acc/all) :from [:all (= ?e (:e this))]]
+                 =>
+                 (insert! "RHS")))))))
   (testing "Fact assignment with brackets around fact-type"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 [?entity <- [:my-attribute]]
                 =>
                 (insert! "RHS")))
-          (macroexpand
-            '(defrule my-rule
-               [?entity <- :my-attribute]
-               =>
-               (insert! "RHS"))))))
+          `(do ~(macroexpand
+                  '(defrule my-rule
+                     [?entity <- :my-attribute]
+                     =>
+                     (insert! "RHS")))))))
   (testing "Fact assignment no brackets around fact-type"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 [?entity <- :my-attribute]
                 =>
                 (insert! "RHS")))
-          (macroexpand
-            '(defrule my-rule
-               [?entity <- :my-attribute]
-               =>
-               (insert! "RHS"))))))
+          `(do ~(macroexpand
+                  '(defrule my-rule
+                     [?entity <- :my-attribute]
+                     =>
+                     (insert! "RHS")))))))
   (testing "Tx-id field - bind"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 [[_ :my-attribute _ ?t]]
                 =>
                 (insert! "RHS")))
-          (macroexpand
-            '(defrule my-rule
-               [:my-attribute (= ?t (:t this))]
-               =>
-               (insert! "RHS"))))))
+          `(do ~(macroexpand
+                  '(defrule my-rule
+                     [:my-attribute (= ?t (:t this))]
+                     =>
+                     (insert! "RHS")))))))
   (testing "Tx-id field - bind the fact"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
                 [?fact <- [_ :my-attribute _ ?t]]
                 =>
                 (insert! "RHS")))
-          (macroexpand
-            '(defrule my-rule
-               [?fact <- :my-attribute (= ?t (:t this))]
-               =>
-               (insert! "RHS"))))))
+          `(do ~(macroexpand
+                  '(defrule my-rule
+                     [?fact <- :my-attribute (= ?t (:t this))]
+                     =>
+                     (insert! "RHS")))))))
   (testing "With :test op"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
@@ -195,12 +202,12 @@
                 [:test (> ?t ?fact)]
                 =>
                 (insert! "RHS")))
-          (macroexpand
-            '(defrule my-rule
-               [?fact <- :my-attribute (= ?t (:t this))]
-               [:test (> ?t ?fact)]
-               =>
-               (insert! "RHS"))))))
+          `(do ~(macroexpand
+                  '(defrule my-rule
+                     [?fact <- :my-attribute (= ?t (:t this))]
+                     [:test (> ?t ?fact)]
+                     =>
+                     (insert! "RHS")))))))
   (testing "Bind to value of s-expr"
     (is (= (macroexpand
              '(def-tuple-rule my-rule
@@ -208,12 +215,12 @@
                 [[(:id ?v) :foo]]
                 =>
                 (insert! "RHS")))
-          (macroexpand
-            '(defrule my-rule
-               [:my-attribute (= ?v (:v this))]
-               [:foo (= (:id ?v) (:e this))]
-               =>
-               (insert! "RHS"))))))
+          `(do ~(macroexpand
+                  '(defrule my-rule
+                     [:my-attribute (= ?v (:v this))]
+                     [:foo (= (:id ?v) (:e this))]
+                     =>
+                     (insert! "RHS")))))))
   (testing "Value match in e position with fact binding"
     (is (= (macroexpand
              '(def-tuple-rule action-cleanup-2
@@ -222,13 +229,13 @@
                 =>
                 (trace "CLEANING this-tick fact because transient" ?fact)
                 (cr/retract! ?fact)))
-          (macroexpand
-            '(defrule action-cleanup-2
-               {:group :cleanup}
-               [?fact <- :all (= ?v (:v this)) (= :this-tick (:e this))]
-               =>
-               (trace "CLEANING this-tick fact because transient" ?fact)
-               (cr/retract! ?fact)))))))
+          `(do ~(macroexpand
+                  '(defrule action-cleanup-2
+                     {:group :cleanup}
+                     [?fact <- :all (= ?v (:v this)) (= :this-tick (:e this))]
+                     =>
+                     (trace "CLEANING this-tick fact because transient" ?fact)
+                     (cr/retract! ?fact))))))))
 
 (deftest def-tuple-query-test
   (testing "Query with no args"
@@ -254,17 +261,17 @@
               =>
               {:visible-todos ?visible-todos
                :all-complete? (= ?active-count 0)}))
-        (macroexpand
-          '(defrule task-list-sub___impl
-             {:group :report}
-             [::sub/request (= ?e___sub___impl (:e this)) (= :task-list (:v this))]
-             [:visible-todos-list (= ?visible-todos (:v this))]
-             [:active-count (= ?active-count (:v this))]
-             =>
-             (precept.util/insert!
-               [?e___sub___impl ::sub/response
-                {:all-complete? (= ?active-count 0)
-                 :visible-todos ?visible-todos}])))))
+        `(do ~(macroexpand
+                '(defrule task-list-sub___impl
+                   {:group :report}
+                   [::sub/request (= ?e___sub___impl (:e this)) (= :task-list (:v this))]
+                   [:visible-todos-list (= ?visible-todos (:v this))]
+                   [:active-count (= ?active-count (:v this))]
+                   =>
+                   (precept.util/insert!
+                     [?e___sub___impl ::sub/response
+                      {:all-complete? (= ?active-count 0)
+                       :visible-todos ?visible-todos}]))))))
 
   (is (= (macroexpand
            '(defsub :task-list
@@ -275,19 +282,19 @@
                 (println "Hi")
                 {:visible-todos ?visible-todos
                  :all-complete? (= ?active-count 0)})))
-         (macroexpand
-           '(defrule task-list-sub___impl
-              {:group :report}
-              [::sub/request (= ?e___sub___impl (:e this)) (= :task-list (:v this))]
-              [:visible-todos-list (= ?visible-todos (:v this))]
-              [:active-count (= ?active-count (:v this))]
-              =>
-              (let [foo "bar"]
-                (println "Hi")
-                (precept.util/insert!
-                  [?e___sub___impl ::sub/response
-                   {:all-complete? (= ?active-count 0)
-                    :visible-todos ?visible-todos}])))))))
+         `(do ~(macroexpand
+                 '(defrule task-list-sub___impl
+                    {:group :report}
+                    [::sub/request (= ?e___sub___impl (:e this)) (= :task-list (:v this))]
+                    [:visible-todos-list (= ?visible-todos (:v this))]
+                    [:active-count (= ?active-count (:v this))]
+                    =>
+                    (let [foo "bar"]
+                      (println "Hi")
+                      (precept.util/insert!
+                        [?e___sub___impl ::sub/response
+                         {:all-complete? (= ?active-count 0)
+                          :visible-todos ?visible-todos}]))))))))
 
   ;; TODO. Not clear how to solve every possible case here. Considering supporting
   ;; a let block or map on RHS only
@@ -313,18 +320,49 @@
   ;               :visible-todos ?visible-todos}]))))))
 
 (deftest special-form-test
-  (is (= (macroexpand
-           '(def-tuple-rule my-rule
-              [[?e :some-attr]]
-              [(<- ?the-ent (entity ?e))]
-              =>
-              (insert! "RHS")))
-        (macroexpand
-          '(defrule my-rule
-             [:some-attr (= ?e (:e this))]
-             [?the-ent <- (clara.rules.accumulators/all) :from [:all (= ?e (:e this))]]
-             =>
-             (insert! "RHS"))))))
+  (testing "entity"
+    (is (= (macroexpand
+             '(def-tuple-rule my-rule
+                [[?e :some-attr]]
+                [(<- ?the-ent (entity ?e))]
+                =>
+                (insert! "RHS")))
+          `(do ~(macroexpand
+                  '(defrule my-rule
+                     [:some-attr (= ?e (:e this))]
+                     [?the-ent <- (clara.rules.accumulators/all) :from [:all (= ?e (:e this))]]
+                     =>
+                     (insert! "RHS"))))))))
+
+  ;; TODO. Test with generated symbols?
+  ;(testing "entities"
+  ;  (let [rule-1 (macroexpand
+  ;                 '(defrule my-rule___impl_split-0
+  ;                    [?eids <- (acc/all :e) :from [:interesting-fact]]
+  ;                    =>
+  ;                    (let [req-id (precept.util/guid)]
+  ;                       (precept.util/insert-unconditional!
+  ;                         [[req-id ::factgen/for-macro :entities]
+  ;                          [req-id ::factgen/request-params ?eids]
+  ;                          [req-id :entities/order ?eids]])
+  ;                       (doseq [eid ?eids]
+  ;                         (precept.util/insert-unconditional! [req-id :entities/eid eid])))))
+  ;
+  ;        rule-2 (macroexpand
+  ;                 '(defrule my-rule
+  ;                    [?eids <- (acc/all :e) :from [:interesting-fact]]
+  ;                    [::factgen/request-params (= ?id (:e this)) (= ?eids (:v this))]
+  ;                    [::factgen/for-macro (= ?id (:e this)) (= :entities (:v this))]
+  ;                    [::factgen/response (= ?id (:e this)) (= ?interesting-facts (:v this))]
+  ;                    =>
+  ;                    (println nil)))]
+  ;    (is (= (macroexpand
+  ;             '(def-tuple-rule my-rule
+  ;                [?eids <- (acc/all :e) :from [:interesting-fact]]
+  ;                [(<- ?interesting-facts (entities ?eids))]
+  ;                =>
+  ;                (println nil)))
+  ;           `(do ~rule-1 ~rule-2))))))
 
 (run-tests)
 

@@ -1,9 +1,11 @@
 (ns precept.macros
-    (:require [clara.rules.dsl :as dsl]
+    (:require [clara.rules.dsl :as cr-dsl]
               [clara.macros :as cm]
               [clara.rules.accumulators :as acc]
               [precept.core :as core]
               [precept.spec.lang :as lang]
+              [precept.spec.factgen :as factgen]
+              [precept.dsl :as dsl]
               [precept.spec.sub :as sub]
               [precept.util :as util]
               [precept.schema :as schema]
@@ -18,8 +20,12 @@
   [name & sources-and-options]
   (let [sources (take-while (complement keyword?) sources-and-options)
         options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
-        ancestors-fn (if (:schema options-in)
-                       `(util/make-ancestors-fn (schema/schema->hierarchy ~(:schema options-in)))
+        hierarchy (if (:schema options-in)
+                    `(schema/schema->hierarchy (concat ~(:schema options-in)
+                                                 ~precept.schema/precept-schema))
+                    `(schema/schema->hierarchy ~precept.schema/precept-schema))
+        ancestors-fn (if hierarchy
+                       `(util/make-ancestors-fn ~hierarchy)
                        `(util/make-ancestors-fn))
         options (mapcat identity
                  (merge {:fact-type-fn :a
@@ -32,7 +38,17 @@
     `(cm/defsession ~name ~@body)))
 
 
-(def special-forms #{'<- 'entity})
+(defn parse-sub-rhs [rhs]
+  (let [map-only? (map? (first (rest rhs)))
+        sub-map (if map-only? (first (rest rhs)) (last (last rhs)))
+        rest-rhs (if map-only? nil (butlast (last rhs)))
+        insertion `(util/insert! [~'?e___sub___impl ::sub/response ~sub-map])]
+    (if map-only?
+      (list 'do insertion)
+      (list 'do (rest `(cons ~@rest-rhs ~insertion))))))
+
+;;TODO. Duplicates what we have in spec
+(def special-forms #{'<- 'entity 'entities})
 
 (defn add-ns-if-special-form [x]
   (let [special-form? (special-forms x)]
@@ -160,8 +176,8 @@
   "Returns Clara DSL for `[:op x]`, [:op [:op x] where x is
   :keyword, [:keyword] or [tuple]"
   [expr]
-  (let [outer-op (dsl/ops (first expr))
-        inner-op (dsl/ops (first (second expr)))]
+  (let [outer-op (cr-dsl/ops (first expr))
+        inner-op (cr-dsl/ops (first (second expr)))]
     (if inner-op
       (vector outer-op (vector inner-op
                          (if (= 1 (count (second (second expr)))) ;;attribute only
@@ -171,11 +187,12 @@
                          (second expr)
                          (parse-as-tuple (vector (second expr))))))))
 
+
 (defn rewrite-expr
   "Returns Clara DSL for single expression"
   [expr]
   (let [leftmost        (first expr)
-        op              (keyword? (dsl/ops leftmost))
+        op              (keyword? (cr-dsl/ops leftmost))
         fact-expression (and (not (keyword? leftmost))
                              (not (vector? leftmost))
                              (binding? leftmost))
@@ -197,8 +214,71 @@
 
 (defn rewrite-lhs
   "Returns Clara DSL for rule LHS"
-  [exprs]
-  (map rewrite-expr exprs))
+  [lhs]
+  (map rewrite-expr lhs))
+
+
+(defn replace-at-index
+  "Removes item at idx of coll and adds new list members (xs) starting at idx"
+  [idx xs coll]
+  (let [[as bs] (split-at idx coll)]
+    (concat (concat as xs) (rest bs))))
+
+;; TODO.
+;; - Generate rules with salience relative to subject
+;; - Use namespaced keywords for :entities so we only match on impl-level attrs
+;; - Add test
+(defn generate-rules
+  [expr idx lhs rhs props]
+  (let [ast (eval (add-ns-if-special-form expr))
+        var-binding (:join (:gen ast))
+        fact-binding (second (first (nth lhs idx)))
+        nom (:name props)
+        ;; This assumes the binding we're looking for exists in accumulator syntax
+        matching-expr (first (filter #(and (has-accumulator? (drop 2 %))
+                                        (= var-binding (first %))
+                                        (> idx (.indexOf lhs %)))
+                               lhs))
+        lhs-mod (assoc (vec lhs) idx (parse-as-tuple `[[~'_ ::factgen/response ~var-binding]]))
+        id (gensym "?")
+        gen-conds (list [[id ::factgen/request-params var-binding]]
+                        [[id ::factgen/for-macro :entities]]
+                        [[id ::factgen/response fact-binding]])
+        rw-lhs (map rewrite-expr (replace-at-index idx gen-conds lhs))
+        req-id (precept.util/guid)]
+    [{:name (symbol (str nom (-> ast :gen :name-suffix)))
+      :lhs (list (parse-with-accumulator matching-expr))
+      :rhs `(do
+              (println "[rulegen] Inserting params/order for req" ~var-binding ~req-id)
+              (precept.util/insert!
+                [[~req-id ::factgen/for-macro :entities]
+                 [~req-id ::factgen/request-params ~var-binding]
+                 [~req-id :entities/order ~var-binding]])
+              (doseq [eid# ~var-binding]
+                (println "[rulegen] Inserting eid fact for req" eid# ~req-id)
+                (precept.util/insert! [~req-id :entities/eid eid#])))}
+     {:name nom
+      :lhs rw-lhs
+      :rhs rhs}]))
+
+(defn find-gen-in-lhs [lhs]
+  (first
+    (->> lhs
+      (map-indexed
+         (fn [idx expr]
+           (let [form (s/conform ::lang/special-form (first expr))]
+             (if (s/valid? ::lang/contains-rule-generator form)
+               [idx (last form)]
+               []))))
+      (filter seq))))
+
+(defn get-rule-defs [lhs rhs props]
+  (let [[idx generative-expr] (find-gen-in-lhs lhs)]
+    (if generative-expr
+      (generate-rules generative-expr idx lhs rhs props)
+      [{:name (:name props)
+        :lhs (rewrite-lhs lhs)
+        :rhs rhs}])))
 
 (defmacro def-tuple-rule
   "CLJS version of def-tuple-rule"
@@ -207,12 +287,13 @@
         body        (if doc (rest body) body)
         properties  (if (map? (first body)) (first body) nil)
         definition  (if properties (rest body) body)
-        {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-        rw-lhs      (rewrite-lhs lhs)
+        {:keys [lhs rhs]} (cr-dsl/split-lhs-rhs definition)
+        rule-defs      (get-rule-defs lhs rhs {:props properties :name name})
         passthrough (filter some? (list doc properties))
         unwrite-rhs (rest rhs)]
     (core/register-rule "rule" lhs rhs)
-    `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@unwrite-rhs)))
+    `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
+            `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
 
 (defmacro def-tuple-query
   "CLJS version of def-tuple-query"
@@ -243,15 +324,9 @@
         properties  (if (map? (first body)) (first body) nil)
         definition  (if properties (rest body) body)
         passthrough (filter some? (list doc (merge {:group :report} properties)))
-        {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-        sub-match `[::sub/request (~'= ~'?e___sub___impl ~'(:e this)) (~'= ~kw ~'(:v this))]
-        map-only? (map? (first (rest rhs)))
-        sub-map (if map-only? (first (rest rhs)) (last (last rhs)))
-        rest-rhs (if map-only? nil (butlast (last rhs)))
-        rw-lhs (conj (rewrite-lhs lhs) sub-match)
-        insertion `(util/insert! [~'?e___sub___impl ::sub/response ~sub-map])
-        rw-rhs  (if map-only?
-                  (list insertion)
-                  (list (rest `(cons ~@rest-rhs ~insertion))))
-        _ (core/register-rule "subscription" rw-lhs rw-rhs)]
-    `(cm/defrule ~name ~@passthrough ~@rw-lhs ~'=> ~@rw-rhs)))
+        {:keys [lhs rhs]} (cr-dsl/split-lhs-rhs definition)
+        sub-rhs (parse-sub-rhs rhs)
+        sub-cond `[[[~'?e___sub___impl ::sub/request ~kw]]]
+        rule-defs (get-rule-defs (into lhs sub-cond) sub-rhs {:name name :props properties})]
+      `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
+               `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))

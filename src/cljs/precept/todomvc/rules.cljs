@@ -1,5 +1,5 @@
 (ns precept.todomvc.rules
-  (:require-macros [precept.dsl :refer [<- entity]])
+  (:require-macros [precept.dsl :refer [<- entity entities]])
   (:require [clara.rules.accumulators :as acc]
             [clara.rules :as cr]
             [precept.spec.sub :as sub]
@@ -89,6 +89,11 @@
   (insert-unconditional! (active-count (- ?total ?done))))
 
 (defn by-fact-id
+  "Custsom accumulator.
+
+  Like acc/all ewxcept sorts tuples by :t slot (fact-id). Since fact ids are created sequentially
+  this orders facts by they were created.
+  Returns list of facts. Optional `k` arg maps `k` over facts."
   ([]
    (acc/accum
      {:initial-value []
@@ -105,46 +110,35 @@
                     (trace "[by-fact-id] returning " (sort-by :t (remove #(= (k cur) %) acc)))
                     (sort-by :t (remove #(= (k cur) %) acc)))})))
 
-;; TODO. Would like to condense since all this does it create/maintain a list
-(def-tuple-rule create-list-of-visible-todos
-  {:group :report}
-  [?eids <- (by-fact-id :e) :from [:todo/visible]]
-  [:test (seq ?eids)]
-  =>
-  (trace "List!" ?eids)
-  (insert! [(guid) :todos/by-last-modified*order ?eids])
-  (doseq [x ?eids]
-    (insert! [(guid) :todos/by-last-modified*eid x])))
-
-(def-tuple-rule update-list-of-visible-todos
-  {:group :report}
-  [[_ :todos/by-last-modified*eid ?e]]
-  [(<- ?entity (entity ?e))]
-  =>
-  (trace "Entity list!" ?entity)
-  (insert! [(guid) :todos/by-last-modified*item ?entity]))
+(defn list-of
+  "Custom accumulator.
+  Calls fact-f on facts being accumulated.
+  If provided, calls list-f on accumulated list result."
+  ([fact-f]
+   (acc/accum
+     {:initial-value []
+      :reduce-fn (fn [acc cur] (fact-f (conj acc cur)))
+      :retract-fn (fn [acc cur] (fact-f (remove #(= cur %) acc)))}))
+  ([fact-f list-f]
+   (acc/accum
+     {:initial-value []
+      :reduce-fn (fn [acc cur]
+                   (trace "[mk-list] reduce fn acc cur" acc cur)
+                   (list-f (conj acc (fact-f cur))))
+      :retract-fn (fn [acc cur]
+                    (trace "[mk-list] retract fn acc cur" acc cur)
+                    (trace "[mk-list] returning " (list-f (remove #(= (fact-f cur) %) acc)))
+                    (list-f (remove #(= (fact-f cur) %) acc)))})))
 
 ;; Subscription handlers
-;; TODO. Because we want to eliminate subscriptions we should invest minimal effort here.
-;; Would like the following for a list sub:
-;'(defsub :task-list
-;   [[_ :visibile-todos-list ?visible-todos]]
-;   [[_ :active-count ?active-count]]
-;   =>
-;   {:visible-todos ?visible-todos
-;    :all-complete? (= ?active-count 0)})
-
 (defsub :task-list
-  [[_ :todos/by-last-modified*order ?eids]]
-  [?items <- (acc/all :v) :from [:todos/by-last-modified*item]]
+  [?eids <- (by-fact-id :e) :from [:todo/visible]]
+  [(<- ?visible-todos (entities ?eids))]
   [[_ :active-count ?active-count]]
-  [:test (seq ?eids)]
   =>
-  (let [items (group-by :e (flatten ?items))
-        ordered (vals (select-keys items (into [] ?eids)))
-        entities (util/entity-Tuples->entity-maps ordered)]
-    (trace "Entities" entities)
-    {:visible-todos entities
+  (let [_ (println "Visible todos" ?visible-todos)
+        _ (println "Accum eids!" ?eids)]
+    {:visible-todos ?visible-todos
      :all-complete? (= 0 ?active-count)}))
 
 (defsub :task-entry

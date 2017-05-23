@@ -56,7 +56,10 @@
     (is (s/valid? ::lang/tuple '[?e :foo "bar"]))
     (is (s/valid? ::lang/tuple '[?e :foo "bar" -1]))
     (is (not (s/valid? ::lang/tuple "foo")))
-    (is (not (s/valid? ::lang/tuple '(?e "foo" bar))))))
+    (is (not (s/valid? ::lang/tuple '(?e "foo" bar)))))
+  (testing "Contains rule generator"
+    (is (s/valid? ::lang/contains-rule-generator '(<- ?x (entities ?y))))))
+
 ;(gen/generate (s/gen ::lang/variable-binding))
 ;(gen/generate (s/gen ::lang/s-expr))
 ;(gen/generate (s/gen ::lang/test-expr))
