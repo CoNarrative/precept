@@ -19,6 +19,7 @@
   [:entities/eid (= ?req (:e this)) (= ?e (:v this))]
   [?entity <- (acc/all) :from [:all (= ?e (:e this))]]
   =>
+  (println "inserting entity!" ?entity)
  (util/insert! [?req :entities/entity ?entity]))
 
 (cr/defrule entities___impl-b
@@ -28,5 +29,6 @@
   =>
   (let [items (group-by :e (flatten ?ents))
         ordered (vals (select-keys items (into [] ?eids)))]
+    (println "inserting response for order" ?eids ?ents)
     (util/insert! [?req ::factgen/response ordered])))
 

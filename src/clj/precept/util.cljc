@@ -46,6 +46,19 @@
 (defn reset-fact-id! [] (reset! state/fact-id -1))
 
 (defrecord Tuple [e a v t])
+#?(:cljs
+    (extend-protocol IPrintWithWriter
+      precept.util/Tuple
+      (-pr-writer [x writer _]
+        (write-all writer "\n["
+          (subs (str (:e x)) 0 6)
+          " "
+          (:a x)
+          " "
+          (:v x)
+          " "
+          (:t x)
+          "]\n"))))
 
 (defn third [xs]
   #?(:cljs (nth xs 2)
