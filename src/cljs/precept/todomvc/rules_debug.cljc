@@ -47,16 +47,6 @@
     (println "Heyo" my-var)
     {:foo/name ?name}))
 
-
-;; User writes
-(def-tuple-rule my-rule
-  [?eids <- (acc/all :e) :from [:interesting-fact]] ;; Maybe new special form `(eids [:interesting-fact])`
-  [(<- ?interesting-entities (entities ?eids))]
-  =>
-  ;; Prints list of Tuples
-  (println "Found entities with interesting fact" ?interesting-entities))
-  ;(println "Found entities with interesting fact" ?eids))
-
 (defsub :my-sub-2
   [?eids <- (acc/all :e) :from [:interesting-fact]] ;; Maybe new special form `(eids [:interesting-fact])`
   [(<- ?interesting-entities (entities ?eids))]
@@ -64,63 +54,12 @@
   (let [_ (println "Sub with entities -----" ?interesting-entities)]
     {:entities-sub ?interesting-entities}))
 
-(def-tuple-rule detect-unique-error
+(def-tuple-rule log-errors
   [[?e ::err/type]]
   [(<- ?error (entity ?e))]
   =>
   (println "Found error!" ?error))
 
-
-;; We generate:
-
-;; A rule that contains the accumulator expression with the binding provided in `(entities)`
-;(def-tuple-rule my-rule___split-0
-;  [?eids <- (acc/all :e) :from [:interesting-fact]]
-;  =>
-;  (let [req-id (guid)
-;        gen-fact-req [[req-id ::factgen/for-macro 'entities]
-;                      [req-id ::factgen/request-params ?eids]]
-;    ;_ (swap! state/generated-facts assoc req-id {:req gen-fact-req :rule-name ???})
-;    (insert! gen-fact-req)
-;    (insert! [req-id :entities/order ?eids])
-;    (doseq [eid ?eids]
-;      (insert! [req-id :entities/eid eid]))))
-
-;: ...and the original, rewritten to match on the ::gen-fact/response, keeping the same name
-;(def-tuple-rule my-rule
-;  ;; ...rest LHS
-;  ;; Want to remove acc expr (it exists in a genned rule),
-;  ;; but then no access to its bound variable inside this rule...
-;  [?eids <- (acc/all :e) :from [:interesting-fact]]
-;  ;; Replaces `entities` on same "line" as original
-;;;;;;;;;;;;;;;;;;;; Edit ;;;;;;;;;;;;;;;;;
-;  [[?id ::factgen/request-params ?eids]]
-;  [[?id ::factgen/for-macro 'entities]]
-;  [[?id ::factgen/response ?interesting-entities]]
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  [[_ ::factgen/response ?interesting-entities]]
-;  =>
-;  (println "Found genned response" ?interesting-entities))
-   ;; ...original RHS
-
-;; precept.rules.impl:
-
-;; These are "always on", waiting for an :entity request
-
-;(def-tuple-rule entities___impl-a
-;  [[?req-id ::factgen/for-macro :entities]]
-;  [[?req-id :entities/eid ?e]]
-;  [(<- ?entity (entity ?e))]
-;  =>
-;  (insert! [?req-id :entities/entity ?entity]))
-;
-;(def-tuple-rule entities___impl-b
-;  [[?req :entities/order ?eids]]
-;  [?ents <- (acc/all :v) :from [?req :entities/entity]]
-;  =>
-;  (let [items (group-by :e (flatten ?ents))
-;        ordered (vals (select-keys items (into [] ?eids)))]
-;     (insert! [?req ::factgen/response ordered])))
 
 (def-tuple-session app-session
    'precept.todomvc.rules-debug

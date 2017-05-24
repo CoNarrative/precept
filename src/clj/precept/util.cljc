@@ -191,20 +191,22 @@
   [facts]
   (partition-by (comp #(= "precept.spec.error" (namespace %)) :a) facts))
 
+(defn conforming-insertions-and-retractions [facts]
+  (let [insertables (insertable facts)
+        indexed (remove nil? (flatten (map update-index! insertables)))
+        ; TODO. Don't know what to call 'indexed', 'in-index'...
+        [in-index errors] (partition-errors indexed)
+        to-insert (into (vec errors) (clojure.set/difference (set insertables) (set in-index)))
+        to-retract (into [] (clojure.set/difference (set in-index) (set insertables)))]
+    [to-insert to-retract]))
+
 (defn insert
   "Inserts facts from outside rule context.
   Accepts [] [[]...]"
   [session facts]
-  (let [insertables (insertable facts)
-        indexed (remove nil? (flatten (map update-index! insertables)))
-        ; TODO. Don't know what to call 'indexed', 'in-index'....
-        [in-index errors] (partition-errors indexed)
-        _ (println "Errors" errors)
-        _ (println "In index" in-index)
-        to-insert (into (vec errors) (clojure.set/difference (set insertables) (set in-index)))
-        to-retract (into [] (clojure.set/difference (set in-index) (set insertables)))
-        _ (println "[insert] to-insert " (mapv vals to-insert))
-        _ (println "[insert] to-retract " (mapv vals to-retract))]
+  (let [[to-insert to-retract] (conforming-insertions-and-retractions facts)
+        _ (trace "[insert] to-insert " (mapv vals to-insert))
+        _ (trace "[insert] to-retract " (mapv vals to-retract))]
     (if (empty? to-retract)
       (cr/insert-all session to-insert)
       (let [inserted (cr/insert-all session to-insert)]
@@ -215,10 +217,7 @@
 (defn insert!
   "Insert facts logically within rule context"
   [facts]
-  (let [insertables (insertable facts)
-        indexed (remove nil? (flatten (map #(update-index! %) insertables)))
-        to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
-        to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))]
+  (let [[to-insert to-retract] (conforming-insertions-and-retractions facts)]
     (trace "[insert!] : inserting " to-insert)
     (trace "[insert!] : retracting " to-retract)
     (if (empty? to-retract)
@@ -229,10 +228,7 @@
 (defn insert-unconditional!
   "Insert facts unconditionally within rule context"
   [facts]
-  (let [insertables (insertable facts)
-        indexed (remove nil? (flatten (map #(update-index! %) insertables)))
-        to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
-        to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))]
+  (let [[to-insert to-retract] (conforming-insertions-and-retractions facts)]
     (trace "[insert-unconditional!] : inserting " to-insert)
     (trace "[insert-unconditional!] : retracting " to-retract)
     (if (empty? to-retract)

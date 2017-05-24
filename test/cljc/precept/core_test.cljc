@@ -4,6 +4,7 @@
             [precept.util :refer [->Tuple] :as util]
             [precept.listeners :as l]
             [precept.spec.sub :as sub]
+            [precept.spec.error :as err]
             [precept.tuplerules :refer [def-tuple-session]]
             [precept.schema :as schema]
             [precept.schema-fixture :refer [test-schema]]
@@ -36,10 +37,10 @@
         removed (:removed ops)]
     (is (= @state/store {}))
     (is (= Tuple (type (get-in @state/fact-index [:one-to-one 1 :test-attr/one-to-one]))))
-    (is (= added true))
-    ;(is (= removed []))
-    (is (every? #{:test-attr/one-to-many :test-attr/one-to-one :test-attr/unique ::sub/request
-                  ::sub/response}
+    (is (= removed []))
+    (is (every? #{:test-attr/one-to-many :test-attr/one-to-one :test-attr/unique
+                  ::sub/request ::sub/response
+                  ::err/type ::err/existing-fact ::err/failed-insert}
            (into #{} (map second added)))
         "Session change parser should have returned at least one of every test attribute")
     ;; Apply additions and removals!
