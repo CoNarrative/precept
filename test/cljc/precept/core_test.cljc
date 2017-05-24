@@ -36,7 +36,8 @@
         removed (:removed ops)]
     (is (= @state/store {}))
     (is (= Tuple (type (get-in @state/fact-index [:one-to-one 1 :test-attr/one-to-one]))))
-    (is (= removed []))
+    (is (= added true))
+    ;(is (= removed []))
     (is (every? #{:test-attr/one-to-many :test-attr/one-to-one :test-attr/unique ::sub/request
                   ::sub/response}
            (into #{} (map second added)))
@@ -76,9 +77,9 @@
             {:db/id 2
              :test-attr/one-to-many '(42 42 42 42 42)
              :test-attr/one-to-one 42
-             :test-attr/unique 42}]))
+             :test-attr/unique 42}]))))
     ; Remove everything that was added!
-    (core/apply-removals-to-view-model! added)
-    (is (= {} @state/store))))
+    ;(core/apply-removals-to-view-model! added)
+    ;(is (= {} @state/store))))
 
 (run-tests)

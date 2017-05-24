@@ -12,9 +12,6 @@
   #?(:clj (java.util.UUID/randomUUID)
      :cljs (random-uuid)))
 
-(defn attr-ns [attr]
-  (subs (first (clojure.string/split attr "/")) 1))
-
 ;; From clojure.core.incubator
 (defn dissoc-in
   "Dissociates an entry from a nested associative structure returning a new
@@ -142,9 +139,6 @@
   "Prepreds :unique to keyseq path in second argument. Overwrites existing value and returns it if
   found."
   [fact ks]
-  (println "Adding to unqiue index" ks fact)
-  (println "Exists in e-a-v" (get-in @state/fact-index
-                               [:one-to-one (:e fact) (:a fact)]))
   (if-let [existing (get-in @state/fact-index (into [:unique] ks))]
     (do
       (swap! state/fact-index dissoc-in (into [:unique] ks))
@@ -181,8 +175,6 @@
           [:unique (:a removed-from-cardinality) (:v removed-from-cardinality)]))
       (vector removed-from-cardinality removed-from-unique))))
 
-
-
 (defn update-index!
   "Primary function that updates fact-index. Requires fact to index. Generates key-seq
   to path in index."
@@ -194,16 +186,25 @@
      :unique (update-unique-index! fact ks)
      :one-to-many nil)))
 
+(defn partition-errors
+  "Separates seq of Tuples by whether :a is in precept.spec.error ns"
+  [facts]
+  (partition-by (comp #(= "precept.spec.error" (namespace %)) :a) facts))
+
 (defn insert
   "Inserts facts from outside rule context.
   Accepts [] [[]...]"
   [session facts]
   (let [insertables (insertable facts)
-        indexed (remove nil? (flatten (map #(update-index! %) insertables)))
-        to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
-        to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))
-        _ (trace "[insert] to-insert " (mapv vals to-insert))
-        _ (trace "[insert] to-retract " (mapv vals to-retract))]
+        indexed (remove nil? (flatten (map update-index! insertables)))
+        ; TODO. Don't know what to call 'indexed', 'in-index'....
+        [in-index errors] (partition-errors indexed)
+        _ (println "Errors" errors)
+        _ (println "In index" in-index)
+        to-insert (into (vec errors) (clojure.set/difference (set insertables) (set in-index)))
+        to-retract (into [] (clojure.set/difference (set in-index) (set insertables)))
+        _ (println "[insert] to-insert " (mapv vals to-insert))
+        _ (println "[insert] to-retract " (mapv vals to-retract))]
     (if (empty? to-retract)
       (cr/insert-all session to-insert)
       (let [inserted (cr/insert-all session to-insert)]
