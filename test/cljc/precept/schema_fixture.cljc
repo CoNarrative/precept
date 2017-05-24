@@ -1,19 +1,25 @@
 (ns precept.schema-fixture
     (:require [precept.util :refer [guid]]
+              [precept.spec.test :as test]
               [precept.schema :refer [attribute]]))
 
 (defn schema []
   [
-   (attribute :test-attr/unique
+   (attribute ::test/unique-identity
      :db.type/string
      :db/unique :db.unique/identity)
 
-   (attribute :test-attr/one-to-many
+   (attribute ::test/one-to-many
      :db.type/string
      :db/cardinality :db.cardinality/many)
 
-   (attribute :test-attr/one-to-one
+   (attribute ::test/one-to-one
      :db.type/string
+     :db/cardinality :db.cardinality/one)
+
+   (attribute ::test/unique-value
+     :db.type/string
+     :db/unique :db.unique/value
      :db/cardinality :db.cardinality/one)
 
    (attribute :todo/title
