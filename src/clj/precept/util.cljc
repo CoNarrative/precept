@@ -1,6 +1,9 @@
 (ns precept.util
    (:require [clara.rules :as cr]
-             [precept.state :as state]))
+             [precept.state :as state]
+             [precept.spec.error :as err]))
+
+(declare update-index!)
 
 (defn trace [& args]
   (comment (apply prn args)))
@@ -104,11 +107,12 @@
   [fact]
   (let [ancestry (@state/ancestors-fn (:a fact))]
     (cond
-      (ancestry :unique) [:unique (:a fact) (:v fact)]
+      (ancestry :unique-identity) [:unique (:a fact) (:v fact)]
+      (ancestry :unique-value) [:unique (:a fact) (:v fact)]
       (ancestry :one-to-one) [:one-to-one (:e fact) (:a fact)]
       :else [:one-to-many])))
 
-(defn find-in-fact-index
+(defn add-to-fact-index!
   "Writes value to path in ks. Returns nil if nothing was overwritten. Else returns fact that was
    overwritten."
   [fact ks]
@@ -122,7 +126,7 @@
         (swap! state/fact-index assoc-in ks fact)
         nil))))
 
-(defn remove-from-fact-index
+(defn remove-from-fact-index!
   "Finds in index based on supplied key.
   Compares value of fact to fact that is indexed. If existing value matches
   fact to be removed, removes fact and returns true to indicate removal, Else
@@ -134,43 +138,68 @@
           true)
       false)))
 
-(defn update-unique-index
+(defn add-to-unique-index!
   "Prepreds :unique to keyseq path in second argument. Overwrites existing value and returns it if
   found."
   [fact ks]
+  (println "Adding to unqiue index" ks fact)
+  (println "Exists in e-a-v" (get-in @state/fact-index
+                               [:one-to-one (:e fact) (:a fact)]))
   (if-let [existing (get-in @state/fact-index (into [:unique] ks))]
     (do
+      (swap! state/fact-index dissoc-in (into [:unique] ks))
       (swap! state/fact-index update-in (into [:unique] ks) (fn [_] fact))
       existing)
     (do
       (swap! state/fact-index assoc-in (into [:unique] ks) fact)
       nil)))
 
-(defn update-index
+(defn check-unique-conflict [fact ks]
+  (let [existing (get-in @state/fact-index [:unique (:a fact) (:v fact)])]
+    (if (and existing (not= (:e fact) (:e existing)))
+       (let [id (guid)]
+         (mapv vec->record
+           [[id ::err/type :unique-conflict]
+            [id ::err/existing-fact existing]
+            [id ::err/failed-insert fact]]))
+      nil)))
+
+(defn update-unique-index! [fact ks]
+  (if-let [unique-conflict (check-unique-conflict fact ks)]
+    unique-conflict
+    (let [removed-from-unique (add-to-unique-index! fact (into [] (rest ks)))
+          removed-from-cardinality (update-index! fact [:one-to-one (:e fact) (:a fact)])]
+      (when (and (seq removed-from-unique)
+              (not= fact removed-from-unique))
+        (remove-from-fact-index!
+          removed-from-unique
+          [:one-to-one (:e removed-from-unique) (:a removed-from-unique)]))
+      (when (and (seq removed-from-cardinality)
+              (not= fact removed-from-cardinality))
+        (remove-from-fact-index!
+          removed-from-cardinality
+          [:unique (:a removed-from-cardinality) (:v removed-from-cardinality)]))
+      (vector removed-from-cardinality removed-from-unique))))
+
+
+
+(defn update-index!
   "Primary function that updates fact-index. Requires fact to index. Generates key-seq
   to path in index."
   ([fact]
-   (update-index fact (fact-index-path fact)))
+   (update-index! fact (fact-index-path fact)))
   ([fact ks]
    (condp = (first ks)
-     :one-to-one (find-in-fact-index fact ks)
-     :unique (let [removed-from-cardinality (update-index fact [:one-to-one (:e fact) (:a fact)])
-                   removed-from-unique (update-unique-index fact (into [] (rest ks)))]
-               (when (and (seq removed-from-unique) (not= fact removed-from-unique))
-                 (remove-from-fact-index removed-from-unique
-                   [:one-to-one (:e removed-from-unique) (:a removed-from-unique)]))
-               (when (and (seq removed-from-cardinality) (not= fact removed-from-cardinality))
-                 (remove-from-fact-index removed-from-cardinality
-                   [:unique (:a removed-from-cardinality) (:v removed-from-cardinality)]))
-               (vector removed-from-cardinality removed-from-unique))
-    :one-to-many nil)))
+     :one-to-one (add-to-fact-index! fact ks)
+     :unique (update-unique-index! fact ks)
+     :one-to-many nil)))
 
 (defn insert
   "Inserts facts from outside rule context.
   Accepts [] [[]...]"
   [session facts]
   (let [insertables (insertable facts)
-        indexed (remove nil? (flatten (map #(update-index %) insertables)))
+        indexed (remove nil? (flatten (map #(update-index! %) insertables)))
         to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
         to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))
         _ (trace "[insert] to-insert " (mapv vals to-insert))
@@ -186,7 +215,7 @@
   "Insert facts logically within rule context"
   [facts]
   (let [insertables (insertable facts)
-        indexed (remove nil? (flatten (map #(update-index %) insertables)))
+        indexed (remove nil? (flatten (map #(update-index! %) insertables)))
         to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
         to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))]
     (trace "[insert!] : inserting " to-insert)
@@ -200,7 +229,7 @@
   "Insert facts unconditionally within rule context"
   [facts]
   (let [insertables (insertable facts)
-        indexed (remove nil? (flatten (map #(update-index %) insertables)))
+        indexed (remove nil? (flatten (map #(update-index! %) insertables)))
         to-insert (into [] (clojure.set/difference (set insertables) (set indexed)))
         to-retract (into [] (clojure.set/difference (set indexed) (set insertables)))]
     (trace "[insert-unconditional!] : inserting " to-insert)
@@ -218,14 +247,14 @@
         _ (trace "[retract!] :" insertables)]
     (doseq [x insertables]
       (cr/retract! x)
-      (remove-from-fact-index x (fact-index-path x)))))
+      (remove-from-fact-index! x (fact-index-path x)))))
 
 (defn retract
   "Retract from outside rule context.
   [] [[]..]"
   [session facts]
   (let [insertables (insertable facts)
-        _ (doseq [x insertables] (remove-from-fact-index x (fact-index-path x)))
+        _ (doseq [x insertables] (remove-from-fact-index! x (fact-index-path x)))
         _ (trace "[retract] : " insertables)]
     (reduce (fn [s fact] (cr/retract s fact))
       session

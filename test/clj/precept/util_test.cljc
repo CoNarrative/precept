@@ -10,6 +10,7 @@
               [clara.tools.inspect :as inspect]
               [clara.tools.tracing :as trace]
               [clojure.spec :as s]
+              [precept.spec.error :as err]
               [clara.rules :refer [query defquery fire-rules] :as cr]
               [clara.tools.tracing :as trace]
               [precept.util :as util])
@@ -29,8 +30,6 @@
 
 (defn fact-id? [n]
   (and (> n -1) (<= n @state/fact-id)))
-
-(@state/ancestors-fn :test-attr/one-to-many)
 
 (defn reset-globals [f]
   (reset! state/fact-index {})
@@ -257,7 +256,7 @@
 (deftest ancestors-fn-test
   (let [h (schema/schema->hierarchy test-schema)
         ancestors-fn (util/make-ancestors-fn h)]
-    (is (= #{:all :one-to-one :unique} (ancestors-fn :todo/title)))
+    (is (= #{:all :one-to-one :unique-identity} (ancestors-fn :todo/title)))
     (is (= #{:all :one-to-one} (ancestors-fn :todo/done)))
     (is (= #{:all :one-to-one} (ancestors-fn :no-match)))
     (is (= #{:all :one-to-many} (ancestors-fn :todo/tags)))))
@@ -283,7 +282,9 @@
         next-1 (->Tuple 1 :foo 43 3)
         next-2 (->Tuple 1 :bar 43 4)
         one-to-many (->Tuple 1 :todo/tags 42 5)
-        unique (->Tuple 1 :todo/title "my unique title" 6)]
+        unique (->Tuple 1 :todo/title "my unique title" 6)
+        unique-upsert (->Tuple 1 :todo/title "my new unique title" 7)
+        unique-conflicting (->Tuple 2 :todo/title "my new unique title" 8)]
 
     (testing "Initial state"
       (is (= {} (reset! state/fact-index {}))
@@ -292,31 +293,31 @@
           "Expected ancestors-fn to be a fn"))
 
     (testing "Finding existing with empty state"
-      (is (= nil (find-in-fact-index fact-1 (fact-index-path fact-1)))))
+      (is (= nil (add-to-fact-index! fact-1 (fact-index-path fact-1)))))
 
     (testing "Fact is indexed by find-existing"
       (is (= @state/fact-index {:one-to-one {1 {:foo fact-1}}})))
 
     (testing "Removing a fact that exists in index"
-      (is (= true (remove-from-fact-index fact-1 (fact-index-path fact-1))))
+      (is (= true (remove-from-fact-index! fact-1 (fact-index-path fact-1))))
       (is (= @state/fact-index {})))
 
     (testing "Newer one-to-one facts should return old fact"
       (is (= @state/fact-index {}))
-      (is (= nil (find-in-fact-index fact-1 (fact-index-path fact-1))))
-      (is (= fact-1 (find-in-fact-index next-1 (fact-index-path next-1)))))
+      (is (= nil (add-to-fact-index! fact-1 (fact-index-path fact-1))))
+      (is (= fact-1 (add-to-fact-index! next-1 (fact-index-path next-1)))))
 
     (testing "Existing one-to-one-fact should have been replaced"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}})))
 
     (testing "Remove fact from index that does not exist"
-      (is (= false (remove-from-fact-index fact-1 (fact-index-path fact-1))))
+      (is (= false (remove-from-fact-index! fact-1 (fact-index-path fact-1))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}})))
 
     (testing "Find with same entity, different attribute should index the new fact and return
               nil (nothing to retract)"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}}))
-      (is (= nil (find-in-fact-index fact-2 (fact-index-path fact-2))))
+      (is (= nil (add-to-fact-index! fact-2 (fact-index-path fact-2))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}})))
 
@@ -324,22 +325,56 @@
               return false to indicate nothing was removed"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}}))
-      (is (= false (remove-from-fact-index next-2 (fact-index-path next-2))))
+      (is (= false (remove-from-fact-index! next-2 (fact-index-path next-2))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}})))
 
     (testing "One-to-many attrs do not affect fact index"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}}))
-      (is (= nil (find-in-fact-index one-to-many (fact-index-path one-to-many))))
-      (is (= false (remove-from-fact-index one-to-many (fact-index-path one-to-many))))
+      (is (= nil (add-to-fact-index! one-to-many (fact-index-path one-to-many))))
+      (is (= false (remove-from-fact-index! one-to-many (fact-index-path one-to-many))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}})))
 
-    (testing "Unique attrs should be indexed in own bucket"
-      (is (= nil (find-in-fact-index unique (fact-index-path unique))))
-      (is (= @state/fact-index {:one-to-one {1 {:foo next-1
-                                                :bar fact-2}}
-                                :unique {:todo/title {"my unique title" unique}}})))))
+    (testing "Unique attrs should be indexed in own bucket and one-to-one"
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2}}}))
+      (is (= [nil nil] (update-index! unique)))
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2
+                             :todo/title unique}}
+             :unique {:todo/title {(:v unique) unique}}})))
+
+    (testing "Unique attrs should be upserted if same eid and :unique/identity"
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2
+                             :todo/title unique}}
+             :unique {:todo/title {(:v unique) unique}}}))
+      (is (= [unique nil] (update-index! unique-upsert)))
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2
+                             :todo/title unique-upsert}}
+             :unique {:todo/title {(:v unique-upsert) unique-upsert}}})))
+
+    (testing "Unique attrs should generate error if diff eid and :unique/identity"
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2
+                             :todo/title unique-upsert}}
+             :unique {:todo/title {(:v unique-upsert) unique-upsert}}}))
+      (is (= (mapv (juxt :a :v) (update-index! unique-conflicting))
+             [[::err/type :unique-conflict]
+              [::err/existing-fact unique-upsert]
+              [::err/failed-insert unique-conflicting]]))
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2
+                             :todo/title unique-upsert}}
+             :unique {:todo/title {(:v unique-upsert) unique-upsert}}})))))
 
 (run-tests)
