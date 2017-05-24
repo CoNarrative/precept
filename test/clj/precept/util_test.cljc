@@ -287,7 +287,8 @@
         unique-upsert (->Tuple 1 ::test/unique-identity "my new unique title" 7)
         unique-conflicting (->Tuple 2 ::test/unique-identity "my new unique title" 8)
         unique-value-conflicting (->Tuple 1 ::test/unique-value "foo" 9)
-        unique-value (->Tuple 2 ::test/unique-value "foo" 10)]
+        unique-value-upsert (->Tuple 2 ::test/unique-value "bar" 10)
+        unique-value (->Tuple 2 ::test/unique-value "foo" 11)]
 
     (testing "Initial state"
       (is (= {} (reset! state/fact-index {}))
@@ -380,7 +381,7 @@
                              ::test/unique-identity unique-upsert}}
              :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}}})))
 
-    (testing "Unique attrs should generate error if same eid and :unique/value"
+    (testing "Unique attrs should generate error if diff eid and :unique/value"
       (is (= [nil nil] (update-index! unique-value)))
       (is (= @state/fact-index
             {:one-to-one {1 {:foo next-1
@@ -393,6 +394,26 @@
             [[::err/type :unique-conflict]
              [::err/existing-fact unique-value]
              [::err/failed-insert unique-value-conflicting]]))
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2
+                             ::test/unique-identity unique-upsert}
+                          2 {::test/unique-value unique-value}}
+             :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
+                      (:a unique-value) {(:v unique-value) unique-value}}})))
+
+    (testing ":unique/value attrs should generate error if try upsert (same eid)"
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2
+                             ::test/unique-identity unique-upsert}
+                          2 {::test/unique-value unique-value}}
+             :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
+                      (:a unique-value) {(:v unique-value) unique-value}}}))
+      (is (= (mapv (juxt :a :v) (update-index! unique-value-upsert))
+            [[::err/type :unique-conflict]
+             [::err/existing-fact unique-value]
+             [::err/failed-insert unique-value-upsert]]))
       (is (= @state/fact-index
             {:one-to-one {1 {:foo next-1
                              :bar fact-2

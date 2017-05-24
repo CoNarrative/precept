@@ -148,13 +148,20 @@
       (swap! state/fact-index assoc-in (into [:unique] ks) fact)
       nil)))
 
+; TODO. Separate unique type operations into own functions
 (defn check-unique-conflict [fact ks]
-  (let [existing (get-in @state/fact-index [:unique (:a fact) (:v fact)])]
-    (if (and existing (not= (:e fact) (:e existing)))
+  (let [existing (get-in @state/fact-index [:unique (:a fact) (:v fact)])
+        existing-value (get-in @state/fact-index [:one-to-one (:e fact) (:a fact)])
+        unique-type (@state/ancestors-fn (:a fact))]
+    (if (or (and (unique-type :unique-value)
+                 (or existing-value
+                     (and existing (not= (:e fact) (:e existing)))))
+            (and (unique-type :unique-identity)
+                 existing (not= (:e fact) (:e existing))))
        (let [id (guid)]
          (mapv vec->record
            [[id ::err/type :unique-conflict]
-            [id ::err/existing-fact existing]
+            [id ::err/existing-fact (or existing existing-value)]
             [id ::err/failed-insert fact]]))
       nil)))
 

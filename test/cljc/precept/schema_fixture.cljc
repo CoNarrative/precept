@@ -19,8 +19,7 @@
 
    (attribute ::test/unique-value
      :db.type/string
-     :db/unique :db.unique/value
-     :db/cardinality :db.cardinality/one)
+     :db/unique :db.unique/value)
 
    (attribute :todo/title
      :db.type/string
