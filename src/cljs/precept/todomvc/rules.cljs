@@ -108,11 +108,13 @@
    :visibility-filter ?visibility-filter})
 
 ;; Error handling
-(def-tuple-rule print-errors
-  [[?e ::err/type ?v]]
-  [(<- ?error (entity ?e))]
+(def-tuple-rule remove-orphaned-when-unique-conflict
+  [[?e ::err/type :unique-conflict]]
+  [[?e ::err/failed-insert ?v]]
+  [?orphaned <- [(:e ?v) :all]]
   =>
-  (println (str "[error] " ?v) ?error))
+  (trace "[error] :unique conflict. Removing orphaned fact" ?orphaned)
+  (retract! ?orphaned))
 
 ;;TODO. Lib?
 ;; TODO. Investigate why sexpr in first position (:id ?v) fails
