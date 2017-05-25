@@ -89,10 +89,10 @@
   (insert-unconditional! (active-count (- ?total ?done))))
 
 (defn by-fact-id
-  "Custsom accumulator.
+  "Custom accumulator.
 
   Like acc/all ewxcept sorts tuples by :t slot (fact-id). Since fact ids are created sequentially
-  this orders facts by they were created.
+  this sorts facts by order they were created.
   Returns list of facts. Optional `k` arg maps `k` over facts."
   ([]
    (acc/accum

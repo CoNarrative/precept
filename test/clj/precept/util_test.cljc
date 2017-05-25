@@ -202,6 +202,16 @@
       (is (every? #(= Tuple (type %)) (:facts (first trace)))
           "Each inserted fact should be a Tuple"))))
 
+(deftest conform-insertions-and-retractions!-test
+  (let [facts [[-1 ::test/one-to-one "foo"]
+               [-1 ::test/unique-identity "foo"]
+               [-2 ::test/unique-identity "foo"]]
+        [to-insert to-retract] (conform-insertions-and-retractions! facts)]
+    (is (= (frequencies (mapv :a to-insert))
+           (frequencies [::err/type ::err/existing-fact ::err/failed-insert
+                         ::test/unique-identity ::test/one-to-one])))
+    (is (= (mapv :a to-retract) []))))
+
 
   ;; TODO. Reinstate
   ;(testing "Insert single map"
@@ -297,31 +307,32 @@
           "Expected ancestors-fn to be a fn"))
 
     (testing "Finding existing with empty state"
-      (is (= nil (add-to-fact-index! fact-1 (fact-index-path fact-1)))))
+      (is (= {:insert fact-1} (add-to-fact-index! fact-1 (fact-index-path fact-1)))))
 
     (testing "Fact is indexed by find-existing"
       (is (= @state/fact-index {:one-to-one {1 {:foo fact-1}}})))
 
     (testing "Removing a fact that exists in index"
-      (is (= true (remove-from-fact-index! fact-1 (fact-index-path fact-1))))
+      (is (= {:retract fact-1} (remove-from-fact-index! fact-1 (fact-index-path fact-1))))
       (is (= @state/fact-index {})))
 
     (testing "Newer one-to-one facts should return old fact"
       (is (= @state/fact-index {}))
-      (is (= nil (add-to-fact-index! fact-1 (fact-index-path fact-1))))
-      (is (= fact-1 (add-to-fact-index! next-1 (fact-index-path next-1)))))
+      (is (= {:insert fact-1} (add-to-fact-index! fact-1 (fact-index-path fact-1))))
+      (is (= {:retract fact-1 :insert next-1}
+            (add-to-fact-index! next-1 (fact-index-path next-1)))))
 
     (testing "Existing one-to-one-fact should have been replaced"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}})))
 
     (testing "Remove fact from index that does not exist"
-      (is (= false (remove-from-fact-index! fact-1 (fact-index-path fact-1))))
+      (is (= {:retract nil} (remove-from-fact-index! fact-1 (fact-index-path fact-1))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}})))
 
     (testing "Find with same entity, different attribute should index the new fact and return
               nil (nothing to retract)"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}}))
-      (is (= nil (add-to-fact-index! fact-2 (fact-index-path fact-2))))
+      (is (= {:insert fact-2} (add-to-fact-index! fact-2 (fact-index-path fact-2))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}})))
 
@@ -329,15 +340,16 @@
               return false to indicate nothing was removed"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}}))
-      (is (= false (remove-from-fact-index! next-2 (fact-index-path next-2))))
+      (is (= {:retract nil} (remove-from-fact-index! next-2 (fact-index-path next-2))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}})))
 
     (testing "One-to-many attrs do not affect fact index"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}}))
-      (is (= nil (add-to-fact-index! one-to-many (fact-index-path one-to-many))))
-      (is (= false (remove-from-fact-index! one-to-many (fact-index-path one-to-many))))
+      (is (= {:insert one-to-many}
+             (add-to-fact-index! one-to-many (fact-index-path one-to-many))))
+      (is (= {:retract nil} (remove-from-fact-index! one-to-many (fact-index-path one-to-many))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}})))
 
@@ -345,7 +357,7 @@
       (is (= @state/fact-index
             {:one-to-one {1 {:foo next-1
                              :bar fact-2}}}))
-      (is (= [nil nil] (update-index! unique)))
+      (is (= {:insert unique :retract nil} (update-index! unique)))
       (is (= @state/fact-index
             {:one-to-one {1 {:foo next-1
                              :bar fact-2
@@ -358,7 +370,7 @@
                              :bar fact-2
                              ::test/unique-identity unique}}
              :unique {::test/unique-identity {(:v unique) unique}}}))
-      (is (= [unique nil] (update-index! unique-upsert)))
+      (is (= {:insert unique-upsert :retract unique} (update-index! unique-upsert)))
       (is (= @state/fact-index
             {:one-to-one {1 {:foo next-1
                              :bar fact-2
@@ -366,41 +378,45 @@
              :unique {::test/unique-identity {(:v unique-upsert) unique-upsert}}})))
 
     (testing "Unique attrs should generate error if diff eid and :unique/identity"
-      (is (= @state/fact-index
-            {:one-to-one {1 {:foo next-1
-                             :bar fact-2
-                             ::test/unique-identity unique-upsert}}
-             :unique {::test/unique-identity {(:v unique-upsert) unique-upsert}}}))
-      (is (= (mapv (juxt :a :v) (update-index! unique-conflicting))
-             [[::err/type :unique-conflict]
-              [::err/existing-fact unique-upsert]
-              [::err/failed-insert unique-conflicting]]))
-      (is (= @state/fact-index
-            {:one-to-one {1 {:foo next-1
-                             :bar fact-2
-                             ::test/unique-identity unique-upsert}}
-             :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}}})))
+      (let [conflicting-insert-res (update-index! unique-conflicting)]
+        (is (= @state/fact-index
+              {:one-to-one {1 {:foo next-1
+                               :bar fact-2
+                               ::test/unique-identity unique-upsert}}
+               :unique {::test/unique-identity {(:v unique-upsert) unique-upsert}}}))
+        (is (= (mapv (juxt :a :v) (:insert conflicting-insert-res))
+               [[::err/type :unique-conflict]
+                [::err/existing-fact unique-upsert]
+                [::err/failed-insert unique-conflicting]]))
+        (is (= nil (:retract conflicting-insert-res)))
+        (is (= @state/fact-index
+              {:one-to-one {1 {:foo next-1
+                               :bar fact-2
+                               ::test/unique-identity unique-upsert}}
+               :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}}}))))
 
     (testing "Unique attrs should generate error if diff eid and :unique/value"
-      (is (= [nil nil] (update-index! unique-value)))
-      (is (= @state/fact-index
-            {:one-to-one {1 {:foo next-1
-                             :bar fact-2
-                             ::test/unique-identity unique-upsert}
-                          2 {::test/unique-value unique-value}}
-             :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
-                      (:a unique-value) {(:v unique-value) unique-value}}}))
-      (is (= (mapv (juxt :a :v) (update-index! unique-value-conflicting))
-            [[::err/type :unique-conflict]
-             [::err/existing-fact unique-value]
-             [::err/failed-insert unique-value-conflicting]]))
-      (is (= @state/fact-index
-            {:one-to-one {1 {:foo next-1
-                             :bar fact-2
-                             ::test/unique-identity unique-upsert}
-                          2 {::test/unique-value unique-value}}
-             :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
-                      (:a unique-value) {(:v unique-value) unique-value}}})))
+        (is (= {:insert unique-value :retract nil} (update-index! unique-value)))
+        (is (= @state/fact-index
+              {:one-to-one {1 {:foo next-1
+                               :bar fact-2
+                               ::test/unique-identity unique-upsert}
+                            2 {::test/unique-value unique-value}}
+               :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
+                        (:a unique-value) {(:v unique-value) unique-value}}}))
+        (let [conflicting-value-insert-res (update-index! unique-value-conflicting)]
+          (is (= (mapv (juxt :a :v) (:insert conflicting-value-insert-res))
+                [[::err/type :unique-conflict]
+                 [::err/existing-fact unique-value]
+                 [::err/failed-insert unique-value-conflicting]]))
+          (is (= nil (:retract conflicting-value-insert-res)))
+          (is (= @state/fact-index
+                {:one-to-one {1 {:foo next-1
+                                 :bar fact-2
+                                 ::test/unique-identity unique-upsert}
+                              2 {::test/unique-value unique-value}}
+                 :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
+                          (:a unique-value) {(:v unique-value) unique-value}}}))))
 
     (testing ":unique/value attrs should generate error if try upsert (same eid)"
       (is (= @state/fact-index
@@ -410,16 +426,18 @@
                           2 {::test/unique-value unique-value}}
              :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
                       (:a unique-value) {(:v unique-value) unique-value}}}))
-      (is (= (mapv (juxt :a :v) (update-index! unique-value-upsert))
-            [[::err/type :unique-conflict]
-             [::err/existing-fact unique-value]
-             [::err/failed-insert unique-value-upsert]]))
-      (is (= @state/fact-index
-            {:one-to-one {1 {:foo next-1
-                             :bar fact-2
-                             ::test/unique-identity unique-upsert}
-                          2 {::test/unique-value unique-value}}
-             :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
-                      (:a unique-value) {(:v unique-value) unique-value}}})))))
+      (let [unique-value-upsert-res (update-index! unique-value-upsert)]
+        (is (= (mapv (juxt :a :v) (:insert unique-value-upsert-res))
+              [[::err/type :unique-conflict]
+               [::err/existing-fact unique-value]
+               [::err/failed-insert unique-value-upsert]]))
+        (is (= nil (:retract unique-value-upsert-res)))
+        (is (= @state/fact-index
+              {:one-to-one {1 {:foo next-1
+                               :bar fact-2
+                               ::test/unique-identity unique-upsert}
+                            2 {::test/unique-value unique-value}}
+               :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
+                        (:a unique-value) {(:v unique-value) unique-value}}}))))))
 
 (run-tests)

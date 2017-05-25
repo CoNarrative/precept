@@ -6,7 +6,7 @@
 (declare update-index!)
 
 (defn trace [& args]
-  (comment (apply prn args)))
+  (apply prn args))
 
 (defn guid []
   #?(:clj (java.util.UUID/randomUUID)
@@ -109,20 +109,22 @@
       (ancestry :one-to-one) [:one-to-one (:e fact) (:a fact)]
       :else [:one-to-many])))
 
+;;TODO. index-cardinality! or add to cardinality
 (defn add-to-fact-index!
   "Writes value to path in ks. Returns nil if nothing was overwritten. Else returns fact that was
    overwritten."
   [fact ks]
   (if (= ks [:one-to-many])
-    nil
+    {:insert fact}
     (if-let [existing (get-in @state/fact-index ks)]
       (do
         (swap! state/fact-index assoc-in ks fact)
-        existing)
+        {:insert fact :retract existing})
       (do
         (swap! state/fact-index assoc-in ks fact)
-        nil))))
+        {:insert fact}))))
 
+;;TODO. Rename remove-from-index-path! (can be unique or card)
 (defn remove-from-fact-index!
   "Finds in index based on supplied key.
   Compares value of fact to fact that is indexed. If existing value matches
@@ -132,9 +134,10 @@
   (let [existing (get-in @state/fact-index ks)]
     (if (= existing fact)
       (do (swap! state/fact-index dissoc-in ks)
-          true)
-      false)))
+          {:retract fact})
+      {:retract nil})))
 
+;; TODO. Rename index-unique!
 (defn add-to-unique-index!
   "Prepreds :unique to keyseq path in second argument. Overwrites existing value and returns it if
   found."
@@ -143,10 +146,10 @@
     (do
       (swap! state/fact-index dissoc-in (into [:unique] ks))
       (swap! state/fact-index update-in (into [:unique] ks) (fn [_] fact))
-      existing)
+      {:insert fact :retract existing})
     (do
       (swap! state/fact-index assoc-in (into [:unique] ks) fact)
-      nil)))
+      {:insert fact :retract nil})))
 
 ; TODO. Separate unique type operations into own functions
 (defn check-unique-conflict [fact ks]
@@ -159,28 +162,34 @@
             (and (unique-type :unique-identity)
                  existing (not= (:e fact) (:e existing))))
        (let [id (guid)]
-         (mapv vec->record
+         {:insert
+          (mapv vec->record
            [[id ::err/type :unique-conflict]
             [id ::err/existing-fact (or existing existing-value)]
-            [id ::err/failed-insert fact]]))
+            [id ::err/failed-insert fact]])})
       nil)))
 
+(defn upsert-unique-index! [fact ks]
+  (let [from-unique (add-to-unique-index! fact (into [] (rest ks)))
+        from-cardinality (update-index! fact [:one-to-one (:e fact) (:a fact)])]
+    (when (and (:retract from-unique)
+            (not= fact from-unique))
+      (remove-from-fact-index!
+        (:retract from-unique)
+        [:one-to-one (:e (:retract from-unique) (:a (:retract from-unique)))]))
+    (when (and (:retract from-cardinality)
+            (not= fact (:retract from-cardinality)))
+      (remove-from-fact-index!
+        (:retract from-cardinality)
+        [:unique (:a (:retract from-cardinality))
+                 (:v (:retract from-cardinality))]))
+    {:insert (first (distinct (remove nil? (map :insert [from-cardinality from-unique]))))
+     :retract (first (distinct (remove nil? (map :retract [from-cardinality from-unique]))))}))
+
 (defn update-unique-index! [fact ks]
-  (if-let [unique-conflict (check-unique-conflict fact ks)]
-    unique-conflict
-    (let [removed-from-unique (add-to-unique-index! fact (into [] (rest ks)))
-          removed-from-cardinality (update-index! fact [:one-to-one (:e fact) (:a fact)])]
-      (when (and (seq removed-from-unique)
-              (not= fact removed-from-unique))
-        (remove-from-fact-index!
-          removed-from-unique
-          [:one-to-one (:e removed-from-unique) (:a removed-from-unique)]))
-      (when (and (seq removed-from-cardinality)
-              (not= fact removed-from-cardinality))
-        (remove-from-fact-index!
-          removed-from-cardinality
-          [:unique (:a removed-from-cardinality) (:v removed-from-cardinality)]))
-      (vector removed-from-cardinality removed-from-unique))))
+  (let [unique-conflict (check-unique-conflict fact ks)]
+    (or unique-conflict
+        (upsert-unique-index! fact ks))))
 
 (defn update-index!
   "Primary function that updates fact-index. Requires fact to index. Generates key-seq
@@ -191,27 +200,20 @@
    (condp = (first ks)
      :one-to-one (add-to-fact-index! fact ks)
      :unique (update-unique-index! fact ks)
-     :one-to-many nil)))
+     :one-to-many {:insert fact})))
 
-(defn partition-errors
-  "Separates seq of Tuples by whether :a is in precept.spec.error ns"
-  [facts]
-  (partition-by (comp #(= "precept.spec.error" (namespace %)) :a) facts))
-
-(defn conforming-insertions-and-retractions [facts]
+(defn conform-insertions-and-retractions! [facts]
   (let [insertables (insertable facts)
-        indexed (remove nil? (flatten (map update-index! insertables)))
-        ; TODO. Don't know what to call 'indexed', 'in-index'...
-        [in-index errors] (partition-errors indexed)
-        to-insert (into (vec errors) (clojure.set/difference (set insertables) (set in-index)))
-        to-retract (into [] (clojure.set/difference (set in-index) (set insertables)))]
-    [to-insert to-retract]))
+        indexed (map update-index! insertables)
+        to-insert (vec (flatten (remove nil? (map :insert indexed))))
+        to-retract (vec (flatten (remove nil? (map :retract indexed))))]
+    (vector to-insert to-retract)))
 
 (defn insert
   "Inserts facts from outside rule context.
   Accepts [] [[]...]"
   [session facts]
-  (let [[to-insert to-retract] (conforming-insertions-and-retractions facts)
+  (let [[to-insert to-retract] (conform-insertions-and-retractions! facts)
         _ (trace "[insert] to-insert " (mapv vals to-insert))
         _ (trace "[insert] to-retract " (mapv vals to-retract))]
     (if (empty? to-retract)
@@ -224,7 +226,7 @@
 (defn insert!
   "Insert facts logically within rule context"
   [facts]
-  (let [[to-insert to-retract] (conforming-insertions-and-retractions facts)]
+  (let [[to-insert to-retract] (conform-insertions-and-retractions! facts)]
     (trace "[insert!] : inserting " to-insert)
     (trace "[insert!] : retracting " to-retract)
     (if (empty? to-retract)
@@ -235,7 +237,7 @@
 (defn insert-unconditional!
   "Insert facts unconditionally within rule context"
   [facts]
-  (let [[to-insert to-retract] (conforming-insertions-and-retractions facts)]
+  (let [[to-insert to-retract] (conform-insertions-and-retractions! facts)]
     (trace "[insert-unconditional!] : inserting " to-insert)
     (trace "[insert-unconditional!] : retracting " to-retract)
     (if (empty? to-retract)
