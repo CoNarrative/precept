@@ -37,4 +37,4 @@
   =>
   (println "Fulfilling remove entity request " ?entity)
   (doseq [tuple ?entity]
-    (clara.rules/retract! tuple)))
+    (precept.util/retract! tuple)))
