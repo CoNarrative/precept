@@ -1,6 +1,6 @@
 (ns precept.todomvc.rules
   (:require-macros [precept.dsl :refer [<- entity entities]])
-  (:require [clara.rules.accumulators :as acc]
+  (:require [precept.accumulators :as acc]
             [precept.spec.error :as err]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
             [precept.tuplerules :refer-macros [deflogical defsub def-tuple-session def-tuple-rule]]
@@ -82,51 +82,9 @@
   (trace "Active count: " (- ?total ?done))
   (insert-unconditional! (active-count (- ?total ?done))))
 
-(defn by-fact-id
-  "Custom accumulator.
-
-  Like acc/all ewxcept sorts tuples by :t slot (fact-id). Since fact ids are created sequentially
-  this sorts facts by order they were created.
-  Returns list of facts. Optional `k` arg maps `k` over facts."
-  ([]
-   (acc/accum
-     {:initial-value []
-      :reduce-fn (fn [acc cur] (sort-by :t (conj acc cur)))
-      :retract-fn (fn [acc cur] (sort-by :t (remove #(= cur %) acc)))}))
-  ([k]
-   (acc/accum
-     {:initial-value []
-      :reduce-fn (fn [acc cur]
-                   (trace "[by-fact-id] reduce fn acc cur" acc cur)
-                   (sort-by :t (conj acc (k cur))))
-      :retract-fn (fn [acc cur]
-                    (trace "[by-fact-id] retract fn acc cur" acc cur)
-                    (trace "[by-fact-id] returning " (sort-by :t (remove #(= (k cur) %) acc)))
-                    (sort-by :t (remove #(= (k cur) %) acc)))})))
-
-(defn list-of
-  "Custom accumulator.
-  Calls fact-f on facts being accumulated.
-  If provided, calls list-f on accumulated list result."
-  ([fact-f]
-   (acc/accum
-     {:initial-value []
-      :reduce-fn (fn [acc cur] (fact-f (conj acc cur)))
-      :retract-fn (fn [acc cur] (fact-f (remove #(= cur %) acc)))}))
-  ([fact-f list-f]
-   (acc/accum
-     {:initial-value []
-      :reduce-fn (fn [acc cur]
-                   (trace "[mk-list] reduce fn acc cur" acc cur)
-                   (list-f (conj acc (fact-f cur))))
-      :retract-fn (fn [acc cur]
-                    (trace "[mk-list] retract fn acc cur" acc cur)
-                    (trace "[mk-list] returning " (list-f (remove #(= (fact-f cur) %) acc)))
-                    (list-f (remove #(= (fact-f cur) %) acc)))})))
-
 ;; Subscription handlers
 (defsub :task-list
-  [?eids <- (by-fact-id :e) :from [:todo/visible]]
+  [?eids <- (acc/by-fact-id :e) :from [:todo/visible]]
   [(<- ?visible-todos (entities ?eids))]
   [[_ :active-count ?active-count]]
   =>
