@@ -15,7 +15,8 @@
                                       value-expr?
                                       parse-as-tuple
                                       parse-with-fact-expression
-                                      rewrite-lhs] :as macros]))
+                                      rewrite-lhs] :as macros]
+              [precept.macros :as macros]))
 
 (deftest tuple-bindings-test
   (let [e1    '[?e :ns/foo 42]
@@ -58,6 +59,14 @@
         (parse-as-tuple '[[_ :ns/attr _ ?tx-id]])))
   (is (= '[:ns/attr (= -1 (:t this))]
         (parse-as-tuple '[[_ :ns/attr _ -1]]))))
+
+(deftest parse-with-accumulator-test
+  (is (= (macros/parse-with-accumulator '[?entity <- (acc/all) :from [?e :all]])
+         '[?entity <- (acc/all) :from [:all (= ?e (:e this))]]))
+  (is (= (macros/parse-with-accumulator '[?entity <- (acc/all :e) :from [?e :all]])
+        '[?entity <- (acc/all :e) :from [:all (= ?e (:e this))]]))
+  (is (= (macros/parse-with-accumulator '[?entity <- (acc/all) :from [(:e ?v) :all]])
+        '[?entity <- (acc/all) :from [:all (= (:e ?v) (:e this))]])))
 
 (deftest rewrite-lhs-test
   (testing "Ops - :exists, :not, :and, :or"
