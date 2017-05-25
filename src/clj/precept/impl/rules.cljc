@@ -27,6 +27,14 @@
   =>
   (let [items (group-by :e (flatten ?ents))
         ordered (vals (select-keys items (into [] ?eids)))]
-    (println "[rulegen] inserting response for order" ?eids ?ents)
+    (println "[rulegen] inserting response for order" ?eids ordered)
     (precept.util/insert! [?req ::factgen/response ordered])))
 
+(clara.rules/defrule remove-entity___impl
+  {:group :action}
+  [:remove-entity (= ?v (:v this))]
+  [?entity <- (clara.rules.accumulators/all) :from [:all (= ?v (:e this))]]
+  =>
+  (println "Fulfilling remove entity request " ?entity)
+  (doseq [tuple ?entity]
+    (clara.rules/retract! tuple)))

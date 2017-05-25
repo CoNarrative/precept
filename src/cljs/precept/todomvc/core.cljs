@@ -34,6 +34,5 @@
 (def facts (into (todo "Hi") (todo "there!")))
 
 (defn ^:export main []
-  (println "Starting with session " app-session)
   (start! {:session app-session :facts facts})
   (mount-components))

@@ -25,12 +25,14 @@
    (accum
      {:initial-value []
       :reduce-fn (fn [acc cur] (sort-by :t (conj acc cur)))
-      :retract-fn (fn [acc cur] (sort-by :t (remove #(= cur %) acc)))}))
+      :retract-fn (fn [acc cur] (sort-by :t (remove #(= cur %) acc)))
+      :convert-return-fn identity}))
   ([k]
    (accum
      {:initial-value []
-      :reduce-fn (fn [acc cur] (sort-by :t (conj acc (k cur))))
-      :retract-fn (fn [acc cur] (sort-by :t (remove #(= (k cur) %) acc)))})))
+      :reduce-fn (fn [acc cur] (sort-by :t (conj acc cur)))
+      :retract-fn (fn [acc cur] (sort-by :t (remove #(= cur %) acc)))
+      :convert-return-fn (fn [facts] (map k facts))})))
 
 (defn list-of
   "Custom accumulator.
@@ -47,3 +49,4 @@
      {:initial-value []
       :reduce-fn (fn [acc cur] (list-f (conj acc (fact-f cur))))
       :retract-fn (fn [acc cur] (list-f (remove #(= (fact-f cur) %) acc)))})))
+
