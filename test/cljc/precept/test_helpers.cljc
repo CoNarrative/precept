@@ -4,6 +4,7 @@
             [precept.listeners :as l]
             [precept.tuplerules :refer [def-tuple-session]]
             [precept.schema :as schema]
+            [precept.spec.test :as test]
             [precept.schema-fixture :refer [test-schema]]
             [clara.rules :as cr]))
 
@@ -15,9 +16,9 @@
   (fn [e] (repeatedly n #(util/vec->record [e a 42]))))
 
 (defn mk-facts [n eids]
-  (let [mk-one-to-one (mk-fact-fn n :test-attr/one-to-one)
-        mk-unique (mk-fact-fn n :test-attr/unique)
-        mk-one-to-many(mk-fact-fn n :test-attr/one-to-many)]
+  (let [mk-one-to-one (mk-fact-fn n ::test/one-to-one)
+        mk-unique (mk-fact-fn n ::test/unique-identity)
+        mk-one-to-many(mk-fact-fn n ::test/one-to-many)]
     (into [] (flatten (mapcat (juxt mk-one-to-one mk-unique mk-one-to-many) eids)))))
 
 (defn max-fid-fact

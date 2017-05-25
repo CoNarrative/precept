@@ -10,6 +10,8 @@
               [clara.tools.inspect :as inspect]
               [clara.tools.tracing :as trace]
               [clojure.spec :as s]
+              [precept.spec.test :as test]
+              [precept.spec.error :as err]
               [clara.rules :refer [query defquery fire-rules] :as cr]
               [clara.tools.tracing :as trace]
               [precept.util :as util])
@@ -29,8 +31,6 @@
 
 (defn fact-id? [n]
   (and (> n -1) (<= n @state/fact-id)))
-
-(@state/ancestors-fn :test-attr/one-to-many)
 
 (defn reset-globals [f]
   (reset! state/fact-index {})
@@ -91,40 +91,40 @@
            [-1 :attr [-2 :nested "foo"]]))))
 
 (deftest any-Tuple?-test
-  (let [tuples (conj (repeatedly 5 #(->Tuple 1 :test-attr/one-to-many 42 1))
-                 (->Tuple 2 :test-attr/one-to-one "bar" 2)
-                 (->Tuple 3 :test-attr/one-to-one "baz" 2))
+  (let [tuples (conj (repeatedly 5 #(->Tuple 1 ::test/one-to-many 42 1))
+                 (->Tuple 2 ::test/one-to-one "bar" 2)
+                 (->Tuple 3 ::test/one-to-one "baz" 2))
         nested (->Tuple 1 :ents tuples 1)
-        entity-tuples (list (vec (conj (repeatedly 5 #(->Tuple 1 :test-attr/one-to-many 42 1))
-                                   (->Tuple 1 :test-attr/one-to-one 42 1)))
-                            (vec (conj (repeatedly 5 #(->Tuple 2 :test-attr/one-to-many 42 1))
-                                   (->Tuple 2 :test-attr/one-to-one 42 1))))]
+        entity-tuples (list (vec (conj (repeatedly 5 #(->Tuple 1 ::test/one-to-many 42 1))
+                                   (->Tuple 1 ::test/one-to-one 42 1)))
+                            (vec (conj (repeatedly 5 #(->Tuple 2 ::test/one-to-many 42 1))
+                                   (->Tuple 2 ::test/one-to-one 42 1))))]
     (is (= true (any-Tuple? tuples)))
     (is (= true (any-Tuple? entity-tuples)))
     (is (= true (any-Tuple? nested)))))
 
 (deftest Tuples->maps-test
-  (let [tuples (conj (repeatedly 5 #(->Tuple 1 :test-attr/one-to-many 42 1))
-                     (->Tuple 1 :test-attr/one-to-one "bar" 2)
-                     (->Tuple 2 :test-attr/one-to-one "baz" 2))
+  (let [tuples (conj (repeatedly 5 #(->Tuple 1 ::test/one-to-many 42 1))
+                     (->Tuple 1 ::test/one-to-one "bar" 2)
+                     (->Tuple 2 ::test/one-to-one "baz" 2))
         nested (->Tuple 1 :ents tuples 1)
-        entity-tuples (list (vec (conj (repeatedly 5 #(->Tuple 1 :test-attr/one-to-many 42 1))
-                                   (->Tuple 1 :test-attr/one-to-one 42 1)))
-                            (vec (conj (repeatedly 5 #(->Tuple 2 :test-attr/one-to-many 42 1))
-                                   (->Tuple 2 :test-attr/one-to-one 42 1))))]
+        entity-tuples (list (vec (conj (repeatedly 5 #(->Tuple 1 ::test/one-to-many 42 1))
+                                   (->Tuple 1 ::test/one-to-one 42 1)))
+                            (vec (conj (repeatedly 5 #(->Tuple 2 ::test/one-to-many 42 1))
+                                   (->Tuple 2 ::test/one-to-one 42 1))))]
     (is (= (Tuples->maps tuples)
-          [{:db/id 2 :test-attr/one-to-one "baz"}
-           {:db/id 1 :test-attr/one-to-many '(42 42 42 42 42)
-            :test-attr/one-to-one "bar"}]))
+          [{:db/id 2 ::test/one-to-one "baz"}
+           {:db/id 1 ::test/one-to-many '(42 42 42 42 42)
+            ::test/one-to-one "bar"}]))
     (is (= (Tuples->maps nested)
-           {:ents [{:db/id 2 :test-attr/one-to-one "baz"}
+           {:ents [{:db/id 2 ::test/one-to-one "baz"}
                    {:db/id 1
-                    :test-attr/one-to-many '(42 42 42 42 42)
-                    :test-attr/one-to-one "bar"}]
+                    ::test/one-to-many '(42 42 42 42 42)
+                    ::test/one-to-one "bar"}]
             :db/id 1}))
     (is (= (Tuples->maps entity-tuples)
-           [{:db/id 1 :test-attr/one-to-many '(42 42 42 42 42) :test-attr/one-to-one 42}
-            {:db/id 2 :test-attr/one-to-many '(42 42 42 42 42) :test-attr/one-to-one 42}]))))
+           [{:db/id 1 ::test/one-to-many '(42 42 42 42 42) ::test/one-to-one 42}
+            {:db/id 2 ::test/one-to-many '(42 42 42 42 42) ::test/one-to-one 42}]))))
 
 (deftest insertable-test
   (testing "Single vector"
@@ -202,6 +202,16 @@
       (is (every? #(= Tuple (type %)) (:facts (first trace)))
           "Each inserted fact should be a Tuple"))))
 
+(deftest conform-insertions-and-retractions!-test
+  (let [facts [[-1 ::test/one-to-one "foo"]
+               [-1 ::test/unique-identity "foo"]
+               [-2 ::test/unique-identity "foo"]]
+        [to-insert to-retract] (conform-insertions-and-retractions! facts)]
+    (is (= (frequencies (mapv :a to-insert))
+           (frequencies [::err/type ::err/existing-fact ::err/failed-insert
+                         ::test/unique-identity ::test/one-to-one])))
+    (is (= (mapv :a to-retract) []))))
+
 
   ;; TODO. Reinstate
   ;(testing "Insert single map"
@@ -257,7 +267,7 @@
 (deftest ancestors-fn-test
   (let [h (schema/schema->hierarchy test-schema)
         ancestors-fn (util/make-ancestors-fn h)]
-    (is (= #{:all :one-to-one :unique} (ancestors-fn :todo/title)))
+    (is (= #{:all :one-to-one :unique-identity} (ancestors-fn :todo/title)))
     (is (= #{:all :one-to-one} (ancestors-fn :todo/done)))
     (is (= #{:all :one-to-one} (ancestors-fn :no-match)))
     (is (= #{:all :one-to-many} (ancestors-fn :todo/tags)))))
@@ -282,8 +292,13 @@
         fact-2 (->Tuple 1 :bar 42 2)
         next-1 (->Tuple 1 :foo 43 3)
         next-2 (->Tuple 1 :bar 43 4)
-        one-to-many (->Tuple 1 :todo/tags 42 5)
-        unique (->Tuple 1 :todo/title "my unique title" 6)]
+        one-to-many (->Tuple 1 ::test/one-to-many 42 5)
+        unique (->Tuple 1 ::test/unique-identity "my unique title" 6)
+        unique-upsert (->Tuple 1 ::test/unique-identity "my new unique title" 7)
+        unique-conflicting (->Tuple 2 ::test/unique-identity "my new unique title" 8)
+        unique-value-conflicting (->Tuple 1 ::test/unique-value "foo" 9)
+        unique-value-upsert (->Tuple 2 ::test/unique-value "bar" 10)
+        unique-value (->Tuple 2 ::test/unique-value "foo" 11)]
 
     (testing "Initial state"
       (is (= {} (reset! state/fact-index {}))
@@ -292,31 +307,32 @@
           "Expected ancestors-fn to be a fn"))
 
     (testing "Finding existing with empty state"
-      (is (= nil (find-in-fact-index fact-1 (fact-index-path fact-1)))))
+      (is (= {:insert fact-1} (add-to-fact-index! fact-1 (fact-index-path fact-1)))))
 
     (testing "Fact is indexed by find-existing"
       (is (= @state/fact-index {:one-to-one {1 {:foo fact-1}}})))
 
     (testing "Removing a fact that exists in index"
-      (is (= true (remove-from-fact-index fact-1 (fact-index-path fact-1))))
+      (is (= {:retract fact-1} (remove-from-fact-index! fact-1 (fact-index-path fact-1))))
       (is (= @state/fact-index {})))
 
     (testing "Newer one-to-one facts should return old fact"
       (is (= @state/fact-index {}))
-      (is (= nil (find-in-fact-index fact-1 (fact-index-path fact-1))))
-      (is (= fact-1 (find-in-fact-index next-1 (fact-index-path next-1)))))
+      (is (= {:insert fact-1} (add-to-fact-index! fact-1 (fact-index-path fact-1))))
+      (is (= {:retract fact-1 :insert next-1}
+            (add-to-fact-index! next-1 (fact-index-path next-1)))))
 
     (testing "Existing one-to-one-fact should have been replaced"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}})))
 
     (testing "Remove fact from index that does not exist"
-      (is (= false (remove-from-fact-index fact-1 (fact-index-path fact-1))))
+      (is (= {:retract nil} (remove-from-fact-index! fact-1 (fact-index-path fact-1))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}})))
 
     (testing "Find with same entity, different attribute should index the new fact and return
               nil (nothing to retract)"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}}))
-      (is (= nil (find-in-fact-index fact-2 (fact-index-path fact-2))))
+      (is (= {:insert fact-2} (add-to-fact-index! fact-2 (fact-index-path fact-2))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}})))
 
@@ -324,22 +340,104 @@
               return false to indicate nothing was removed"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}}))
-      (is (= false (remove-from-fact-index next-2 (fact-index-path next-2))))
+      (is (= {:retract nil} (remove-from-fact-index! next-2 (fact-index-path next-2))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}})))
 
     (testing "One-to-many attrs do not affect fact index"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}}))
-      (is (= nil (find-in-fact-index one-to-many (fact-index-path one-to-many))))
-      (is (= false (remove-from-fact-index one-to-many (fact-index-path one-to-many))))
+      (is (= {:insert one-to-many}
+             (add-to-fact-index! one-to-many (fact-index-path one-to-many))))
+      (is (= {:retract nil} (remove-from-fact-index! one-to-many (fact-index-path one-to-many))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}})))
 
-    (testing "Unique attrs should be indexed in own bucket"
-      (is (= nil (find-in-fact-index unique (fact-index-path unique))))
-      (is (= @state/fact-index {:one-to-one {1 {:foo next-1
-                                                :bar fact-2}}
-                                :unique {:todo/title {"my unique title" unique}}})))))
+    (testing "Unique attrs should be indexed in own bucket and one-to-one"
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2}}}))
+      (is (= {:insert unique :retract nil} (update-index! unique)))
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2
+                             ::test/unique-identity unique}}
+             :unique {(:a unique) {(:v unique) unique}}})))
+
+    (testing "Unique attrs should be upserted if same eid and :unique/identity"
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2
+                             ::test/unique-identity unique}}
+             :unique {::test/unique-identity {(:v unique) unique}}}))
+      (is (= {:insert unique-upsert :retract unique} (update-index! unique-upsert)))
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2
+                             ::test/unique-identity unique-upsert}}
+             :unique {::test/unique-identity {(:v unique-upsert) unique-upsert}}})))
+
+    (testing "Unique attrs should generate error if diff eid and :unique/identity"
+      (let [conflicting-insert-res (update-index! unique-conflicting)]
+        (is (= @state/fact-index
+              {:one-to-one {1 {:foo next-1
+                               :bar fact-2
+                               ::test/unique-identity unique-upsert}}
+               :unique {::test/unique-identity {(:v unique-upsert) unique-upsert}}}))
+        (is (= (mapv (juxt :a :v) (:insert conflicting-insert-res))
+               [[::err/type :unique-conflict]
+                [::err/existing-fact unique-upsert]
+                [::err/failed-insert unique-conflicting]]))
+        (is (= nil (:retract conflicting-insert-res)))
+        (is (= @state/fact-index
+              {:one-to-one {1 {:foo next-1
+                               :bar fact-2
+                               ::test/unique-identity unique-upsert}}
+               :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}}}))))
+
+    (testing "Unique attrs should generate error if diff eid and :unique/value"
+        (is (= {:insert unique-value :retract nil} (update-index! unique-value)))
+        (is (= @state/fact-index
+              {:one-to-one {1 {:foo next-1
+                               :bar fact-2
+                               ::test/unique-identity unique-upsert}
+                            2 {::test/unique-value unique-value}}
+               :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
+                        (:a unique-value) {(:v unique-value) unique-value}}}))
+        (let [conflicting-value-insert-res (update-index! unique-value-conflicting)]
+          (is (= (mapv (juxt :a :v) (:insert conflicting-value-insert-res))
+                [[::err/type :unique-conflict]
+                 [::err/existing-fact unique-value]
+                 [::err/failed-insert unique-value-conflicting]]))
+          (is (= nil (:retract conflicting-value-insert-res)))
+          (is (= @state/fact-index
+                {:one-to-one {1 {:foo next-1
+                                 :bar fact-2
+                                 ::test/unique-identity unique-upsert}
+                              2 {::test/unique-value unique-value}}
+                 :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
+                          (:a unique-value) {(:v unique-value) unique-value}}}))))
+
+    (testing ":unique/value attrs should generate error if try upsert (same eid)"
+      (is (= @state/fact-index
+            {:one-to-one {1 {:foo next-1
+                             :bar fact-2
+                             ::test/unique-identity unique-upsert}
+                          2 {::test/unique-value unique-value}}
+             :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
+                      (:a unique-value) {(:v unique-value) unique-value}}}))
+      (let [unique-value-upsert-res (update-index! unique-value-upsert)]
+        (is (= (mapv (juxt :a :v) (:insert unique-value-upsert-res))
+              [[::err/type :unique-conflict]
+               [::err/existing-fact unique-value]
+               [::err/failed-insert unique-value-upsert]]))
+        (is (= nil (:retract unique-value-upsert-res)))
+        (is (= @state/fact-index
+              {:one-to-one {1 {:foo next-1
+                               :bar fact-2
+                               ::test/unique-identity unique-upsert}
+                            2 {::test/unique-value unique-value}}
+               :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
+                        (:a unique-value) {(:v unique-value) unique-value}}}))))))
 
 (run-tests)
