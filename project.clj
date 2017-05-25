@@ -3,10 +3,9 @@
   :license      {:name "Eclipse Public License The Same As Clojure"
                  :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
-                 ;[org.clojure/clojurescript "1.9.542"]
                  [org.clojure/clojurescript "1.9.494"]
                  [org.clojure/core.async "0.3.442"]
-                 [com.cerner/clara-rules "0.14.0"]
+                 [com.cerner/clara-rules "0.15.0"]
                  [reagent "0.6.0"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
@@ -14,7 +13,7 @@
 
   :codox {:namespaces [precept.core precept.dsl precept.listeners precept.macros precept.query
                        precept.schema precept.state precept.tuplerules precept.util
-                       precept.spec.lang precept.spec.sub]
+                       precept.spec.lang precept.spec.sub precept.spec.error]
           :output-path "docs"
           :metadata {:doc/format :markdown}}
 
@@ -95,7 +94,6 @@
                       {:main "precept.runner"
                        :output-to "target/cljsbuild/public/js/devcards/main.js"
                        :output-dir "target/cljsbuild/public/js/devcards/out"
-                       ;:asset-path "target/cljsbuild/public/js/devcards/out"
                        :asset-path "/js/out"
                        :preloads [devtools.preload]
                        :optimizations :none
