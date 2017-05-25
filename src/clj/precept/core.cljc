@@ -54,9 +54,14 @@
       (fn [sessions] (conj (butlast sessions) session)))
     (swap! state update :session-history conj session)))
 
-(defn swap-session! [next]
+(defn swap-session!
+  [next]
   (trace "Swapping session!")
   (swap! state assoc :session next))
+
+(defn swap-session-sync! [next f]
+  (swap! state assoc :session next)
+  (f))
 
 (defn dispatch! [f] (put! action-ch f))
 
@@ -199,9 +204,9 @@
   [facts]
   (dispatch! (fn [session] (util/insert session facts))))
 
-(defn start! [options cb]
+(defn start! [options]
   (let [opts (or options (hash-map))]
-    (swap-session! (l/replace-listener (:session opts)))
-    (dispatch! (fn [session] (util/insert session (:facts opts))))
-    (cb)))
+    (swap-session-sync!
+      (l/replace-listener (:session opts))
+      #(dispatch! (fn [session] (util/insert session (:facts opts)))))))
 

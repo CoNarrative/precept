@@ -35,7 +35,5 @@
 
 (defn ^:export main []
   (println "Starting with session " app-session)
-  (start! {:session app-session :facts facts}
-    (fn [_]
-      (println "Mounting!")
-      (mount-components))))
+  (start! {:session app-session :facts facts})
+  (mount-components))
