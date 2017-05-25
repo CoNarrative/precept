@@ -6,7 +6,7 @@
 (declare update-index!)
 
 (defn trace [& args]
-  (apply prn args))
+  (comment (apply prn args)))
 
 (defn guid []
   #?(:clj (java.util.UUID/randomUUID)

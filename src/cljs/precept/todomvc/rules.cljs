@@ -2,7 +2,7 @@
   (:require-macros [precept.dsl :refer [<- entity entities]])
   (:require [clara.rules.accumulators :as acc]
             [clara.rules :as cr]
-            [precept.spec.sub :as sub]
+            [precept.spec.error :as err]
             [precept.todomvc.schema :refer [app-schema]]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
             [precept.tuplerules :refer-macros [deflogical
@@ -154,6 +154,13 @@
   {:active-count ?active-count
    :done-count ?done-count
    :visibility-filter ?visibility-filter})
+
+;; Error handling
+(def-tuple-rule print-errors
+  [[?e ::err/type ?v]]
+  [(<- ?error (entity ?e))]
+  =>
+  (println (str "[error] " ?v) ?error))
 
 ;;TODO. Lib?
 ;; TODO. Investigate why sexpr in first position (:id ?v) fails
