@@ -176,17 +176,16 @@
   "Returns Clara DSL for `[:op x]`, [:op [:op x] where x is
   :keyword, [:keyword] or [tuple]"
   [expr]
-  (let [outer-op (cr-dsl/ops (first expr))
-        inner-op (cr-dsl/ops (first (second expr)))]
-    (if inner-op
-      (vector outer-op (vector inner-op
-                         (if (= 1 (count (second (second expr)))) ;;attribute only
-                           (second (second expr))
-                           (parse-as-tuple (vector (second (second expr)))))))
-      (vector outer-op (if (= 1 (count (second expr)))      ;;attribute only
-                         (second expr)
-                         (parse-as-tuple (vector (second expr))))))))
-
+  (let [op (cr-dsl/ops (first expr))]
+    (into [op]
+      (if (attr-only? (second expr))
+        (vector (second expr))
+        (map
+          (fn [x]
+            (if (contains? cr-dsl/ops (first x))
+              (parse-with-op x)
+              (parse-as-tuple (vector x))))
+          (rest expr))))))
 
 (defn rewrite-expr
   "Returns Clara DSL for single expression"
@@ -201,8 +200,7 @@
         has-accumulator (and (true? fact-expression)
                              (has-accumulator? (drop 2 expr)))
         is-test-expr (is-test-expr? leftmost)
-        special-form (special-form? leftmost)
-        cljs-namespace (clara.rules.compiler/cljs-ns)]
+        special-form (special-form? leftmost)]
     (cond
       is-test-expr expr
       special-form (rewrite-expr (eval (map add-ns-if-special-form leftmost)))

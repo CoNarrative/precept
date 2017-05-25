@@ -68,6 +68,25 @@
   (is (= (macros/parse-with-accumulator '[?entity <- (acc/all) :from [(:e ?v) :all]])
         '[?entity <- (acc/all) :from [:all (= (:e ?v) (:e this))]])))
 
+(deftest parse-with-op-test
+  (is (= (macros/parse-with-op '[:or [?e :attr ?v]
+                                     [?e :attr-2 ?v]])
+        '[:or
+           [:attr (= ?e (:e this)) (= ?v (:v this))]
+           [:attr-2 (= ?e (:e this)) (= ?v (:v this))]]))
+
+  (is (= (macros/parse-with-op '[:or [?e :attr-1 ?v]
+                                 [:and [?e :attr-2 ?v] [?e :attr-3 ?v]]
+                                 [:and [?e :attr-4 ?v] [?e :attr-5 ?v]]])
+        '[:or [:attr-1 (= ?e (:e this)) (= ?v (:v this))]
+           [:and
+            [:attr-2 (= ?e (:e this)) (= ?v (:v this))]
+            [:attr-3 (= ?e (:e this)) (= ?v (:v this))]]
+           [:and
+            [:attr-4 (= ?e (:e this)) (= ?v (:v this))]
+            [:attr-5 (= ?e (:e this)) (= ?v (:v this))]]])))
+
+
 (deftest rewrite-lhs-test
   (testing "Ops - :exists, :not, :and, :or"
     (is (= '[[:exists [:ns/foo]]]

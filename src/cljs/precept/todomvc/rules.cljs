@@ -48,18 +48,27 @@
   (retract! ?entry)
   (insert-unconditional! (todo ?v)))
 
+(def-tuple-rule todo-is-visible-when
+  {:group :calc}
+  [:or [:and [_ :visibility-filter :all] [?e :todo/title]]
+       [:and [_ :visibility-filter :done] [?e :todo/done true]]
+       [:and [_ :visibility-filter :active] [?e :todo/done false]]]
+  =>
+  (println "inserting visible todo fact")
+  (insert! [?e :todo/visible :tag]))
+
 ;; Calculations
-(deflogical [?e :todo/visible :tag] :- [[_ :visibility-filter :all]]
-                                       [[?e :todo/title]])
-
-(deflogical [?e :todo/visible :tag] :- [[_ :visibility-filter :done]]
-                                       [[?e :todo/done true]])
-
-(deflogical [?e :todo/visible :tag] :- [[_ :visibility-filter :active]]
-                                       [[?e :todo/done false]])
-
-(deflogical [?e :entry/save-action :tag] :- [[_ :input/key-code 13]]
-                                            [[?e :entry/title]])
+;(deflogical [?e :todo/visible :tag] :- [[_ :visibility-filter :all]]
+;                                       [[?e :todo/title]]]))
+;
+;(deflogical [?e :todo/visible :tag] :- [[_ :visibility-filter :done]]
+;                                       [[?e :todo/done true]]]))
+;
+;(deflogical [?e :todo/visible :tag] :- [[_ :visibility-filter :active]]
+;                                       [[?e :todo/done false]]]))
+;
+;(deflogical [?e :entry/save-action :tag] :- [[_ :input/key-code 13]]
+;                                            [[?e :entry/title]]]))
 
 ;; TODO. These work and should not. Rules that match their consequences are in :action group
 ;; which precedes :calc group
@@ -113,7 +122,7 @@
   [[?e ::err/failed-insert ?v]]
   [?orphaned <- [(:e ?v) :all]]
   =>
-  (trace "[error] :unique conflict. Removing orphaned fact" ?orphaned)
+  (trace "[error] :unique-conflict. Removing orphaned fact" ?orphaned)
   (retract! ?orphaned))
 
 ;;TODO. Lib?
