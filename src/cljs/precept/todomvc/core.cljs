@@ -18,9 +18,9 @@
 ;; Instead of secretary consider:
 ;;   - https://github.com/DomKM/silk
 ;;   - https://github.com/juxt/bidi
-(defroute "/" [] (then [:global :ui/visibility-filter :all]))
+(defroute "/" [] (then [:global :visibility-filter :all]))
 
-(defroute "/:filter" [filter] (then [:global :ui/visibility-filter (keyword filter)]))
+(defroute "/:filter" [filter] (then [:global :visibility-filter (keyword filter)]))
 
 (def history
   (doto (History.)

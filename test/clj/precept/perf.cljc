@@ -17,24 +17,24 @@
   (comment (apply prn args)))
 
 (cr/defrule todo-is-visible-when-filter-is-all
-  ;[Tuple (= a :ui/visibility-filter) (= v :all)]
-  [:ui/visibility-filter (= (:v this) :all)]
+  ;[Tuple (= a :visibility-filter) (= v :all)]
+  [:visibility-filter (= (:v this) :all)]
   ;[Tuple (= e ?e) (= a :todo/title)]
   [:todo/title (= (:e this) ?e)]
   =>
   (util/insert! [?e :todo/visible :tag]))
 ;
 (cr/defrule todo-is-visile-when-filter-is-done-and-todo-done
-  ;[Tuple (= a :ui/visibility-filter) (= v :done)]
-  [:ui/visibility-filter (= (:v this) :done)]
+  ;[Tuple (= a :visibility-filter) (= v :done)]
+  [:visibility-filter (= (:v this) :done)]
   ;[Tuple (= e ?e) (= a :todo/done)]
   [:todo/done (= (:e this) ?e)]
   =>
   (util/insert! [?e :todo/visible :tag]))
 ;;
 (cr/defrule todo-is-visible-when-filter-active-and-todo-not-done
-  ;[Tuple (= a :ui/visibility-filter) (= v :active)]
-  [:ui/visibility-filter (= (:v this) :active)]
+  ;[Tuple (= a :visibility-filter) (= v :active)]
+  [:visibility-filter (= (:v this) :active)]
   ;[Tuple (= e ?e) (= a :todo/title)]
   [:todo/title (= (:e this) ?e)]
   ;[:not [Tuple (= e ?e) (= a :todo/done)]]

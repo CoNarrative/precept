@@ -1,15 +1,9 @@
 (ns precept.todomvc.rules
   (:require-macros [precept.dsl :refer [<- entity entities]])
   (:require [clara.rules.accumulators :as acc]
-            [clara.rules :as cr]
             [precept.spec.error :as err]
-            [precept.todomvc.schema :refer [app-schema]]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
-            [precept.tuplerules :refer-macros [deflogical
-                                               defsub
-                                               def-tuple-session
-                                               def-tuple-rule]]
-            [precept.schema :as schema]
+            [precept.tuplerules :refer-macros [deflogical defsub def-tuple-session def-tuple-rule]]
             [precept.todomvc.facts :refer [todo entry done-count active-count visibility-filter]]))
 
 (defn trace [& args]
@@ -55,13 +49,13 @@
   (insert-unconditional! (todo ?v)))
 
 ;; Calculations
-(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]]
+(deflogical [?e :todo/visible :tag] :- [[_ :visibility-filter :all]]
                                        [[?e :todo/title]])
 
-(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :done]]
+(deflogical [?e :todo/visible :tag] :- [[_ :visibility-filter :done]]
                                        [[?e :todo/done true]])
 
-(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :active]]
+(deflogical [?e :todo/visible :tag] :- [[_ :visibility-filter :active]]
                                        [[?e :todo/done false]])
 
 (deflogical [?e :entry/save-action :tag] :- [[_ :input/key-code 13]]
@@ -149,7 +143,7 @@
 (defsub :footer
   [[_ :done-count ?done-count]]
   [[_ :active-count ?active-count]]
-  [[_ :ui/visibility-filter ?visibility-filter]]
+  [[_ :visibility-filter ?visibility-filter]]
   =>
   {:active-count ?active-count
    :done-count ?done-count
@@ -181,4 +175,4 @@
   (doseq [tuple ?entity]
     (retract! tuple)))
 
-(def-tuple-session app-session 'precept.todomvc.rules :schema app-schema)
+(def-tuple-session app-session 'precept.todomvc.rules :schema precept.todomvc.schema/app-schema)

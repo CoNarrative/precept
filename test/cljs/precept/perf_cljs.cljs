@@ -23,7 +23,7 @@
 ;; have for non-generated rule names, because when we delete a rule or rename it, it's still in
 ;; the REPL and requires a restart or manual ns-unmap to clear. We could expose a function
 ;; that takes all nses in which they are rules and unmaps everything in them.
-(deflogical [?e :todo/visible :tag] :- [[_ :ui/visibility-filter :all]]
+(deflogical [?e :todo/visible :tag] :- [[_ :visibility-filter :all]]
   [[?e :todo/title]])
 
 (cr/defrule add-item-handler
@@ -38,13 +38,13 @@
   (insert-unconditional! [(guid) :todo/title ?title]))
 
 (def-tuple-rule todo-is-visile-when-filter-is-done-and-todo-done
-  [[_ :ui/visibility-filter :done]]
+  [[_ :visibility-filter :done]]
   [[?e :todo/done]]
   =>
   (insert! [?e :todo/visible :tag]))
 
 (def-tuple-rule todo-is-visible-when-filter-active-and-todo-not-done
-  [[_ :ui/visibility-filter :active]]
+  [[_ :visibility-filter :active]]
   [[?e :todo/title]]
   [:not [?e :todo/done]]
   =>

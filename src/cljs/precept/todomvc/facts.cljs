@@ -1,6 +1,6 @@
 (ns precept.todomvc.facts)
 
-(defn visibility-filter [v] [:global :ui/visibility-filter v])
+(defn visibility-filter [v] [:global :visibility-filter v])
 
 (defn entry [v] [:global :entry/title v])
 

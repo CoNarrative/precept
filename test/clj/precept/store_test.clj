@@ -11,19 +11,19 @@
 ;              [precept.tuplerules :refer [def-tuple-rule def-tuple-query def-tuple-session]]))
 ;
 ;(def-tuple-rule todo-is-visible-when-filter-is-all
-;  [[_ :ui/visibility-filter :all]]
+;  [[_ :visibility-filter :all]]
 ;  [[?e :todo/title]]
 ;  =>
 ;  (cr/insert! [?e :todo/visible :tag]))
 ;
 ;(def-tuple-rule todo-is-visile-when-filter-is-done-and-todo-done
-;  [[_ :ui/visibility-filter :done]]
+;  [[_ :visibility-filter :done]]
 ;  [[?e :todo/done]]
 ;  =>
 ;  (cr/insert! [?e :todo/visible :tag]))
 ;
 ;(def-tuple-rule todo-is-visible-when-filter-active-and-todo-not-done
-;  [[_ :ui/visibility-filter :active]]
+;  [[_ :visibility-filter :active]]
 ;  [[?e :todo/title]]
 ;  [:not [?e :todo/done]]
 ;  =>
@@ -82,7 +82,7 @@
 ;  [:exists [?e ::sub/request [:footer]]]
 ;  [[_ :done-count ?done-count]]
 ;  [[_ :active-count ?active-count]]
-;  [[_ :ui/visibility-filter ?visibility-filter]]
+;  [[_ :visibility-filter ?visibility-filter]]
 ;  =>
 ;  (println "Inserting footer response")
 ;  (let [id (guid)]
@@ -133,7 +133,7 @@
 ;(def initial-facts
 ;  [[id :todo/visible :tag]
 ;   [id :todo/title "Hi"]
-;   [(guid) :ui/visibility-filter :done]])
+;   [(guid) :visibility-filter :done]])
 ;
 ;;(use-fixtures :once
 ;;  (fn [_]
