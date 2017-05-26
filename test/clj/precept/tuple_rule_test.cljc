@@ -104,7 +104,9 @@
     (is (= '[[?toggle <- :ui/toggle-complete]]
           (rewrite-lhs '[[?toggle <- [:ui/toggle-complete]]])))
     (is (= '[[:not [:ns/foo (= 3 (:v this))]]]
-           (rewrite-lhs '[[:not [_ :ns/foo 3]]]))))
+           (rewrite-lhs '[[:not [_ :ns/foo 3]]])))))
+
+(deftest def-tuple-rule-test
   (testing "Basic rule with exists"
     (is (= (macroexpand
              '(def-tuple-rule my-rule

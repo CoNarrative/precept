@@ -215,7 +215,6 @@
   [lhs]
   (map rewrite-expr lhs))
 
-
 (defn replace-at-index
   "Removes item at idx of coll and adds new list members (xs) starting at idx"
   [idx xs coll]
