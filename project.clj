@@ -1,4 +1,4 @@
-(defproject precept "0.2.0"
+(defproject precept "0.2.1"
   :url          "https://github.com/CoNarrative/precept.git"
   :license      {:name "Eclipse Public License The Same As Clojure"
                  :url "http://www.eclipse.org/legal/epl-v10.html"}
