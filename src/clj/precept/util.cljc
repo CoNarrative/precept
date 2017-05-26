@@ -312,10 +312,10 @@
 
 (defn make-activation-group-fn
   "Reads from optional third argument to rule.
-  `super` boolean
-  `group` keyword
-  `salience` number
-  Rules marked super will be present in every agenda phase."
+  `:super` - boolean
+  `:group` - keyword
+  `:salience` - number
+   Rules marked `:super` are given the highest priority."
   [default-group]
   (fn [m] {:salience (or (:salience (:props m)) 0)
            :group (or (:group (:props m)) default-group)
