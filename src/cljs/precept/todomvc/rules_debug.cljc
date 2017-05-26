@@ -3,7 +3,7 @@
     (:require [clara.rules.accumulators :as acc]
               [clara.rules :as cr]
               [precept.spec.sub :as sub]
-              [precept.spec.factgen :as factgen]
+              [precept.spec.rulegen :as rulegen]
               [precept.spec.error :as err]
               [precept.listeners :as l]
               [precept.schema :as schema]

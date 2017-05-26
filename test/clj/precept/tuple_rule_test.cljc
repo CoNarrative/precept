@@ -3,7 +3,7 @@
               [clara.rules :refer [defrule defquery]]
               [clara.rules.accumulators :as acc]
               [precept.spec.sub :as sub]
-              [precept.spec.factgen :as factgen]
+              [precept.spec.rulegen :as rulegen]
               [precept.tuplerules :refer [def-tuple-rule
                                           def-tuple-query
                                           defsub]]
@@ -370,8 +370,8 @@
   ;                    =>
   ;                    (let [req-id (precept.util/guid)]
   ;                       (precept.util/insert-unconditional!
-  ;                         [[req-id ::factgen/for-macro :entities]
-  ;                          [req-id ::factgen/request-params ?eids]
+  ;                         [[req-id ::rulegen/for-macro :entities]
+  ;                          [req-id ::rulegen/request-params ?eids]
   ;                          [req-id :entities/order ?eids]])
   ;                       (doseq [eid ?eids]
   ;                         (precept.util/insert-unconditional! [req-id :entities/eid eid])))))
@@ -379,9 +379,9 @@
   ;        rule-2 (macroexpand
   ;                 '(defrule my-rule
   ;                    [?eids <- (acc/all :e) :from [:interesting-fact]]
-  ;                    [::factgen/request-params (= ?id (:e this)) (= ?eids (:v this))]
-  ;                    [::factgen/for-macro (= ?id (:e this)) (= :entities (:v this))]
-  ;                    [::factgen/response (= ?id (:e this)) (= ?interesting-facts (:v this))]
+  ;                    [::rulegen/request-params (= ?id (:e this)) (= ?eids (:v this))]
+  ;                    [::rulegen/for-macro (= ?id (:e this)) (= :entities (:v this))]
+  ;                    [::rulegen/response (= ?id (:e this)) (= ?interesting-facts (:v this))]
   ;                    =>
   ;                    (println nil)))]
   ;    (is (= (macroexpand

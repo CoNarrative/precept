@@ -1,5 +1,5 @@
 (ns precept.impl.rules
-  (:require [precept.spec.factgen :as factgen]))
+    (:require [precept.spec.rulegen :as rulegen]))
 
 ;;TODO. Figure out if we can avoid a circular dependency with tuplerules so we can use
 ;; positional rules syntax
@@ -13,7 +13,7 @@
 
 (clara.rules/defrule entities___impl-a
   {:salience 1}
-  [::factgen/for-macro (= ?req (:e this)) (= :entities (:v this))]
+  [::rulegen/for-macro (= ?req (:e this)) (= :entities (:v this))]
   [:entities/eid (= ?req (:e this)) (= ?e (:v this))]
   [?entity <- (clara.rules.accumulators/all) :from [:all (= ?e (:e this))]]
   =>
@@ -28,7 +28,7 @@
   (let [items (group-by :e (flatten ?ents))
         ordered (vals (select-keys items (into [] ?eids)))]
     (println "[rulegen] inserting response for order" ?eids ordered)
-    (precept.util/insert! [?req ::factgen/response ordered])))
+    (precept.util/insert! [?req ::rulegen/response ordered])))
 
 (clara.rules/defrule remove-entity___impl
   {:group :action}

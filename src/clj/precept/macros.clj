@@ -4,7 +4,7 @@
               [clara.rules.accumulators :as acc]
               [precept.core :as core]
               [precept.spec.lang :as lang]
-              [precept.spec.factgen :as factgen]
+              [precept.spec.rulegen :as rulegen]
               [precept.dsl :as dsl]
               [precept.spec.sub :as sub]
               [precept.util :as util]
@@ -237,11 +237,11 @@
                                         (= var-binding (first %))
                                         (> idx (.indexOf lhs %)))
                                lhs))
-        lhs-mod (assoc (vec lhs) idx (parse-as-tuple `[[~'_ ::factgen/response ~var-binding]]))
+        lhs-mod (assoc (vec lhs) idx (parse-as-tuple `[[~'_ ::rulegen/response ~var-binding]]))
         id (gensym "?")
-        gen-conds (list [[id ::factgen/request-params var-binding]]
-                        [[id ::factgen/for-macro :entities]]
-                        [[id ::factgen/response fact-binding]])
+        gen-conds (list [[id ::rulegen/request-params var-binding]]
+                        [[id ::rulegen/for-macro :entities]]
+                        [[id ::rulegen/response fact-binding]])
         rw-lhs (map rewrite-expr (replace-at-index idx gen-conds lhs))
         req-id (precept.util/guid)]
     [{:name (symbol (str nom (-> ast :gen :name-suffix)))
@@ -249,8 +249,8 @@
       :rhs `(do
               (println "[rulegen] Inserting params/order for req" ~var-binding ~req-id)
               (precept.util/insert!
-                [[~req-id ::factgen/for-macro :entities]
-                 [~req-id ::factgen/request-params ~var-binding]
+                [[~req-id ::rulegen/for-macro :entities]
+                 [~req-id ::rulegen/request-params ~var-binding]
                  [~req-id :entities/order ~var-binding]])
               (doseq [eid# ~var-binding]
                 (println "[rulegen] Inserting eid fact for req" eid# ~req-id)

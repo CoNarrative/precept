@@ -1,6 +1,6 @@
 (ns precept.spec.lang
-  (:require [clojure.spec :as s]
-            [precept.spec.factgen :as factgen]))
+    (:require [clojure.spec :as s]
+              [precept.spec.rulegen :as rulegen]))
 
 (s/def ::variable-binding
   (s/and some? symbol?
@@ -42,7 +42,7 @@
 
 (s/def ::contains-rule-generator
   (s/and ::special-form
-         #(s/valid? ::factgen/generators (nth (flatten %) 2))))
+         #(s/valid? ::rulegen/generators (nth (flatten %) 2))))
 
 (s/def ::tuple-2
   (s/tuple

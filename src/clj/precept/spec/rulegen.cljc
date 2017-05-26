@@ -1,4 +1,4 @@
-(ns precept.spec.factgen
+(ns precept.spec.rulegen
   (:require [clojure.spec :as s]))
 
 
