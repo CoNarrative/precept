@@ -52,12 +52,10 @@
   (retract! ?entry)
   (insert-unconditional! (todo ?v)))
 
-(def-tuple-rule todo-is-visible
+(deflogical [?e :todo/visible true] :-
   [:or [:and [_ :visibility-filter :all] [?e :todo/title]]
        [:and [_ :visibility-filter :done] [?e :todo/done true]]
-       [:and [_ :visibility-filter :active] [?e :todo/done false]]]
-  =>
- (insert! [?e :todo/visible true]))
+       [:and [_ :visibility-filter :active] [?e :todo/done false]]])
 
 (def-tuple-rule insert-done-count
   [?n <- (acc/count) :from [_ :todo/done true]]
@@ -75,10 +73,8 @@
   [(<- ?visible-todos (entities ?eids))]
   [[_ :active-count ?active-count]]
   =>
-  (let [_ (println "Visible todos" ?visible-todos)
-        _ (println "Accum eids!" ?eids)]
-    {:visible-todos ?visible-todos
-     :all-complete? (= 0 ?active-count)}))
+  {:visible-todos ?visible-todos
+   :all-complete? (= 0 ?active-count)})
 
 (defsub :task-entry
   [[?e :entry/title ?v]]
