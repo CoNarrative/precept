@@ -18,7 +18,12 @@
                             'precept.macros-test
                             :fact-type-fn :a
                             :ancestors-fn (util/make-ancestors-fn
-                                            (schema/schema->hierarchy ~precept.schema/precept-schema))
+                                            (schema/schema->hierarchy
+                                              (remove nil?
+                                                (concat
+                                                  ~precept.schema/precept-schema
+                                                  nil  ;; no client schema
+                                                  nil)))) ;; no db schema
                             :activation-group-fn (util/make-activation-group-fn ~core/default-group)
                             :activation-group-sort-fn (util/make-activation-group-sort-fn
                                                         ~core/groups
@@ -43,26 +48,46 @@
                            :ancestors-fn (fn [x] [:all :foo]))]
       (is (= (macroexpand clara-session) (macroexpand wrapper)))))
 
-  (testing "Expand schema opt to ancestors fn"
-    (let [schemas (list precept.schema-fixture/test-schema
-                        precept.schema/precept-schema)]
+  (testing "Expand :db-schema opt to ancestors fn"
       (is (= (macroexpand `(defsession ~'foo
                              'precept.impl.rules
                              'precept.macros-test
                              :fact-type-fn :a
                              :ancestors-fn (util/make-ancestors-fn
                                              (schema/schema->hierarchy
-                                               ~`(concat ~@schemas)))
+                                                 (remove nil?
+                                                   (concat
+                                                     ~precept.schema/precept-schema
+                                                     ~precept.schema-fixture/test-schema
+                                                     nil)))) ;; no :client-schema
                              :activation-group-fn (util/make-activation-group-fn ~core/default-group)
                              :activation-group-sort-fn (util/make-activation-group-sort-fn
                                                          ~core/groups
                                                          ~core/default-group)))
             (macroexpand `(def-tuple-session ~'foo
                             'precept.macros-test
-                            :schema ~precept.schema-fixture/test-schema)))))))
+                            :db-schema ~precept.schema-fixture/test-schema))))))
+
+;; TODO. Probably better off testing functionality over expansion at this point
+(testing "Expand :client-schema and :db-schema opts to ancestors fn"
+  (is (= (macroexpand `(defsession ~'foo
+                         'precept.impl.rules
+                         'precept.macros-test
+                         :fact-type-fn :a
+                         :ancestors-fn (util/make-ancestors-fn
+                                         (schema/schema->hierarchy
+                                             (remove nil?
+                                               (concat
+                                                 ~precept.schema/precept-schema
+                                                 ~precept.schema-fixture/test-schema
+                                                 ~precept.schema-fixture/test-schema))))
+                         :activation-group-fn (util/make-activation-group-fn ~core/default-group)
+                         :activation-group-sort-fn (util/make-activation-group-sort-fn
+                                                     ~core/groups
+                                                     ~core/default-group)))
+        (macroexpand `(def-tuple-session ~'foo
+                        'precept.macros-test
+                        :db-schema ~precept.schema-fixture/test-schema
+                        :client-schema ~precept.schema-fixture/test-schema)))))
 
 (run-tests)
-
-
-
-

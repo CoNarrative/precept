@@ -8,7 +8,7 @@
 ;              [precept.listeners :as l]
 ;              [precept.schema :as schema]
 ;              [precept.state :as state]
-;              [precept.todomvc.schema :refer [app-schema]]
+;              [precept.todomvc.schema :refer [db-schema]]
 ;              [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
 ;      #?(:clj
 ;              [precept.dsl :refer [<- entity entities]])
@@ -63,7 +63,7 @@
 ;
 ;(def-tuple-session app-session
 ;   'precept.todomvc.rules-debug
-;   :schema app-schema)
+;   :db-schema db-schema)
 ;;(reset! precept.state/fact-index {})
 ;
 ;(-> app-session

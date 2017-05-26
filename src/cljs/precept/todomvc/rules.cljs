@@ -97,4 +97,7 @@
   =>
   (retract! ?orphaned))
 
-(def-tuple-session app-session 'precept.todomvc.rules :schema precept.todomvc.schema/app-schema)
+(def-tuple-session app-session
+  'precept.todomvc.rules
+  :db-schema precept.todomvc.schema/db-schema
+  :client-schema precept.todomvc.schema/client-schema)

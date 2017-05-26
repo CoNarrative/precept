@@ -35,12 +35,12 @@
    (defmacro def-tuple-session
      "Defines a session.
 
-     (def-tuple-session my-session 'my-proj/my-ns :schema my-schema)
+     (def-tuple-session my-session 'my-proj/my-ns :db-schema my-schema)
 
-     Accepts same arguments as Clara's defsession plus an additional :schema option. Rules and
+     Accepts same arguments as Clara's defsession plus an additional :db-schema option. Rules and
      queries are loaded from the provided namespace.
 
-     :schema - A Datomic schema. Attributes with defined cardinality and uniqueness are be
+     :db-schema - A Datomic schema. Attributes with defined cardinality and uniqueness are be
      maintained at insertion time. Unlike Datomic, facts that are :db.unique/value and
      :db.unique/identity attributes are both upserted.
 
@@ -48,7 +48,7 @@
        :fact-type-fn - :a
          Tells Clara to index fact-types by the attribute slot of provided eav tuples
        :ancestors-fn - util/make-ancestors-fn
-         If :schema provided, returns a function with the provided Datomic schema. Else called
+         If :db-schema provided, returns a function with the provided Datomic schema. Else called
          with no arguments in which case all facts will be treated as cardinality :one-to-one.
        :activation-group-fn - (util/make-activation-group-fn :calc)
           Orders rules by :group, :salience, and :super propertes given as first argument to
@@ -62,19 +62,19 @@
        (let [sources (take-while (complement keyword?) sources-and-options)
              options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
              impl-sources `['precept.impl.rules]
-             hierarchy (if (:schema options-in)
-                         `(schema/schema->hierarchy (concat ~(:schema options-in)
-                                                           ~precept.schema/precept-schema))
-                         `(schema/schema->hierarchy ~precept.schema/precept-schema))
-             ancestors-fn (if hierarchy
-                            `(util/make-ancestors-fn ~hierarchy)
-                            `(util/make-ancestors-fn))
+             hierarchy `(schema/schema->hierarchy
+                         (remove nil?
+                           (concat
+                             ~schema/precept-schema
+                             ~(:db-schema options-in)
+                             ~(:client-schema options-in))))
+             ancestors-fn `(util/make-ancestors-fn ~hierarchy)
              defaults {:fact-type-fn :a
                        :ancestors-fn ancestors-fn
                        :activation-group-fn `(util/make-activation-group-fn ~core/default-group)
                        :activation-group-sort-fn `(util/make-activation-group-sort-fn
                                                    ~core/groups ~core/default-group)}
-             options (mapcat identity (merge defaults (dissoc options-in :schema)))
+             options (mapcat identity (merge defaults (dissoc options-in :db-schema :client-schema)))
              body (into options (concat sources impl-sources))]
          `(def ~name (com/mk-session `~[~@body]))))))
 

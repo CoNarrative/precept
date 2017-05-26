@@ -6,7 +6,7 @@
             [precept.core :refer [start! then]]
             [precept.todomvc.facts :refer [todo visibility-filter]]
             [precept.todomvc.rules :refer [app-session]]
-            [precept.todomvc.schema :refer [app-schema]]
+            [precept.todomvc.schema :refer [db-schema]]
             [precept.todomvc.views])
   (:import [goog History]
            [goog.history EventType]))

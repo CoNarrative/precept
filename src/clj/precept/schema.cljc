@@ -31,21 +31,24 @@
 (defn unique-facts [session unique-attrs]
   (mapcat #(q/facts-where session %) unique-attrs))
 
-(defn attribute [ident type & {:as opts}]
+(defn attribute
+  "Creates a Datomic schema entry for an attribute. Cardinality defaults to
+  one-to-one. Generates UUID for :db/id."
+  [ident type & {:as opts}]
   (merge {:db/id        (guid)
           :db/ident     ident
           :db/valueType type}
     {:db/cardinality :db.cardinality/one}
     opts))
 
-(defn enum [ident & {:as fields}]
+(defn enum
+  [ident & {:as fields}]
   (merge {:db/id    (guid)
           :db/ident ident}
     fields))
 
 (def precept-schema
-  [
-   (attribute ::sub/request
+  [(attribute ::sub/request
      :db.type/vector
      :db/unique :db.unique/identity)
 
