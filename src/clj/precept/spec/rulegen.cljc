@@ -11,6 +11,3 @@
 (s/def ::for-macro keyword?)
 
 (s/def ::request-params any?)
-
-
-

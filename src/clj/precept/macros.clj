@@ -20,12 +20,7 @@
   [name & sources-and-options]
   (let [sources (take-while (complement keyword?) sources-and-options)
         options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
-        hierarchy `(schema/schema->hierarchy
-                     (remove nil?
-                       (concat
-                         ~schema/precept-schema
-                         ~(:db-schema options-in)
-                         ~(:client-schema options-in))))
+        hierarchy `(schema/init! (select-keys ~options-in [:db-schema :client-schema]))
         ancestors-fn `(util/make-ancestors-fn ~hierarchy)
         options (mapcat identity
                  (merge {:fact-type-fn :a

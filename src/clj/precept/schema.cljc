@@ -1,8 +1,9 @@
 (ns precept.schema
-  (:require [precept.spec.sub :as sub]
-            [precept.query :as q]
-            [precept.state :refer [session-hierarchy]]
-            [precept.util :refer [guid]]))
+    (:require [precept.spec.sub :as sub]
+              [precept.query :as q]
+              [precept.state :refer [session-hierarchy]]
+              [precept.util :refer [guid]]
+              [precept.state :as state]))
 
 (defn by-ident [schema]
   (reduce (fn [acc [k v]] (assoc acc k (first v)))
@@ -85,3 +86,10 @@
     (swap! h derive :unique-identity :one-to-one)
     (reset! session-hierarchy h)
     @h))
+
+(defn init!
+  "Stores schemas and returns hierarchy for provided schemas and Precept's internal schema"
+  [{:keys [db-schema client-schema]}]
+  (let [schemas (remove nil? (concat db-schema client-schema precept-schema))]
+    (swap! state/schemas assoc :db db-schema :client client-schema)
+    (schema->hierarchy schemas)))
