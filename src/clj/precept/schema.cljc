@@ -1,8 +1,9 @@
 (ns precept.schema
-  (:require [precept.spec.sub :as sub]
-            [precept.query :as q]
-            [precept.state :refer [session-hierarchy]]
-            [precept.util :refer [guid]]))
+    (:require [precept.spec.sub :as sub]
+              [precept.query :as q]
+              [precept.state :refer [session-hierarchy]]
+              [precept.util :refer [guid]]
+              [precept.state :as state]))
 
 (defn by-ident [schema]
   (reduce (fn [acc [k v]] (assoc acc k (first v)))
@@ -31,21 +32,24 @@
 (defn unique-facts [session unique-attrs]
   (mapcat #(q/facts-where session %) unique-attrs))
 
-(defn attribute [ident type & {:as opts}]
+(defn attribute
+  "Creates a Datomic schema entry for an attribute. Cardinality defaults to
+  one-to-one. Generates UUID for :db/id."
+  [ident type & {:as opts}]
   (merge {:db/id        (guid)
           :db/ident     ident
           :db/valueType type}
     {:db/cardinality :db.cardinality/one}
     opts))
 
-(defn enum [ident & {:as fields}]
+(defn enum
+  [ident & {:as fields}]
   (merge {:db/id    (guid)
           :db/ident ident}
     fields))
 
 (def precept-schema
-  [
-   (attribute ::sub/request
+  [(attribute ::sub/request
      :db.type/vector
      :db/unique :db.unique/identity)
 
@@ -82,3 +86,10 @@
     (swap! h derive :unique-identity :one-to-one)
     (reset! session-hierarchy h)
     @h))
+
+(defn init!
+  "Stores schemas and returns hierarchy for provided schemas and Precept's internal schema"
+  [{:keys [db-schema client-schema]}]
+  (let [schemas (remove nil? (concat db-schema client-schema precept-schema))]
+    (swap! state/schemas assoc :db db-schema :client client-schema)
+    (schema->hierarchy schemas)))

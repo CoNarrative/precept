@@ -162,7 +162,7 @@
 ;     (go (>! ch
 ;          (core/start!
 ;            {:session my-session
-;             :schema test-schema
+;             :db-schema test-schema
 ;             :facts initial-facts})))
 ;     (test-async
 ;       (go (is (= @store {} (<! ch))))))))

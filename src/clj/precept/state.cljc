@@ -10,10 +10,11 @@
    ;:session-history '() ;; TODO. Own atom (public).
    :subscriptions {}})
 
-;; TODO. Aggregate impl. atoms into single `impl` atom
 (def fact-id (atom -1))
 
 (def fact-index (atom {}))
+
+(def schemas (atom {}))
 
 (def session-hierarchy (atom nil))
 
@@ -22,7 +23,6 @@
 (def rules (atom []))
 
 (defonce state (atom initial-state))
-;; TODO. ----------------------------------------------
 
 (defonce store (mk-ratom {}))
 

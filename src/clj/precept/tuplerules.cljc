@@ -35,46 +35,62 @@
    (defmacro def-tuple-session
      "Defines a session.
 
-     (def-tuple-session my-session 'my-proj/my-ns :schema my-schema)
+     (def-tuple-session my-session 'my-proj/my-ns :db-schema my-schema)
 
-     Accepts same arguments as Clara's defsession plus an additional :schema option. Rules and
-     queries are loaded from the provided namespace.
+     Accepts same arguments as Clara's defsession plus :db-schema and :client-schema options.
+     Rules and queries are loaded from the provided namespace. To load rules from multiple
+     namespaces, a vector of namespaces may be provided.
 
-     :schema - A Datomic schema. Attributes with defined cardinality and uniqueness are be
-     maintained at insertion time. Unlike Datomic, facts that are :db.unique/value and
-     :db.unique/identity attributes are both upserted.
+     :db-schema - Datomic-format schema for persistent facts. Precept enforces cardinality and
+       uniqueness similarly to Datomic. All facts are treated as non-unique and one-to-one
+       cardinality by default.
 
-     Default options:
-       :fact-type-fn - :a
-         Tells Clara to index fact-types by the attribute slot of provided eav tuples
-       :ancestors-fn - util/make-ancestors-fn
-         If :schema provided, returns a function with the provided Datomic schema. Else called
-         with no arguments in which case all facts will be treated as cardinality :one-to-one.
-       :activation-group-fn - (util/make-activation-group-fn :calc)
-          Orders rules by :group, :salience, and :super propertes given as first argument to
-          def-tuple-rule. Rules marked :super are active across all groups. :salience determines
-          precedence within the same group.
-       :activation-group-sort-fn - (util/make-activation-group-fn [:action :calc :report :cleanup])
-         Sets group order. Rules with :group property :action fire first, :calc second, and so on."
+     :client-schema - Datomic-format schema for non-perstent facts. Precept enforces cardinality
+       and uniqueness for attributes in this schema the same way it does for :db-schema. It
+       serves two main purposes. 1. To define client-side facts as one-to-many or unique. 2. To
+       allow Precept's API to filter out facts that should not be persisted when writing to a
+       database.
+
+     Defaults:
+
+     `:fact-type-fn` - `:a`
+       Tells Clara to index facts by attribute. This is the preferred :fact-type-fn option for
+       working with eav tuples.
+
+     `:ancestors-fn` - `util/make-ancestors-fn`
+       If :db-schema and/or :client-schema are provided, uses Clojure's `make-hierarchy` and
+       `derive` functions to assign cardinality and uniqueness for each provided attribute.
+       When no schemas are provided, all facts will be descendents of #{:all :one-to-one}.
+       Because all facts descend from `:all`, rules written with the `:all` attribute can
+       match facts independently of their attributes.
+
+     `:activation-group-fn` - `(util/make-activation-group-fn :calc)`
+        Allows categorization and prioritization of some rules over others. Puts a rule into a
+        prioritization group according to the optional first argument to def-tuple-rule.
+        Assigns the default values `{:group :calc :salience 0 :super false}` to rules where the
+        without these arguments.
+        argument to def-tuple-rule. :salience determines precedence within the same group.
+        Rules marked :super are active across all groups.
+
+     `:activation-group-sort-fn` - `(util/make-activation-group-fn [:action :calc :report :cleanup])`
+       Determines the scheme by which some rules are given priority over others. Rules in the
+       `:action` group will be given the chance to fire before rules in the `:calc` group and so on.
+       When determining the priority of two rules are in the same group, the :salience property
+       serves as a tiebreaker, with higher salience rules winning over lower salience ones."
      [name & sources-and-options]
      (if (compiling-cljs?)
        `(precept.macros/def-tuple-session ~name ~@sources-and-options)
        (let [sources (take-while (complement keyword?) sources-and-options)
              options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
              impl-sources `['precept.impl.rules]
-             hierarchy (if (:schema options-in)
-                         `(schema/schema->hierarchy (concat ~(:schema options-in)
-                                                           ~precept.schema/precept-schema))
-                         `(schema/schema->hierarchy ~precept.schema/precept-schema))
-             ancestors-fn (if hierarchy
-                            `(util/make-ancestors-fn ~hierarchy)
-                            `(util/make-ancestors-fn))
+             hierarchy `(schema/init! (select-keys ~options-in [:db-schema :client-schema]))
+             ancestors-fn `(util/make-ancestors-fn ~hierarchy)
              defaults {:fact-type-fn :a
                        :ancestors-fn ancestors-fn
                        :activation-group-fn `(util/make-activation-group-fn ~core/default-group)
                        :activation-group-sort-fn `(util/make-activation-group-sort-fn
                                                    ~core/groups ~core/default-group)}
-             options (mapcat identity (merge defaults (dissoc options-in :schema)))
+             options (mapcat identity (merge defaults (dissoc options-in :db-schema :client-schema)))
              body (into options (concat sources impl-sources))]
          `(def ~name (com/mk-session `~[~@body]))))))
 

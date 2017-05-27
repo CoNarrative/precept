@@ -20,23 +20,17 @@
   [name & sources-and-options]
   (let [sources (take-while (complement keyword?) sources-and-options)
         options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
-        hierarchy (if (:schema options-in)
-                    `(schema/schema->hierarchy (concat ~(:schema options-in)
-                                                 ~precept.schema/precept-schema))
-                    `(schema/schema->hierarchy ~precept.schema/precept-schema))
-        ancestors-fn (if hierarchy
-                       `(util/make-ancestors-fn ~hierarchy)
-                       `(util/make-ancestors-fn))
+        hierarchy `(schema/init! (select-keys ~options-in [:db-schema :client-schema]))
+        ancestors-fn `(util/make-ancestors-fn ~hierarchy)
         options (mapcat identity
                  (merge {:fact-type-fn :a
                          :ancestors-fn ancestors-fn
                          :activation-group-fn `(util/make-activation-group-fn ~core/default-group)
                          :activation-group-sort-fn `(util/make-activation-group-sort-fn
                                                       ~core/groups ~core/default-group)}
-                   (dissoc options-in :schema)))
+                   (dissoc options-in :db-schema :client-schema)))
         body (into options (conj sources `'precept.impl.rules))]
     `(cm/defsession ~name ~@body)))
-
 
 (defn parse-sub-rhs [rhs]
   (let [map-only? (map? (first (rest rhs)))
