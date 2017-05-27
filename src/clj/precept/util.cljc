@@ -1,6 +1,7 @@
 (ns precept.util
    (:require [clara.rules :as cr]
              [precept.state :as state]
+             [precept.spec.rulegen :as rulegen]
              [precept.spec.error :as err]))
 
 (declare update-index!)
@@ -370,6 +371,12 @@
         (fn [[id sub]] (= name (:name sub)))
         (:subscriptions @state/state)))))
 
+(def impl-facts #{(namespace ::rulegen/for-macro)})
+
+(defn impl-fact?
+  "Returns true if vector tuple attribute is one that should not be in view model"
+  [[e a v]]
+  (contains? impl-facts (namespace a)))
 
 ;; TODO. Find right ns fns
 ;(defn unmap-all-rule-nses [nses]

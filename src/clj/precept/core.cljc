@@ -145,7 +145,7 @@
     (go-loop []
       (let [ops (<! in)
             _ (trace "Removals" (:removed ops))]
-       (apply-removals-to-view-model! (:removed ops))
+       (apply-removals-to-view-model! (remove util/impl-fact? (:removed ops)))
        (>! out ops)
        (recur)))
    out))
@@ -156,7 +156,7 @@
   (go-loop []
     (let [ops (<! in)
           _ (trace "Additions" (:added ops))]
-      (apply-additions-to-view-model! (:added ops))
+      (apply-additions-to-view-model! (remove util/impl-fact? (:added ops)))
       (>! done-ch :done)
       (recur)))
   nil)
@@ -193,8 +193,7 @@
 (defn subscribe
   "Returns lens that points to a path in the store. Sub is handled by a rule."
   ([req]
-   (let [;_ (validate ::sub/request req) ;;TODO. move to :pre
-         name (first req)
+   (let [name (first req)
          existing (util/find-sub-by-name name)
          _ (trace "New sub name / existing if any" name existing)]
      (or (:lens existing) (register req)))))

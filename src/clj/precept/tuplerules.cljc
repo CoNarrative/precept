@@ -61,6 +61,8 @@
        If :db-schema and/or :client-schema are provided, uses Clojure's `make-hierarchy` and
        `derive` functions to assign cardinality and uniqueness for each provided attribute.
        When no schemas are provided, all facts will be descendents of #{:all :one-to-one}.
+       Because all facts descend from `:all`, rules written with the `:all` attribute can
+       match facts independently of their attributes.
 
      `:activation-group-fn` - `(util/make-activation-group-fn :calc)`
         Allows categorization and prioritization of some rules over others. Puts a rule into a
