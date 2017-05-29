@@ -119,4 +119,7 @@
   (set (keys (by-ident (:db @state/schemas)))))
 
 (defn persistent-facts []
+  "Retrieves persistent facts from view model, excluding subscriptions.
+
+  Returns vector of eav tuples."
     (store->tuples (persistent-attrs)))
