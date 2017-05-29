@@ -31,14 +31,9 @@
   "Creates a session with `n-facts` of each type of fact supported by schema.
   Derives ancestry from test-schema. Adds fact listener to session. Returns session."
   [facts sources]
-  (let [hierarchy (schema/schema->hierarchy test-schema)
-        ancestors-fn (util/make-ancestors-fn hierarchy)
-        session @(def-tuple-session core-test-session
+  (let [session @(def-tuple-session core-test-session
                    sources
-                   :ancestors-fn ancestors-fn
-                   :activation-group-fn (util/make-activation-group-fn core/default-group)
-                   :activation-group-sort-fn (util/make-activation-group-sort-fn
-                                               core/groups core/default-group))]
+                   :db-schema test-schema)]
     (-> session
       (l/replace-listener)
       (util/insert facts)

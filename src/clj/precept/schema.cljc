@@ -93,3 +93,30 @@
   (let [schemas (remove nil? (concat db-schema client-schema precept-schema))]
     (swap! state/schemas assoc :db db-schema :client client-schema)
     (schema->hierarchy schemas)))
+
+(defn a-v-pairs->tuples
+  [e avs]
+  (reduce
+    (fn reduce-avs [acc2 [a v]]
+      (if (and (= ((@state/ancestors-fn a) :one-to-many))
+               (coll? v))
+        (into acc2 (mapv #(vector e a %) v))
+        (conj acc2 (vector e a v))))
+    []
+    avs))
+
+(defn store->tuples
+  [attr-set]
+  (reduce
+    (fn reduce-fact-type [acc [e avs]]
+      (if (contains? attr-set (ffirst avs))
+        (into acc (a-v-pairs->tuples e avs))
+        acc))
+    []
+    @state/store))
+
+(defn persistent-attrs []
+  (set (keys (by-ident (:db @state/schemas)))))
+
+(defn persistent-facts []
+    (store->tuples (persistent-attrs)))

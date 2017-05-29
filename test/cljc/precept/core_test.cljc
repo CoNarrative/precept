@@ -3,6 +3,7 @@
             [precept.state :as state]
             [precept.util :refer [->Tuple] :as util]
             [precept.listeners :as l]
+            [precept.spec.lang :as lang]
             [precept.spec.sub :as sub]
             [precept.spec.test :as test]
             [precept.spec.error :as err]
@@ -10,6 +11,7 @@
             [precept.schema :as schema]
             [precept.schema-fixture :refer [test-schema]]
             [clara.rules :as cr]
+            [clojure.spec :as s]
             [precept.test-helpers :as h]
     #?(:clj [clojure.test :refer [use-fixtures deftest is testing run-tests]]))
   (:import [precept.util Tuple]))
@@ -80,7 +82,14 @@
              ::test/one-to-many '(42 42 42 42 42)
              ::test/one-to-one 42
              ::test/unique-identity 42}]))
-    ; Remove everything that was added!
+    (testing "persistent-facts"
+      (is (every?
+            (fn [[e a v]] (contains? (schema/persistent-attrs) a))
+            (schema/persistent-facts)))
+      (is (every?
+            #(s/valid? ::lang/tuple-3 %)
+            (schema/persistent-facts))))
+    ; Remove everything that was added!)
     (core/apply-removals-to-view-model! added)
     (is (= {} @state/store))))
 
