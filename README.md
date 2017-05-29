@@ -85,11 +85,25 @@ Unique attributes are handled using the same semantics as Datomic. Conflicts gen
 
 You can have both a `:db-schema` and a `:client-schema`. This distinction between persistent and non-persistent facts is useful when writing to a database. Precept can hand you the facts you want to persist, while still allowing cardinality and uniqueness designations for client-side data.
 
-### Future plans
-The project board contains the most up-to-date information about what features are being discussed, prioritized, and worked on. Here's a few we're excited about:
-- **Ruleset API** - Rules should be easily pluggable. We should be able to use general purpose rulesets the same way we use libraries. E.g. drag and drop, typeahead, etc.
-- **General purpose algorithms** - Building complex, game-like UIs with animation sometimes requires algorithms for path-finding, tweening, collision detection, distance, etc. We want to write these applications, but we don't want to deal with the complexity of having half an application written in imperative code and the other half declarative. We're working to extend our DSL to support simple expressions like `(distance ?a ?b)` by calling performant, general-purpose algorithms for you.
-- **Rendering views** - Working with a rules means we know what changes from one state to the next. Given that, we don't need React and its diff algorithm. It also means we don't need subscriptions. If we declare a view in the right hand side of a rule, we can render it when the facts it cares about change.
+### Where we're headed
+The project board contains the most up-to-date information about what features are being discussed, prioritized, and worked on. Here's a few we're excited about.
+
+#### Rendering views
+
+Because we use a rules engine, we know what changes from one state to the next. This means we don't need React and its diff algorithm to figure out "What changed?" for us. If we declare a view in the right hand side of a rule, we can render it when the facts it cares about change. We don't even need the concept of subscriptions.
+
+#### Ruleset API
+
+Rules are pluggable. We should be able to use general purpose rulesets the same way we use libraries. E.g. drag and drop, typeahead, etc. Rulesets can be authored by the community. Precept can add have its own rulesets that can be turned on or off when defining a session.
+
+#### Dev tools
+Because Clara's sessions are immutable, we can store each one and cycle through them. Clara provides tools for inspecting sessions that show what rules fired, why they fired, what facts were inserted, which were retracted, which rule inserted what, which rule retracted what, and so on.
+
+In addition, changes to Precept's view model can visualized and tracked just like [Redux DevTools](https://github.com/gaearon/redux-devtools).
+
+#### General purpose algorithms
+
+Precept aims to enable teams to build increasingly game-like UIs. This sometimes requires algorithms for path-finding, tweening, collision detection, and distance calculation. We want to write applications where talking about these things is trivial. That means never having to fall back to imperative programming, while at the same time having the performance it provides. We're working to support declarative statements like `(<- ?my-trip (distance ?paris ?london))` that allow us to focus on what, not how, by calling performant, general-purpose algorithms under the covers.
 
 ### Thanks
 - [Clara](http://www.clara-rules.org/)
