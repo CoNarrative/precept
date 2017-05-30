@@ -6,7 +6,7 @@
               [clara.rules :as cr]
               [clara.rules.accumulators :as acc]
               [precept.spec.sub :as sub]
-              [precept.tuplerules :refer [session
+              [precept.rules :refer [session
                                           define
                                           rule
                                           defquery]]

@@ -2,7 +2,7 @@
   (:require [cljs.test :refer [run-tests]]
             [precept.core :as core]
             [precept.util :as util]
-            [precept.tuplerules :refer [session]]
+            [precept.rules :refer [session]]
             [precept.state :as state])
   (:require-macros [cljs.test :refer [deftest async use-fixtures testing is]]))
 

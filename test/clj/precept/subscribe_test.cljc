@@ -3,7 +3,7 @@
 ;  (:require ;[clojure.test :refer [deftest is testing run-tests]]
 ;            [cljs.test :refer-macros [async deftest is testing] :refer [run-tests]]
 ;            [precept.core :as core]
-;            [precept.tuplerules :refer [session]]))
+;            [precept.rules :refer [session]]))
 ;
 ;(core/swap-session! @(session my-session))
 ;(swap! core/state update :subscriptions (fn [_] {}))

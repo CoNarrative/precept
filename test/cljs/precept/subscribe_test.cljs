@@ -1,7 +1,7 @@
 (ns precept.subscribe-test
   (:require [cljs.test :refer [run-tests]]
             [precept.core :as core]
-            [precept.tuplerules :refer [session]]
+            [precept.rules :refer [session]]
             [precept.state :as state])
   (:require-macros [cljs.test :refer [async use-fixtures testing is]]
                    [devcards.core :refer [deftest]]))

@@ -4,7 +4,7 @@
               [clara.rules.accumulators :as acc]
               [precept.spec.sub :as sub]
               [precept.spec.rulegen :as rulegen]
-              [precept.tuplerules :refer [rule defquery defsub]]
+              [precept.rules :refer [rule defquery defsub]]
               [precept.util :refer [insert!] :as util]
               [precept.macros :refer [binding?
                                       variable-bindings

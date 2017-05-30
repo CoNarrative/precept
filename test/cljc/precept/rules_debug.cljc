@@ -13,11 +13,11 @@
 ;      #?(:clj
 ;              [precept.dsl :refer [<- entity entities]])
 ;      #?(:clj
-;              [precept.tuplerules :refer [session
+;              [precept.rules :refer [session
 ;                                          rule
 ;                                          define
 ;                                          defsub]])
-;      #?(:cljs [precept.tuplerules :refer-macros [define
+;      #?(:cljs [precept.rules :refer-macros [define
 ;                                                  defsub
 ;                                                  session
 ;                                                  rule]])))

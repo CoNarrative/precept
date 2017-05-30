@@ -5,7 +5,7 @@
               [precept.state :as state]
               [precept.query :as q]
               [precept.schema :as schema]
-              [precept.tuplerules :refer [session]]
+              [precept.rules :refer [session]]
               [precept.schema-fixture :refer [test-schema]]
               [clara.tools.inspect :as inspect]
               [clara.tools.tracing :as trace]

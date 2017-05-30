@@ -2,7 +2,7 @@
   (:require [precept.core :as core]
             [precept.util :as util]
             [precept.listeners :as l]
-            [precept.tuplerules :refer [session]]
+            [precept.rules :refer [session]]
             [precept.schema :as schema]
             [precept.spec.test :as test]
             [precept.schema-fixture :refer [test-schema]]

@@ -3,7 +3,7 @@
   (:require [precept.accumulators :as acc]
             [precept.spec.error :as err]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
-            [precept.tuplerules :refer-macros [define defsub session rule]]
+            [precept.rules :refer-macros [define defsub session rule]]
             [precept.todomvc.facts :refer [todo entry done-count active-count visibility-filter]]))
 
 

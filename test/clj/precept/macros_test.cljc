@@ -1,5 +1,5 @@
 (ns precept.macros-test
-    (:require [precept.tuplerules :refer [session]]
+    (:require [precept.rules :refer [session]]
               [precept.util :as util]
               [precept.core :as core]
               [clara.rules :refer [defsession defrule]]

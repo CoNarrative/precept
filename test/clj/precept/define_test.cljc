@@ -1,6 +1,6 @@
 (ns precept.define-test
     (:require [clojure.test :refer [deftest run-tests is testing]]
-              [precept.tuplerules :refer [define]]
+              [precept.rules :refer [define]]
               [clara.rules :refer [defrule]]))
 
 (defn rule-props [expansion]

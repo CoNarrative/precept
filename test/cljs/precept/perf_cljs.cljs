@@ -10,10 +10,7 @@
             [clara.rules :as cr]
             [clara.rules.accumulators :as acc]
             [precept.spec.sub :as sub]
-            [precept.tuplerules :refer [session
-                                        define
-                                        rule
-                                        defquery]]
+            [precept.rules :refer [session define rule defquery]]
             [precept.listeners :as l]
             [precept.schema :as schema]))
 

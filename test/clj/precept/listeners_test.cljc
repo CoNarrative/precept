@@ -6,7 +6,7 @@
             [precept.state :as state]
             [precept.query :as q]
             [precept.util :refer [guid ->Tuple] :as util]
-            [precept.tuplerules :refer [rule session]])
+            [precept.rules :refer [rule session]])
   (:import [precept.util Tuple]))
 
 (defn reset-globals [f]

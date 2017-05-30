@@ -1,4 +1,4 @@
-(ns precept.tuplerules
+(ns precept.rules
     #?(:clj
        (:require [precept.core :as core]
                  [precept.macros :as macros]
@@ -10,8 +10,8 @@
                  [clara.rules.dsl :as dsl]
                  [clara.rules.compiler :as com]))
 
-     #?(:cljs (:require [precept.spec.sub :as sub]))
-     #?(:cljs (:require-macros precept.tuplerules)))
+    #?(:cljs (:require [precept.spec.sub :as sub]))
+    #?(:cljs (:require-macros precept.rules)))
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj
