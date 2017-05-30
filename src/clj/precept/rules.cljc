@@ -201,3 +201,5 @@
                        ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/"
                                              (clojure.core/name name)))
                        ~doc (assoc :doc ~doc)))))))))
+
+(def fire-rules clara.rules/fire-rules)

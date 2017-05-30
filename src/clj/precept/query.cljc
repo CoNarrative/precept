@@ -60,3 +60,4 @@
   ([session a v] (mapv #(into [] (vals %)) (qav session a v))))
   ;([session a v e] (mapv #(into [] (vals %)) (qave session a v e))))
 
+(def q clara.rules/query)
