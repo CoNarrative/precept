@@ -2,7 +2,7 @@
     (:require [clojure.test :refer [run-tests]]
               [precept.core-test]
               [precept.lang-test]
-              [precept.deflogical-test]
+              [precept.define-test]
               [precept.macros-test]
               [precept.tuple-rule-test]
               [precept.query-test]
@@ -12,7 +12,7 @@
 (defn run []
   (for [ns ['precept.core-test
             'precept.lang-test
-            'precept.deflogical-test
+            'precept.define-test
             'precept.macros-test
             'precept.tuple-rule-test
             'precept.query-test

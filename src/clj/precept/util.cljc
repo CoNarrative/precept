@@ -358,7 +358,7 @@
       cr-ancestors-fn)))
 
 (defn split-head-body
-  "Takes macro body of a deflogical and returns map of :head, :body"
+  "Takes macro body of a define and returns map of :head, :body"
   [rule]
   (let [[head [sep & body]] (split-with #(not= ':- %) rule)]
     {:body body

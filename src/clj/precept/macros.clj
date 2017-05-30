@@ -297,11 +297,11 @@
     (core/register-rule "query" definition nil)
     `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
 
-(defmacro deflogical
-  "CLJS version of deflogical"
+(defmacro define
+  "CLJS version of define"
   [& forms]
   (let [{:keys [body head]} (util/split-head-body forms)
-        name (symbol (core/register-rule "deflogical" body head))
+        name (symbol (core/register-rule "define" body head))
         lhs (rewrite-lhs body)
         rhs (list `(precept.util/insert! ~head))]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))

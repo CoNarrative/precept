@@ -147,10 +147,10 @@
               ~doc (assoc :doc ~doc)))))))
 
 #?(:clj
-   (defmacro deflogical
+   (defmacro define
      "Prolog-style rule.
 
-     (deflogical [?e :derived-fact ?v] :- [[?e :my-fact ?v]])
+     (define [?e :derived-fact ?v] :- [[?e :my-fact ?v]])
 
      Head/consequence is declared first followed by body/conditions.
      Uses :- as separator. Name is auto-generated. Auto-assigned to default activation group.
@@ -158,11 +158,11 @@
      Does not support non-DSL syntax (e.g. println, let)."
      [& forms]
      (if (compiling-cljs?)
-       `(precept.macros/deflogical ~@forms)
+       `(precept.macros/define ~@forms)
        (let [{:keys [body head]} (util/split-head-body forms)
              properties nil
              doc nil
-             name (symbol (core/register-rule "deflogical" body head))
+             name (symbol (core/register-rule "define" body head))
              lhs (macros/rewrite-lhs body)
              rhs `(do (precept.util/insert! ~head))]
          `(def ~(vary-meta name assoc :rule true :doc doc)

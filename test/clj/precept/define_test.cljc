@@ -1,19 +1,19 @@
-(ns precept.deflogical-test
+(ns precept.define-test
     (:require [clojure.test :refer [deftest run-tests is testing]]
-              [precept.tuplerules :refer [deflogical]]
+              [precept.tuplerules :refer [define]]
               [clara.rules :refer [defrule]]))
 
 (defn rule-props [expansion]
   (second (nth expansion 2)))
 
-;; Because names for deflogical are generated we skip the part of the
+;; Because names for define are generated we skip the part of the
 ;; expansion that includes the name
-(deftest deflogical-test
+(deftest define-test
   (testing "Single fact"
     (is (=
           (rule-props
             (macroexpand
-               '(deflogical
+               '(define
                   [-1 :foo "bar"] :-
                   [[?e :baz]]
                   [[?e :quux]])))
@@ -28,7 +28,7 @@
     (is (=
           (rule-props
             (macroexpand
-             '(deflogical
+             '(define
                 [[-1 :foo "bar"] [-2 :foo "baz"]] :-
                 [[?e :baz]]
                 [[?e :quux]])))

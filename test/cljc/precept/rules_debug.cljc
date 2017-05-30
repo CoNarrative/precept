@@ -15,9 +15,9 @@
 ;      #?(:clj
 ;              [precept.tuplerules :refer [session
 ;                                          rule
-;                                          deflogical
+;                                          define
 ;                                          defsub]])
-;      #?(:cljs [precept.tuplerules :refer-macros [deflogical
+;      #?(:cljs [precept.tuplerules :refer-macros [define
 ;                                                  defsub
 ;                                                  session
 ;                                                  rule]])))
@@ -25,7 +25,7 @@
 ;(defn trace [& args]
 ;  (apply prn args))
 ;
-;(deflogical [?e :entry/new-title "Hello again!"] :- [[?e :entry/title]])
+;(define [?e :entry/new-title "Hello again!"] :- [[?e :entry/title]])
 ;
 ;(rule all-facts
 ;  {:group :report}

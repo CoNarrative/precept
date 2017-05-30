@@ -11,7 +11,7 @@
             [clara.rules.accumulators :as acc]
             [precept.spec.sub :as sub]
             [precept.tuplerules :refer [session
-                                        deflogical
+                                        define
                                         rule
                                         def-tuple-query]]
             [precept.listeners :as l]
@@ -23,7 +23,7 @@
 ;; have for non-generated rule names, because when we delete a rule or rename it, it's still in
 ;; the REPL and requires a restart or manual ns-unmap to clear. We could expose a function
 ;; that takes all nses in which they are rules and unmaps everything in them.
-(deflogical [?e :todo/visible :tag] :- [[_ :visibility-filter :all]]
+(define [?e :todo/visible :tag] :- [[_ :visibility-filter :all]]
   [[?e :todo/title]])
 
 (cr/defrule add-item-handler

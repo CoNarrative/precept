@@ -3,7 +3,7 @@
   (:require [precept.accumulators :as acc]
             [precept.spec.error :as err]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
-            [precept.tuplerules :refer-macros [deflogical defsub session rule]]
+            [precept.tuplerules :refer-macros [define defsub session rule]]
             [precept.todomvc.facts :refer [todo entry done-count active-count visibility-filter]]))
 
 
@@ -52,7 +52,7 @@
   (retract! ?entry)
   (insert-unconditional! (todo ?v)))
 
-(deflogical [?e :todo/visible true] :-
+(define [?e :todo/visible true] :-
   [:or [:and [_ :visibility-filter :all] [?e :todo/title]]
        [:and [_ :visibility-filter :done] [?e :todo/done true]]
        [:and [_ :visibility-filter :active] [?e :todo/done false]]])
