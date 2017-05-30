@@ -4,7 +4,7 @@
               [precept.lang-test]
               [precept.define-test]
               [precept.macros-test]
-              [precept.tuple-rule-test]
+              [precept.rule-test]
               [precept.query-test]
               [precept.util-test]
               [precept.listeners-test]))
@@ -14,7 +14,7 @@
             'precept.lang-test
             'precept.define-test
             'precept.macros-test
-            'precept.tuple-rule-test
+            'precept.rule-test
             'precept.query-test
             'precept.util-test
             'precept.listeners-test]]

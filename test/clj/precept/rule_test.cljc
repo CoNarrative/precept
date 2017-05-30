@@ -1,4 +1,4 @@
-(ns precept.tuple-rule-test
+(ns precept.rule-test
     (:require [clojure.test :refer [deftest testing is run-tests]]
               [clara.rules :refer [defrule] :as cr]
               [clara.rules.accumulators :as acc]
