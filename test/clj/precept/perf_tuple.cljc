@@ -6,10 +6,10 @@
               [clara.rules :as cr]
               [clara.rules.accumulators :as acc]
               [precept.spec.sub :as sub]
-              [precept.tuplerules :refer [def-tuple-session
-                                          deflogical
-                                          def-tuple-rule
-                                          def-tuple-query]]
+              [precept.rules :refer [session
+                                          define
+                                          rule
+                                          defquery]]
               [precept.listeners :as l]
               [precept.schema :as schema]
       #?(:clj [clara.tools.inspect :as inspect])
@@ -22,8 +22,8 @@
 ;; have for non-generated rule names, because when we delete a rule or rename it, it's still in
 ;; the REPL and requires a restart or manual ns-unmap to clear. We could expose a function
 ;; that takes all nses in which they are rules and unmaps everything in them.
-(deflogical [?e :todo/visible :tag] :- [[_ :visibility-filter :all]]
-                                       [[?e :todo/title]])
+(define [?e :todo/visible :tag] :- [[_ :visibility-filter :all
+                                       [[?e :todo/title]]]])
 
 (cr/defrule add-item-handler
   ;; Works with maps
@@ -36,27 +36,27 @@
   (trace "Inserting :todo/title")
   (insert-unconditional! [(guid) :todo/title ?title]))
 
-(def-tuple-rule todo-is-visile-when-filter-is-done-and-todo-done
+(rule todo-is-visile-when-filter-is-done-and-todo-done
   [[_ :visibility-filter :done]]
   [[?e :todo/done]]
   =>
   (insert! [?e :todo/visible :tag]))
 
-(def-tuple-rule todo-is-visible-when-filter-active-and-todo-not-done
+(rule todo-is-visible-when-filter-active-and-todo-not-done
   [[_ :visibility-filter :active]]
   [[?e :todo/title]]
   [:not [?e :todo/done]]
   =>
   (insert! [?e :todo/visible :tag]))
 
-(def-tuple-rule toggle-all-complete
+(rule toggle-all-complete
   [:exists [:ui/toggle-complete]]
   [[?e :todo/title]]
   [:not [?e :todo/done]]
   =>
   (insert-unconditional! [?e :todo/done :tag]))
 
-(def-tuple-rule acc-all-visible
+(rule acc-all-visible
   {:group :report}
   [?count <- (acc/count) :from [:todo/title]]
   [:test (> ?count 0)]
@@ -65,7 +65,7 @@
   (insert! [-1 :todo/count ?count]))
 
 
-(def-tuple-rule action-cleanup
+(rule action-cleanup
   {:group :cleanup}
   [?actions <- (acc/all) :from [:action]]
   [:test (> (count ?actions) 0)]
@@ -80,7 +80,7 @@
 (def hierarchy (schema/schema->hierarchy test-schema))
 (def ancestors-fn (util/make-ancestors-fn hierarchy))
 
-(def-tuple-session tuple-session
+(session tuple-session
   'precept.perf-tuple
   :ancestors-fn ancestors-fn
   :activation-group-fn activation-group-fn

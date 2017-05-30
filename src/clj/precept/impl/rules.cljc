@@ -1,7 +1,7 @@
 (ns precept.impl.rules
     (:require [precept.spec.rulegen :as rulegen]))
 
-;;TODO. Figure out if we can avoid a circular dependency with tuplerules so we can use
+;;TODO. Figure out if we can avoid a circular dependency with rules so we can use
 ;; positional rules syntax
 
 (clara.rules/defrule clean-transients___impl

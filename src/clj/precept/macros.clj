@@ -15,7 +15,7 @@
 (defn trace [& args]
   (comment (apply prn args)))
 
-(defmacro def-tuple-session
+(defmacro session
   "For CLJS. Wraps Clara's `defsession` macro."
   [name & sources-and-options]
   (let [sources (take-while (complement keyword?) sources-and-options)
@@ -271,8 +271,8 @@
         :lhs (rewrite-lhs lhs)
         :rhs rhs}])))
 
-(defmacro def-tuple-rule
-  "CLJS version of def-tuple-rule"
+(defmacro rule
+  "CLJS version of rule"
   [name & body]
   (let [doc         (if (string? (first body)) (first body) nil)
         body        (if doc (rest body) body)
@@ -286,8 +286,8 @@
     `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
             `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
 
-(defmacro def-tuple-query
-  "CLJS version of def-tuple-query"
+(defmacro defquery
+  "CLJS version of defquery"
   [name & body]
   (let [doc (if (string? (first body)) (first body) nil)
         binding (if doc (second body) (first body))
@@ -297,11 +297,11 @@
     (core/register-rule "query" definition nil)
     `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
 
-(defmacro deflogical
-  "CLJS version of deflogical"
+(defmacro define
+  "CLJS version of define"
   [& forms]
   (let [{:keys [body head]} (util/split-head-body forms)
-        name (symbol (core/register-rule "deflogical" body head))
+        name (symbol (core/register-rule "define" body head))
         lhs (rewrite-lhs body)
         rhs (list `(precept.util/insert! ~head))]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))

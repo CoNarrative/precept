@@ -12,7 +12,7 @@
             [lein-codox "0.10.3"]]
 
   :codox {:namespaces [precept.core precept.dsl precept.listeners precept.macros precept.query
-                       precept.schema precept.state precept.tuplerules precept.util
+                       precept.schema precept.state precept.rules precept.util
                        precept.spec.lang precept.spec.sub precept.spec.error]
           :output-path "docs"
           :metadata {:doc/format :markdown}}

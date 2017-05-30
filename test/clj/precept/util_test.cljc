@@ -5,7 +5,7 @@
               [precept.state :as state]
               [precept.query :as q]
               [precept.schema :as schema]
-              [precept.tuplerules :refer [def-tuple-session]]
+              [precept.rules :refer [session]]
               [precept.schema-fixture :refer [test-schema]]
               [clara.tools.inspect :as inspect]
               [clara.tools.tracing :as trace]
@@ -178,7 +178,7 @@
 (deftest insert-test
   (testing "Insert single tuple"
     (let [_ (reset! state/fact-index {})
-          session @(def-tuple-session mysess)
+          session @(session mysess)
           fact [-1 :foo "bar"]
           trace (trace/get-trace (-> session
                                    (trace/with-tracing)
@@ -189,7 +189,7 @@
         "Inserted fact should be a Tuple")))
 
   (testing "Insert tuples"
-    (let [session @(def-tuple-session mysess)
+    (let [session @(session mysess)
           facts [[-1 :foo "bar"]
                  [-1 :bar "baz"]
                  [-2 :baz "baz"]]
@@ -215,7 +215,7 @@
 
   ;; TODO. Reinstate
   ;(testing "Insert single map"
-  ;  (let [session @(def-tuple-session mysess)
+  ;  (let [session @(session mysess)
   ;        fact-m  (todo-tx (guid) "Hi" :tag)
   ;        trace (trace/get-trace (-> session
   ;                                 (trace/with-tracing)
@@ -225,7 +225,7 @@
   ;    (is (= (map #(apply ->Tuple %) (map->tuples fact-m)) (:facts (first trace)))
   ;        "Fact map should have been inserted as Tuples"))))
   ;(testing "Insert vector of maps"
-  ;  (let [session @(def-tuple-session mysess)
+  ;  (let [session @(session mysess)
   ;        numfacts 5
   ;        m-fact  #(todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
   ;        m-facts (into [] (repeatedly numfacts m-fact))

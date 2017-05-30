@@ -1,4 +1,4 @@
-(ns precept.tuplerules
+(ns precept.rules
     #?(:clj
        (:require [precept.core :as core]
                  [precept.macros :as macros]
@@ -10,8 +10,8 @@
                  [clara.rules.dsl :as dsl]
                  [clara.rules.compiler :as com]))
 
-     #?(:cljs (:require [precept.spec.sub :as sub]))
-     #?(:cljs (:require-macros precept.tuplerules)))
+    #?(:cljs (:require [precept.spec.sub :as sub]))
+    #?(:cljs (:require-macros precept.rules)))
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj
@@ -32,10 +32,10 @@
             @v)))))
 
 #?(:clj
-   (defmacro def-tuple-session
+   (defmacro session
      "Defines a session.
 
-     (def-tuple-session my-session 'my-proj/my-ns :db-schema my-schema)
+     (session my-session 'my-proj/my-ns :db-schema my-schema)
 
      Accepts same arguments as Clara's defsession plus :db-schema and :client-schema options.
      Rules and queries are loaded from the provided namespace. To load rules from multiple
@@ -66,10 +66,10 @@
 
      `:activation-group-fn` - `(util/make-activation-group-fn :calc)`
         Allows categorization and prioritization of some rules over others. Puts a rule into a
-        prioritization group according to the optional first argument to def-tuple-rule.
+        prioritization group according to the optional first argument to rule.
         Assigns the default values `{:group :calc :salience 0 :super false}` to rules where the
         without these arguments.
-        argument to def-tuple-rule. :salience determines precedence within the same group.
+        argument to rule. :salience determines precedence within the same group.
         Rules marked :super are active across all groups.
 
      `:activation-group-sort-fn` - `(util/make-activation-group-fn [:action :calc :report :cleanup])`
@@ -79,7 +79,7 @@
        serves as a tiebreaker, with higher salience rules winning over lower salience ones."
      [name & sources-and-options]
      (if (compiling-cljs?)
-       `(precept.macros/def-tuple-session ~name ~@sources-and-options)
+       `(precept.macros/session ~name ~@sources-and-options)
        (let [sources (take-while (complement keyword?) sources-and-options)
              options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
              impl-sources `['precept.impl.rules]
@@ -95,11 +95,11 @@
          `(def ~name (com/mk-session `~[~@body]))))))
 
 #?(:clj
-   (defmacro def-tuple-rule
+   (defmacro rule
      [name & body]
      "Defines a rule.
 
-     (def-tuple-rule my-rule
+     (rule my-rule
        {:group :action}
        [[_ :my-fact ?v]]
        =>
@@ -108,7 +108,7 @@
        Behaves identically to Clara's defrule. Supports positional syntax for 4-arity
        [e a v fact-id] tuples."
      (if (compiling-cljs?)
-       `(precept.macros/def-tuple-rule ~name ~@body)
+       `(precept.macros/rule ~name ~@body)
        (let [doc             (if (string? (first body)) (first body) nil)
              body            (if doc (rest body) body)
              properties      (if (map? (first body)) (first body) nil)
@@ -125,17 +125,17 @@
                        ~doc (assoc :doc ~doc)))))))))
 
 #?(:clj
-   (defmacro def-tuple-query
+   (defmacro defquery
      "Clara's defquery with precept DSL.
 
-     (def-tuple-query my-query [:v]
+     (defquery my-query [:v]
        [?fact <- [_ :my-fact ?v]])
 
       Defines a named query that can be called with Clara's `query` function with optional
       arguments."
      [name & body]
      (if (compiling-cljs?)
-       `(precept.macros/def-tuple-query ~name ~@body)
+       `(precept.macros/defquery ~name ~@body)
        (let [doc (if (string? (first body)) (first body) nil)
              binding (if doc (second body) (first body))
              definition (if doc (drop 2 body) (rest body))
@@ -147,10 +147,10 @@
               ~doc (assoc :doc ~doc)))))))
 
 #?(:clj
-   (defmacro deflogical
+   (defmacro define
      "Prolog-style rule.
 
-     (deflogical [?e :derived-fact ?v] :- [[?e :my-fact ?v]])
+     (define [?e :derived-fact ?v] :- [[?e :my-fact ?v]])
 
      Head/consequence is declared first followed by body/conditions.
      Uses :- as separator. Name is auto-generated. Auto-assigned to default activation group.
@@ -158,11 +158,11 @@
      Does not support non-DSL syntax (e.g. println, let)."
      [& forms]
      (if (compiling-cljs?)
-       `(precept.macros/deflogical ~@forms)
+       `(precept.macros/define ~@forms)
        (let [{:keys [body head]} (util/split-head-body forms)
              properties nil
              doc nil
-             name (symbol (core/register-rule "deflogical" body head))
+             name (symbol (core/register-rule "define" body head))
              lhs (macros/rewrite-lhs body)
              rhs `(do (precept.util/insert! ~head))]
          `(def ~(vary-meta name assoc :rule true :doc doc)

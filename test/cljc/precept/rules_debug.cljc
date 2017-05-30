@@ -13,28 +13,28 @@
 ;      #?(:clj
 ;              [precept.dsl :refer [<- entity entities]])
 ;      #?(:clj
-;              [precept.tuplerules :refer [def-tuple-session
-;                                          def-tuple-rule
-;                                          deflogical
+;              [precept.rules :refer [session
+;                                          rule
+;                                          define
 ;                                          defsub]])
-;      #?(:cljs [precept.tuplerules :refer-macros [deflogical
+;      #?(:cljs [precept.rules :refer-macros [define
 ;                                                  defsub
-;                                                  def-tuple-session
-;                                                  def-tuple-rule]])))
+;                                                  session
+;                                                  rule]])))
 ;
 ;(defn trace [& args]
 ;  (apply prn args))
 ;
-;(deflogical [?e :entry/new-title "Hello again!"] :- [[?e :entry/title]])
+;(define [?e :entry/new-title "Hello again!"] :- [[?e :entry/title]])
 ;
-;(def-tuple-rule all-facts
+;(rule all-facts
 ;  {:group :report}
 ;  [?facts <- (acc/all) :from [:all]]
 ;  =>
 ;  (do nil))
 ;  ;(println "FACTs at the end!" ?facts))
 ;
-;(def-tuple-rule print-entity
+;(rule print-entity
 ;  [[?e :todo/title]]
 ;  [(<- ?entity (entity ?e))]
 ;  =>
@@ -54,14 +54,14 @@
 ;  (let [_ (println "Sub with entities -----" ?interesting-entities)]
 ;    {:entities-sub ?interesting-entities}))
 ;
-;(def-tuple-rule log-errors
+;(rule log-errors
 ;  [[?e ::err/type]]
 ;  [(<- ?error (entity ?e))]
 ;  =>
 ;  (println "Found error!" ?error))
 ;
 ;
-;(def-tuple-session app-session
+;(session app-session
 ;   'precept.todomvc.rules-debug
 ;   :db-schema db-schema)
 ;;(reset! precept.state/fact-index {})

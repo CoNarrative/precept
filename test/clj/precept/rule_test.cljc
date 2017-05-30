@@ -1,12 +1,10 @@
-(ns precept.tuple-rule-test
+(ns precept.rule-test
     (:require [clojure.test :refer [deftest testing is run-tests]]
-              [clara.rules :refer [defrule defquery]]
+              [clara.rules :refer [defrule] :as cr]
               [clara.rules.accumulators :as acc]
               [precept.spec.sub :as sub]
               [precept.spec.rulegen :as rulegen]
-              [precept.tuplerules :refer [def-tuple-rule
-                                          def-tuple-query
-                                          defsub]]
+              [precept.rules :refer [rule defquery defsub]]
               [precept.util :refer [insert!] :as util]
               [precept.macros :refer [binding?
                                       variable-bindings
@@ -15,8 +13,7 @@
                                       value-expr?
                                       parse-as-tuple
                                       parse-with-fact-expression
-                                      rewrite-lhs] :as macros]
-              [precept.macros :as macros]))
+                                      rewrite-lhs] :as macros]))
 
 (deftest tuple-bindings-test
   (let [e1    '[?e :ns/foo 42]
@@ -106,10 +103,10 @@
     (is (= '[[:not [:ns/foo (= 3 (:v this))]]]
            (rewrite-lhs '[[:not [_ :ns/foo 3]]])))))
 
-(deftest def-tuple-rule-test
+(deftest rule-test
   (testing "Basic rule with exists"
     (is (= (macroexpand
-             '(def-tuple-rule my-rule
+             '(rule my-rule
                 [[?e :todo/title _]]
                 [:exists [:todo/done]]
                 =>
@@ -123,7 +120,7 @@
                  (insert! "RHS")))))))
   (testing "Match on a value"
     (is (= (macroexpand
-             '(def-tuple-rule my-rule
+             '(rule my-rule
                 [[?e :todo/title "Hello"]]
                 =>
                 (insert! "RHS")))
@@ -135,7 +132,7 @@
                  (insert! "RHS")))))))
   (testing "With accumulator, fact-type only"
     (is (= (macroexpand
-             '(def-tuple-rule my-rule
+             '(rule my-rule
                 [?foo <- (acc/all) from [:todo/title]]
                 =>
                 (insert! "RHS")))
@@ -147,7 +144,7 @@
                   (insert! "RHS")))))))
   (testing "With op that contains tuple expression"
     (is (= (macroexpand
-            '(def-tuple-rule my-rule
+            '(rule my-rule
               [:not [?e :todo/done]]
               =>
               (insert! "RHS")))
@@ -159,7 +156,7 @@
                  (insert! "RHS")))))))
   (testing "With nested ops"
       (is (= (macroexpand
-              '(def-tuple-rule my-rule
+              '(rule my-rule
                  [:not [:exists [:todo/done]]]
                  =>
                  (insert! "RHS")))
@@ -171,7 +168,7 @@
                   (insert! "RHS")))))))
   (testing "Accum with fact assignment"
     (is (= (macroexpand
-             '(def-tuple-rule my-rule
+             '(rule my-rule
                 [?entity <- (acc/all) :from [?e :all]]
                 =>
                 (insert! "RHS")))
@@ -183,7 +180,7 @@
                  (insert! "RHS")))))))
   (testing "Fact assignment with brackets around fact-type"
     (is (= (macroexpand
-             '(def-tuple-rule my-rule
+             '(rule my-rule
                 [?entity <- [:my-attribute]]
                 =>
                 (insert! "RHS")))
@@ -194,7 +191,7 @@
                      (insert! "RHS")))))))
   (testing "Fact assignment no brackets around fact-type"
     (is (= (macroexpand
-             '(def-tuple-rule my-rule
+             '(rule my-rule
                 [?entity <- :my-attribute]
                 =>
                 (insert! "RHS")))
@@ -205,7 +202,7 @@
                      (insert! "RHS")))))))
   (testing "Tx-id field - bind"
     (is (= (macroexpand
-             '(def-tuple-rule my-rule
+             '(rule my-rule
                 [[_ :my-attribute _ ?t]]
                 =>
                 (insert! "RHS")))
@@ -216,7 +213,7 @@
                      (insert! "RHS")))))))
   (testing "Tx-id field - bind the fact"
     (is (= (macroexpand
-             '(def-tuple-rule my-rule
+             '(rule my-rule
                 [?fact <- [_ :my-attribute _ ?t]]
                 =>
                 (insert! "RHS")))
@@ -227,7 +224,7 @@
                      (insert! "RHS")))))))
   (testing "With :test op"
     (is (= (macroexpand
-             '(def-tuple-rule my-rule
+             '(rule my-rule
                 [?fact <- [_ :my-attribute _ ?t]]
                 [:test (> ?t ?fact)]
                 =>
@@ -240,7 +237,7 @@
                      (insert! "RHS")))))))
   (testing "Bind to value of s-expr"
     (is (= (macroexpand
-             '(def-tuple-rule my-rule
+             '(rule my-rule
                 [[_ :my-attribute ?v]]
                 [[(:id ?v) :foo]]
                 =>
@@ -253,7 +250,7 @@
                      (insert! "RHS")))))))
   (testing "Value match in e position with fact binding"
     (is (= (macroexpand
-             '(def-tuple-rule action-cleanup-2
+             '(rule action-cleanup-2
                 {:group :cleanup}
                 [?fact <- [:this-tick :all ?v]]
                 =>
@@ -267,20 +264,20 @@
                      (trace "CLEANING this-tick fact because transient" ?fact)
                      (cr/retract! ?fact))))))))
 
-(deftest def-tuple-query-test
+(deftest defquery-test
   (testing "Query with no args"
     (is (= (macroexpand
-             '(def-tuple-query my-query []
+             '(defquery my-query []
                 [[?e :foo ?v]]))
            (macroexpand
-             '(defquery my-query []
+             '(cr/defquery my-query []
                 [:foo (= ?e (:e this)) (= ?v (:v this))])))))
   (testing "Query with args"
     (is (= (macroexpand
-             '(def-tuple-query my-query [:?e]
+             '(defquery my-query [:?e]
                 [[?e :foo ?v]]))
           (macroexpand
-            '(defquery my-query [:?e]
+            '(cr/defquery my-query [:?e]
                [:foo (= ?e (:e this)) (= ?v (:v this))]))))))
 
 (deftest defsub-test
@@ -352,7 +349,7 @@
 (deftest special-form-test
   (testing "entity"
     (is (= (macroexpand
-             '(def-tuple-rule my-rule
+             '(rule my-rule
                 [[?e :some-attr]]
                 [(<- ?the-ent (entity ?e))]
                 =>
@@ -387,7 +384,7 @@
   ;                    =>
   ;                    (println nil)))]
   ;    (is (= (macroexpand
-  ;             '(def-tuple-rule my-rule
+  ;             '(rule my-rule
   ;                [?eids <- (acc/all :e) :from [:interesting-fact]]
   ;                [(<- ?interesting-facts (entities ?eids))]
   ;                =>

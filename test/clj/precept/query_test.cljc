@@ -1,7 +1,7 @@
 (ns precept.query-test
     (:require [precept.util :refer :all :as util]
               [precept.query :as q]
-              [precept.tuplerules :refer [def-tuple-session def-tuple-rule]]
+              [precept.rules :refer [session rule]]
               [clojure.test :refer [use-fixtures testing is deftest run-tests]]
               [clara.rules :as cr]
               [clara.rules.accumulators :as acc]
@@ -22,7 +22,7 @@
 (cr/defquery find-all-acc [] [?all <- (acc/all) :from [:all]])
 
 (deftest cr-query-single-fact
-  (let [blank @(def-tuple-session default 'precept.query-test)
+  (let [blank @(session default 'precept.query-test)
         s (-> blank (insert (->Tuple -1 :attr "foo" 500))
                     (cr/fire-rules))
         start (:?all (first (cr/query blank find-all)))
@@ -31,7 +31,7 @@
     (is (= res (util/map->Tuple {:e -1 :a :attr :v "foo" :t 500})))))
 
 (deftest cr-query-many-facts
-  (let [blank @(def-tuple-session default 'precept.query-test)
+  (let [blank @(session default 'precept.query-test)
         to-insert [(->Tuple -1 :attr "foo" 500)
                    (->Tuple -2 :attr "bar" 501)
                    (->Tuple -3 :attr "baz" 502)]
@@ -46,7 +46,7 @@
                          (util/map->Tuple {:e -3 :a :attr :v "baz" :t 502})])))))
 
 (deftest entities-where-many-facts
-  (let [blank @(def-tuple-session default
+  (let [blank @(session default
                  'precept.query-test
                  'precept.query)
         to-insert [[-1 :first-name "Bob"]
@@ -72,7 +72,7 @@
          (frequencies res)))))
 
 (deftest entityv-test
-  (let [s @(def-tuple-session entityv-session
+  (let [s @(session entityv-session
                               'precept.query)
         inserted (-> s
                    (insert [[123 :foo "bar"]
@@ -89,7 +89,7 @@
 ;; TODO. This is wrong! Keys will collide when creating map. Should use schema
 ;; to hydrate as one-to-many or provide warning
 (deftest entity-test
-  (let [s @(def-tuple-session entity-session
+  (let [s @(session entity-session
                               'precept.query)
         inserted (-> s
                    (insert [[123 :foo "bar"]

@@ -1,5 +1,5 @@
 (ns precept.macros-test
-    (:require [precept.tuplerules :refer [def-tuple-session]]
+    (:require [precept.rules :refer [session]]
               [precept.util :as util]
               [precept.core :as core]
               [clara.rules :refer [defsession defrule]]
@@ -10,7 +10,7 @@
               [precept.dsl :refer [<- entity]])
     (:import [precept.util Tuple]))
 
-(deftest def-tuple-session-test
+(deftest session-test
   (testing "Macroexpansion should be the same as equivalent
             arguments to defsession"
       (is (= (macroexpand `(defsession ~'foo
@@ -24,7 +24,7 @@
                             :activation-group-sort-fn (util/make-activation-group-sort-fn
                                                         ~core/groups
                                                         ~core/default-group)))
-             (macroexpand '(def-tuple-session foo 'precept.macros-test)))))
+             (macroexpand '(session foo 'precept.macros-test)))))
 
   (testing "Allow overwrite defaults"
     (let [clara-session `(defsession ~'foo
@@ -37,7 +37,7 @@
                            :activation-group-sort-fn (util/make-activation-group-sort-fn
                                                         ~core/groups
                                                         ~core/default-group))
-          wrapper       '(def-tuple-session foo
+          wrapper       '(session foo
                            'precept.macros-test
                            :fact-type-fn (fn [x] (or (:a x)
                                                      (:b x)))
@@ -58,7 +58,7 @@
                              :activation-group-sort-fn (util/make-activation-group-sort-fn
                                                          ~core/groups
                                                          ~core/default-group)))
-            (macroexpand `(def-tuple-session ~'foo
+            (macroexpand `(session ~'foo
                             'precept.macros-test
                             :db-schema ~precept.schema-fixture/test-schema)))))
 
@@ -78,7 +78,7 @@
                            :activation-group-sort-fn (util/make-activation-group-sort-fn
                                                        ~core/groups
                                                        ~core/default-group)))
-          (macroexpand `(def-tuple-session ~'foo
+          (macroexpand `(session ~'foo
                           'precept.macros-test
                           :db-schema ~precept.schema-fixture/test-schema
                           :client-schema ~precept.schema-fixture/test-schema))))))

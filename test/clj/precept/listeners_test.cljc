@@ -6,7 +6,7 @@
             [precept.state :as state]
             [precept.query :as q]
             [precept.util :refer [guid ->Tuple] :as util]
-            [precept.tuplerules :refer [def-tuple-rule def-tuple-session]])
+            [precept.rules :refer [rule session]])
   (:import [precept.util Tuple]))
 
 (defn reset-globals [f]
@@ -22,19 +22,19 @@
 (defn trace [& args]
   (comment (apply prn args)))
 
-(def-tuple-rule insert-logical-for-every-a
+(rule insert-logical-for-every-a
   [?f <- [?e :attr/a]]
   =>
   (trace "Found " ?f "Inserting logical fact" [?e :attr/logical-insert ?f])
   (util/insert! [?e :attr/logical-insert ?f]))
 
-(def-tuple-rule retract-a-fact-that-caused-a-logical-insertion
+(rule retract-a-fact-that-caused-a-logical-insertion
   [[_ :attr/logical-insert ?f]]
   =>
   (trace "Found " ?f " Retracting its condition for existing")
   (cr/retract! ?f))
 
-(def-tuple-rule accumulate-count
+(rule accumulate-count
   [?facts <- (acc/all) :from [:all]]
   =>
   (trace "All facts" ?facts)
@@ -43,7 +43,7 @@
 (def background-facts (repeatedly 5 #(vector (guid) :junk 42)))
 
 (deftest trace-parsing-fns
-  (let [traced-session (-> @(def-tuple-session trace-parsing-session)
+  (let [traced-session (-> @(session trace-parsing-session)
                           (l/replace-listener)
                           (util/insert
                             (into
@@ -99,7 +99,7 @@
 
 
 (deftest listeners-state-transitions
-  (let [test-session @(def-tuple-session the-session
+  (let [test-session @(session the-session
                         'precept.listeners-test
                         'precept.query)
         state-0-inserts (into
