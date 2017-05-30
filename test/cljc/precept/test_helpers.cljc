@@ -2,7 +2,7 @@
   (:require [precept.core :as core]
             [precept.util :as util]
             [precept.listeners :as l]
-            [precept.tuplerules :refer [def-tuple-session]]
+            [precept.tuplerules :refer [session]]
             [precept.schema :as schema]
             [precept.spec.test :as test]
             [precept.schema-fixture :refer [test-schema]]
@@ -31,7 +31,7 @@
   "Creates a session with `n-facts` of each type of fact supported by schema.
   Derives ancestry from test-schema. Adds fact listener to session. Returns session."
   [facts sources]
-  (let [session @(def-tuple-session core-test-session
+  (let [session @(session core-test-session
                    sources
                    :db-schema test-schema)]
     (-> session

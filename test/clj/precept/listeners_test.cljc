@@ -6,7 +6,7 @@
             [precept.state :as state]
             [precept.query :as q]
             [precept.util :refer [guid ->Tuple] :as util]
-            [precept.tuplerules :refer [def-tuple-rule def-tuple-session]])
+            [precept.tuplerules :refer [def-tuple-rule session]])
   (:import [precept.util Tuple]))
 
 (defn reset-globals [f]
@@ -43,7 +43,7 @@
 (def background-facts (repeatedly 5 #(vector (guid) :junk 42)))
 
 (deftest trace-parsing-fns
-  (let [traced-session (-> @(def-tuple-session trace-parsing-session)
+  (let [traced-session (-> @(session trace-parsing-session)
                           (l/replace-listener)
                           (util/insert
                             (into
@@ -99,7 +99,7 @@
 
 
 (deftest listeners-state-transitions
-  (let [test-session @(def-tuple-session the-session
+  (let [test-session @(session the-session
                         'precept.listeners-test
                         'precept.query)
         state-0-inserts (into

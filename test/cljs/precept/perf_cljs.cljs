@@ -10,7 +10,7 @@
             [clara.rules :as cr]
             [clara.rules.accumulators :as acc]
             [precept.spec.sub :as sub]
-            [precept.tuplerules :refer [def-tuple-session
+            [precept.tuplerules :refer [session
                                         deflogical
                                         def-tuple-rule
                                         def-tuple-query]]
@@ -84,7 +84,7 @@
 (def ancestors-fn (util/make-ancestors-fn hierarchy))
 
 
-(def-tuple-session tuple-session
+(session tuple-session
   'precept.perf-tuple
   :ancestors-fn ancestors-fn
   :activation-group-fn activation-group-fn

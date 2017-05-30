@@ -2,12 +2,12 @@
   (:require [cljs.test :refer [run-tests]]
             [precept.core :as core]
             [precept.util :as util]
-            [precept.tuplerules :refer [def-tuple-session]]
+            [precept.tuplerules :refer [session]]
             [precept.state :as state])
   (:require-macros [cljs.test :refer [deftest async use-fixtures testing is]]))
 
 (enable-console-print!)
-;(def-tuple-session my-session)
+;(session my-session)
 
 (defn clear-subs []
   (swap! state/state update :subscriptions (fn [_] {})))

@@ -8,7 +8,7 @@
 ;              [precept.listeners :as l]
 ;              [precept.schema-fixture :refer [test-schema]]
 ;              [precept.util :refer [guid clara-tups->tups insert retract qa- entityv]]
-;              [precept.tuplerules :refer [def-tuple-rule def-tuple-query def-tuple-session]]))
+;              [precept.tuplerules :refer [def-tuple-rule def-tuple-query session]]))
 ;
 ;(def-tuple-rule todo-is-visible-when-filter-is-all
 ;  [[_ :visibility-filter :all]]
@@ -116,7 +116,7 @@
 ;  []
 ;  [?facts <- (acc/all) :from [:all]])
 ;
-;(def-tuple-session my-session 'precept.store-test)
+;(session my-session 'precept.store-test)
 ;
 ;(defn reset-store []
 ;  (reset! store {}))

@@ -32,10 +32,10 @@
             @v)))))
 
 #?(:clj
-   (defmacro def-tuple-session
+   (defmacro session
      "Defines a session.
 
-     (def-tuple-session my-session 'my-proj/my-ns :db-schema my-schema)
+     (session my-session 'my-proj/my-ns :db-schema my-schema)
 
      Accepts same arguments as Clara's defsession plus :db-schema and :client-schema options.
      Rules and queries are loaded from the provided namespace. To load rules from multiple
@@ -79,7 +79,7 @@
        serves as a tiebreaker, with higher salience rules winning over lower salience ones."
      [name & sources-and-options]
      (if (compiling-cljs?)
-       `(precept.macros/def-tuple-session ~name ~@sources-and-options)
+       `(precept.macros/session ~name ~@sources-and-options)
        (let [sources (take-while (complement keyword?) sources-and-options)
              options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
              impl-sources `['precept.impl.rules]

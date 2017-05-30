@@ -3,7 +3,7 @@
   (:require [precept.accumulators :as acc]
             [precept.spec.error :as err]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
-            [precept.tuplerules :refer-macros [deflogical defsub def-tuple-session def-tuple-rule]]
+            [precept.tuplerules :refer-macros [deflogical defsub session def-tuple-rule]]
             [precept.todomvc.facts :refer [todo entry done-count active-count visibility-filter]]))
 
 
@@ -97,7 +97,7 @@
   =>
   (retract! ?orphaned))
 
-(def-tuple-session app-session
+(session app-session
   'precept.todomvc.rules
   :db-schema precept.todomvc.schema/db-schema
   :client-schema precept.todomvc.schema/client-schema)

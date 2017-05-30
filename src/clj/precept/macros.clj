@@ -15,7 +15,7 @@
 (defn trace [& args]
   (comment (apply prn args)))
 
-(defmacro def-tuple-session
+(defmacro session
   "For CLJS. Wraps Clara's `defsession` macro."
   [name & sources-and-options]
   (let [sources (take-while (complement keyword?) sources-and-options)

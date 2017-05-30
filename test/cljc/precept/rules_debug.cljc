@@ -13,13 +13,13 @@
 ;      #?(:clj
 ;              [precept.dsl :refer [<- entity entities]])
 ;      #?(:clj
-;              [precept.tuplerules :refer [def-tuple-session
+;              [precept.tuplerules :refer [session
 ;                                          def-tuple-rule
 ;                                          deflogical
 ;                                          defsub]])
 ;      #?(:cljs [precept.tuplerules :refer-macros [deflogical
 ;                                                  defsub
-;                                                  def-tuple-session
+;                                                  session
 ;                                                  def-tuple-rule]])))
 ;
 ;(defn trace [& args]
@@ -61,7 +61,7 @@
 ;  (println "Found error!" ?error))
 ;
 ;
-;(def-tuple-session app-session
+;(session app-session
 ;   'precept.todomvc.rules-debug
 ;   :db-schema db-schema)
 ;;(reset! precept.state/fact-index {})

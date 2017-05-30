@@ -7,7 +7,7 @@
             [precept.spec.sub :as sub]
             [precept.spec.test :as test]
             [precept.spec.error :as err]
-            [precept.tuplerules :refer [def-tuple-session]]
+            [precept.tuplerules :refer [session]]
             [precept.schema :as schema]
             [precept.schema-fixture :refer [test-schema]]
             [clara.rules :as cr]
