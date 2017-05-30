@@ -41,7 +41,7 @@ be achieved." - [Out of the Tar Pit](http://shaffner.us/cs/papers/tarpit.pdf)
 (start! {:session my-session :facts [[:global :count 0]]})
 ```
 
-### Rules engine
+## Rules engine
 > “In the ideal world, **we** are not concerned with
 performance, and our language and infrastructure provide all the general
 support we desire.” - Out of the Tar Pit, emphasis added
@@ -55,38 +55,46 @@ the browser. Had this happened earlier, a truly declarative approach to
 front-end web development might already have become popular.
 
 
-### Global state
+## Global state
 
 State in Precept is more or less a "bag of facts". There is no tree structure
 to reason over or  organize. The session just contains a bunch of tuples that
 can be grabbed at will. The fact of a  key-code is on the same level as a
 username.
 
-### Synchronized Reactive View Model
+## Reactive View Model
 
-Because most view libraries and programming languages tend to operate more
-naturally with  associative data structures than eav tuples, Precept converts
-and syncs all facts from the rules  session to a view model. Components that
-subscribe to it are automatically rerendered when the data they subscribe
-to changes.
+All facts from the rules session are synced to a reactive view model. Components are rerendered only when the data they subscribe to changes.
 
-### Schema support
-Precept enforces cardinality and uniqueness of facts according to user-supplied, Datomic-format schemas. This allows the declaration of one-to-many relationships in eav format:
+Subscription results are returned as maps. Tuples are great for pattern matching, but maps are a better fit for components to generate markup from and for programming languages to iterate over. As a result, working with data in the view layer is the same as it is in most any frontend library or framework.
+
+## Schema support
+Precept enforces cardinality and uniqueness according to user-supplied, Datomic-format schemas. This allows the modeling of one-to-many relationships with eav tuples:
+
 ```clj
-(insert! [[?e :list/item "foo"]
-          [?e :list/item "bar"]
-          [?e :list/item "baz"])
+;; schema.cljs
+(attribute :list/item
+  :db/cardinality :db.cardinality/one-to-many)
+
+;; rules.cljs
+(insert! [[123 :list/item "foo"]
+          [123 :list/item "bar"]
+          [123 :list/item "baz"])
 ```
-Via subscriptions in the view layer, components receive `:list/item` as a list:
+
+Components receive `:list/item` as a list:
+
 ```clj
 {:db/id 123 :list/item ["foo" "bar" "baz"]}
 ```
-Unique attributes are handled using the same semantics as Datomic. Conflicts generate "error facts", which are inserted into the session so they may be resolved by rules.
+Unique attributes are handled using the same semantics as Datomic for [:db.unique/identity](http://docs.datomic.com/identity.html#sec-4) and [:db.unique/value](http://docs.datomic.com/identity.html#sec-5). When there is a conflict, instead of throwing an error, Precept inserts facts about the error into the session so they it may be handled or resolved through rules.
 
-You can have both a `:db-schema` and a `:client-schema`. This distinction between persistent and non-persistent facts is useful when writing to a database. Precept can hand you the facts you want to persist, while still allowing cardinality and uniqueness designations for client-side data.
+Precept supports both a `:db-schema` and a `:client-schema` to allow users to distinguish persistent facts from non-persistent facts. They're both enforced the same way.
 
-### Where we're headed
-The project board contains the most up-to-date information about what features are being discussed, prioritized, and worked on. Here's a few we're excited about.
+Precept can hand you the facts you want to persist, while still allowing you to define schema attributes your client-side only data.
+
+## Where we're headed
+The [project board](https://github.com/CoNarrative/precept/projects/1) contains the most up-to-date information about what features are being discussed, prioritized, and worked on. Here's a few we're excited about.
 
 #### Rendering views
 
