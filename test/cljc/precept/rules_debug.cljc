@@ -14,27 +14,27 @@
 ;              [precept.dsl :refer [<- entity entities]])
 ;      #?(:clj
 ;              [precept.tuplerules :refer [session
-;                                          def-tuple-rule
+;                                          rule
 ;                                          deflogical
 ;                                          defsub]])
 ;      #?(:cljs [precept.tuplerules :refer-macros [deflogical
 ;                                                  defsub
 ;                                                  session
-;                                                  def-tuple-rule]])))
+;                                                  rule]])))
 ;
 ;(defn trace [& args]
 ;  (apply prn args))
 ;
 ;(deflogical [?e :entry/new-title "Hello again!"] :- [[?e :entry/title]])
 ;
-;(def-tuple-rule all-facts
+;(rule all-facts
 ;  {:group :report}
 ;  [?facts <- (acc/all) :from [:all]]
 ;  =>
 ;  (do nil))
 ;  ;(println "FACTs at the end!" ?facts))
 ;
-;(def-tuple-rule print-entity
+;(rule print-entity
 ;  [[?e :todo/title]]
 ;  [(<- ?entity (entity ?e))]
 ;  =>
@@ -54,7 +54,7 @@
 ;  (let [_ (println "Sub with entities -----" ?interesting-entities)]
 ;    {:entities-sub ?interesting-entities}))
 ;
-;(def-tuple-rule log-errors
+;(rule log-errors
 ;  [[?e ::err/type]]
 ;  [(<- ?error (entity ?e))]
 ;  =>

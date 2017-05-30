@@ -271,8 +271,8 @@
         :lhs (rewrite-lhs lhs)
         :rhs rhs}])))
 
-(defmacro def-tuple-rule
-  "CLJS version of def-tuple-rule"
+(defmacro rule
+  "CLJS version of rule"
   [name & body]
   (let [doc         (if (string? (first body)) (first body) nil)
         body        (if doc (rest body) body)

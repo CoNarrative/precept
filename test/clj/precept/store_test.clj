@@ -8,28 +8,28 @@
 ;              [precept.listeners :as l]
 ;              [precept.schema-fixture :refer [test-schema]]
 ;              [precept.util :refer [guid clara-tups->tups insert retract qa- entityv]]
-;              [precept.tuplerules :refer [def-tuple-rule def-tuple-query session]]))
+;              [precept.tuplerules :refer [rule def-tuple-query session]]))
 ;
-;(def-tuple-rule todo-is-visible-when-filter-is-all
+;(rule todo-is-visible-when-filter-is-all
 ;  [[_ :visibility-filter :all]]
 ;  [[?e :todo/title]]
 ;  =>
 ;  (cr/insert! [?e :todo/visible :tag]))
 ;
-;(def-tuple-rule todo-is-visile-when-filter-is-done-and-todo-done
+;(rule todo-is-visile-when-filter-is-done-and-todo-done
 ;  [[_ :visibility-filter :done]]
 ;  [[?e :todo/done]]
 ;  =>
 ;  (cr/insert! [?e :todo/visible :tag]))
 ;
-;(def-tuple-rule todo-is-visible-when-filter-active-and-todo-not-done
+;(rule todo-is-visible-when-filter-active-and-todo-not-done
 ;  [[_ :visibility-filter :active]]
 ;  [[?e :todo/title]]
 ;  [:not [?e :todo/done]]
 ;  =>
 ;  (cr/insert! [?e :todo/visible :tag]))
 ;
-;(def-tuple-rule toggle-all-complete
+;(rule toggle-all-complete
 ;  [:exists [:ui/toggle-complete]]
 ;  [[?e :todo/title]]
 ;  [:not [?e :todo/done]]
@@ -37,7 +37,7 @@
 ;  (println "Marked done via toggle complete:" ?e)
 ;  (cr/insert-unconditional! [?e :todo/done :tag]))
 ;
-;(def-tuple-rule remove-toggle-complete-when-all-todos-done
+;(rule remove-toggle-complete-when-all-todos-done
 ;  [?toggle <- :ui/toggle-complete]
 ;  [?total <- (acc/count) :from [:todo/title]]
 ;  [?total-done <- (acc/count) :from [:todo/done]]
@@ -48,7 +48,7 @@
 ;  (println "Retracting toggle-all-complete action: " ?toggle)
 ;  (cr/retract! ?toggle))
 ;
-;(def-tuple-rule no-done-todos-when-clear-completed-action
+;(rule no-done-todos-when-clear-completed-action
 ;  [:exists [:ui/clear-completed]]
 ;  [[?e :todo/title]]
 ;  [[?e :todo/done]]
@@ -57,19 +57,19 @@
 ;  (println "Retracting entity " ?entity)
 ;  (doseq [tuple ?entity] (cr/retract! tuple)))
 ;
-;(def-tuple-rule clear-completed-action-is-done-when-no-done-todos
+;(rule clear-completed-action-is-done-when-no-done-todos
 ;  [?action <- :ui/clear-completed]
 ;  [:not [:exists [:todo/done]]]
 ;  =>
 ;  (println "Clear-completed action finished. Retracting " ?action)
 ;  (cr/retract! ?action))
 ;
-;(def-tuple-rule print-all-facts
+;(rule print-all-facts
 ;  [?fact <- [?e]]
 ;  =>
 ;  (println "FACT" ?fact))
 ;
-;(def-tuple-rule find-done-count
+;(rule find-done-count
 ;  [?done <- (acc/count) :from [:todo/done]]
 ;  [?total <- (acc/count) :from [:todo/title]]
 ;  =>
@@ -78,7 +78,7 @@
 ;    [[(guid) :done-count ?done]
 ;     [(guid) :active-count (- ?total ?done)]]))
 ;
-;(def-tuple-rule subs-footer-controls
+;(rule subs-footer-controls
 ;  [:exists [?e ::sub/request [:footer]]]
 ;  [[_ :done-count ?done-count]]
 ;  [[_ :active-count ?active-count]]
@@ -92,7 +92,7 @@
 ;               :done-count ?done-count
 ;               :visibility-filter ?visibility-filter}])))
 ;
-;(def-tuple-rule subs-task-list
+;(rule subs-task-list
 ;  [:exists [?e ::sub/request [:task-list]]]
 ;  [?visible-todos <- (acc/all) :from [:todo/visible]]
 ;  [[_ :active-count ?active-count]]
@@ -105,7 +105,7 @@
 ;         :all-complete? (> ?active-count 0)}]
 ;       [?e ::sub/response-id id]])))
 ;
-;(def-tuple-rule subs-todo-app
+;(rule subs-todo-app
 ;  [:exists [?e ::sub/request [:todo-app]]]
 ;  [?todos <- (acc/all) :from [:todo/title]]
 ;  =>

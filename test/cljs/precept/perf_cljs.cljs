@@ -12,7 +12,7 @@
             [precept.spec.sub :as sub]
             [precept.tuplerules :refer [session
                                         deflogical
-                                        def-tuple-rule
+                                        rule
                                         def-tuple-query]]
             [precept.listeners :as l]
             [precept.schema :as schema]))
@@ -37,27 +37,27 @@
   (trace "Inserting :todo/title")
   (insert-unconditional! [(guid) :todo/title ?title]))
 
-(def-tuple-rule todo-is-visile-when-filter-is-done-and-todo-done
+(rule todo-is-visile-when-filter-is-done-and-todo-done
   [[_ :visibility-filter :done]]
   [[?e :todo/done]]
   =>
   (insert! [?e :todo/visible :tag]))
 
-(def-tuple-rule todo-is-visible-when-filter-active-and-todo-not-done
+(rule todo-is-visible-when-filter-active-and-todo-not-done
   [[_ :visibility-filter :active]]
   [[?e :todo/title]]
   [:not [?e :todo/done]]
   =>
   (insert! [?e :todo/visible :tag]))
 
-(def-tuple-rule toggle-all-complete
+(rule toggle-all-complete
   [:exists [:ui/toggle-complete]]
   [[?e :todo/title]]
   [:not [?e :todo/done]]
   =>
   (insert-unconditional! [?e :todo/done :tag]))
 
-(def-tuple-rule acc-all-visible
+(rule acc-all-visible
   {:group :report}
   [?count <- (acc/count) :from [:todo/title]]
   [:test (> ?count 0)]
@@ -66,7 +66,7 @@
   (insert! [-1 :todo/count ?count]))
 
 
-(def-tuple-rule action-cleanup
+(rule action-cleanup
   {:group :cleanup}
   [?actions <- (acc/all) :from [:action]]
   [:test (> (count ?actions) 0)]

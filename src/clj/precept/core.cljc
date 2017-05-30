@@ -24,7 +24,7 @@
 (def groups [:action :calc :report :cleanup])
 (def default-group :calc)
 
-;; TODO. Pass namespace argument from deflogical, def-tuple-rule.
+;; TODO. Pass namespace argument from deflogical, rule.
 (defn register-rule [type lhs rhs]
   "Returns rule name if found in registry, else registers new rule and returns name"
   (if-let [existing (first (filter #(and (= rhs (:consequences %)) (= lhs (:conditions %))) @rules))]

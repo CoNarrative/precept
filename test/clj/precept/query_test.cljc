@@ -1,7 +1,7 @@
 (ns precept.query-test
     (:require [precept.util :refer :all :as util]
               [precept.query :as q]
-              [precept.tuplerules :refer [session def-tuple-rule]]
+              [precept.tuplerules :refer [session rule]]
               [clojure.test :refer [use-fixtures testing is deftest run-tests]]
               [clara.rules :as cr]
               [clara.rules.accumulators :as acc]

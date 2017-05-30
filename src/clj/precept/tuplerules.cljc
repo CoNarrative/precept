@@ -66,10 +66,10 @@
 
      `:activation-group-fn` - `(util/make-activation-group-fn :calc)`
         Allows categorization and prioritization of some rules over others. Puts a rule into a
-        prioritization group according to the optional first argument to def-tuple-rule.
+        prioritization group according to the optional first argument to rule.
         Assigns the default values `{:group :calc :salience 0 :super false}` to rules where the
         without these arguments.
-        argument to def-tuple-rule. :salience determines precedence within the same group.
+        argument to rule. :salience determines precedence within the same group.
         Rules marked :super are active across all groups.
 
      `:activation-group-sort-fn` - `(util/make-activation-group-fn [:action :calc :report :cleanup])`
@@ -95,11 +95,11 @@
          `(def ~name (com/mk-session `~[~@body]))))))
 
 #?(:clj
-   (defmacro def-tuple-rule
+   (defmacro rule
      [name & body]
      "Defines a rule.
 
-     (def-tuple-rule my-rule
+     (rule my-rule
        {:group :action}
        [[_ :my-fact ?v]]
        =>
@@ -108,7 +108,7 @@
        Behaves identically to Clara's defrule. Supports positional syntax for 4-arity
        [e a v fact-id] tuples."
      (if (compiling-cljs?)
-       `(precept.macros/def-tuple-rule ~name ~@body)
+       `(precept.macros/rule ~name ~@body)
        (let [doc             (if (string? (first body)) (first body) nil)
              body            (if doc (rest body) body)
              properties      (if (map? (first body)) (first body) nil)
