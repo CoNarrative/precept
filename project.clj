@@ -1,7 +1,7 @@
 (defproject precept "0.2.1"
   :url          "https://github.com/CoNarrative/precept.git"
-  :license      {:name "Eclipse Public License The Same As Clojure"
-                 :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :license      {:name "MIT"
+                 :url "https://github.com/CoNarrative/precept/blob/master/LICENSE"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
                  [org.clojure/clojurescript "1.9.494"]
                  [org.clojure/core.async "0.3.442"]
