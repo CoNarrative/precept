@@ -286,8 +286,8 @@
     `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
             `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
 
-(defmacro def-tuple-query
-  "CLJS version of def-tuple-query"
+(defmacro defquery
+  "CLJS version of defquery"
   [name & body]
   (let [doc (if (string? (first body)) (first body) nil)
         binding (if doc (second body) (first body))

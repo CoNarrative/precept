@@ -8,7 +8,7 @@
 ;              [precept.listeners :as l]
 ;              [precept.schema-fixture :refer [test-schema]]
 ;              [precept.util :refer [guid clara-tups->tups insert retract qa- entityv]]
-;              [precept.tuplerules :refer [rule def-tuple-query session]]))
+;              [precept.tuplerules :refer [rule defquery session]]))
 ;
 ;(rule todo-is-visible-when-filter-is-all
 ;  [[_ :visibility-filter :all]]
@@ -112,7 +112,7 @@
 ;  (println "Inserting all-todos response" ?todos)
 ;  (cr/insert! [(guid) ::sub/response (precept.util/tuples->maps ?todos)]))
 ;
-;(def-tuple-query find-all-facts
+;(defquery find-all-facts
 ;  []
 ;  [?facts <- (acc/all) :from [:all]])
 ;

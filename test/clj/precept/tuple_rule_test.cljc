@@ -1,12 +1,10 @@
 (ns precept.tuple-rule-test
     (:require [clojure.test :refer [deftest testing is run-tests]]
-              [clara.rules :refer [defrule defquery]]
+              [clara.rules :refer [defrule] :as cr]
               [clara.rules.accumulators :as acc]
               [precept.spec.sub :as sub]
               [precept.spec.rulegen :as rulegen]
-              [precept.tuplerules :refer [rule
-                                          def-tuple-query
-                                          defsub]]
+              [precept.tuplerules :refer [rule defquery defsub]]
               [precept.util :refer [insert!] :as util]
               [precept.macros :refer [binding?
                                       variable-bindings
@@ -15,8 +13,7 @@
                                       value-expr?
                                       parse-as-tuple
                                       parse-with-fact-expression
-                                      rewrite-lhs] :as macros]
-              [precept.macros :as macros]))
+                                      rewrite-lhs] :as macros]))
 
 (deftest tuple-bindings-test
   (let [e1    '[?e :ns/foo 42]
@@ -267,20 +264,20 @@
                      (trace "CLEANING this-tick fact because transient" ?fact)
                      (cr/retract! ?fact))))))))
 
-(deftest def-tuple-query-test
+(deftest defquery-test
   (testing "Query with no args"
     (is (= (macroexpand
-             '(def-tuple-query my-query []
+             '(defquery my-query []
                 [[?e :foo ?v]]))
            (macroexpand
-             '(defquery my-query []
+             '(cr/defquery my-query []
                 [:foo (= ?e (:e this)) (= ?v (:v this))])))))
   (testing "Query with args"
     (is (= (macroexpand
-             '(def-tuple-query my-query [:?e]
+             '(defquery my-query [:?e]
                 [[?e :foo ?v]]))
           (macroexpand
-            '(defquery my-query [:?e]
+            '(cr/defquery my-query [:?e]
                [:foo (= ?e (:e this)) (= ?v (:v this))]))))))
 
 (deftest defsub-test

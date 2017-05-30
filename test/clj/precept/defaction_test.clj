@@ -2,7 +2,7 @@
 ;  (:require [precept.macros :refer [defaction]]
 ;            [clojure.test :refer [use-fixtures deftest run-tests is testing]]
 ;            [clara.tools.tracing :as trace]
-;            [precept.tuplerules :refer [session def-tuple-query]]))
+;            [precept.tuplerules :refer [session defquery]]))
 
 ;; TODO. Is failing because Tuple != vector
 ;; defaction in this form will likely not be part of api

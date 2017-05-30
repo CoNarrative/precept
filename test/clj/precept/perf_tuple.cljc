@@ -9,7 +9,7 @@
               [precept.tuplerules :refer [session
                                           define
                                           rule
-                                          def-tuple-query]]
+                                          defquery]]
               [precept.listeners :as l]
               [precept.schema :as schema]
       #?(:clj [clara.tools.inspect :as inspect])

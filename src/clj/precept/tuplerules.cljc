@@ -125,17 +125,17 @@
                        ~doc (assoc :doc ~doc)))))))))
 
 #?(:clj
-   (defmacro def-tuple-query
+   (defmacro defquery
      "Clara's defquery with precept DSL.
 
-     (def-tuple-query my-query [:v]
+     (defquery my-query [:v]
        [?fact <- [_ :my-fact ?v]])
 
       Defines a named query that can be called with Clara's `query` function with optional
       arguments."
      [name & body]
      (if (compiling-cljs?)
-       `(precept.macros/def-tuple-query ~name ~@body)
+       `(precept.macros/defquery ~name ~@body)
        (let [doc (if (string? (first body)) (first body) nil)
              binding (if doc (second body) (first body))
              definition (if doc (drop 2 body) (rest body))
