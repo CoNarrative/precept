@@ -43,6 +43,9 @@
     []
     entity-avs))
 
+(defn update-dom [f]
+  [(guid) :command (fn [_] f)])
+
 (defn hit-node [event]
   "Takes .path property of a DOM event and returns first element with an id"
   (first (filter #(not (clojure.string/blank? (.-id %))) (.-path event))))
@@ -72,9 +75,10 @@
               [:transient :hit/id (.-id node)]])))
 
 (rule make-hit-nodes-red
+  [[_ :mouse/down]]
   [[_ :hit/node ?node]]
   =>
-  (set-style! ?node {:background-color "red"}))
+  (insert! (update-dom (set-style! ?node {:background-color "red"}))))
 
 
 ;; TODO. We want to always establish facts instead of immediately performing a dom operation
@@ -90,6 +94,12 @@
 
 
 ;;;;;;;;;;;;;; Framework Rules ;;;;;;;;;;;;;;;;;;;;
+
+(rule handle-explicit-command
+  [[_ :command ?fn]]
+  [:test (fn? ?fn)]
+  =>
+  (?fn))
 
 (rule append-element
   {:group :action}
