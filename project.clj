@@ -67,7 +67,7 @@
       {:source-paths ["examples/draw" "dev/cljs/precept/draw"]
        :compiler
                      {:main "precept.draw.app"
-                      :asset-path "/js/out"
+                      :asset-path "/draw/js/out"
                       :output-to "target/cljsbuild/public/draw/js/app.js"
                       :output-dir "target/cljsbuild/public/draw/js/out"
                       :preloads [devtools.preload]

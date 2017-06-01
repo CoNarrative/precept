@@ -4,6 +4,7 @@
             [precept.spec.error :as err]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
             [precept.rules :refer-macros [define defsub session rule]]
+            [precept.draw.schema :as schema]
             [precept.draw.facts :refer [todo entry done-count active-count visibility-filter]]))
 
 
@@ -99,5 +100,5 @@
 
 (session app-session
   'precept.draw.rules
-  :db-schema precept.draw.schema/db-schema
-  :client-schema precept.draw.schema/client-schema)
+  :db-schema schema/db-schema
+  :client-schema schema/client-schema)
