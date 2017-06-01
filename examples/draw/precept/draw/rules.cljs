@@ -7,6 +7,17 @@
             [precept.draw.schema :as schema]
             [precept.draw.facts :refer [todo entry done-count active-count visibility-filter]]))
 
+(rule intercept-mouse-down
+  {:group :action}
+  [[_ :mouse/down ?event]]
+  =>
+  (println "Mouse down event" ?event))
+
+(rule intercept-mouse-up
+  {:group :action}
+  [[_ :mouse/up ?event]]
+  =>
+  (println "Mouse up event" ?event))
 
 (rule save-edit
   {:group :action}
