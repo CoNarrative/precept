@@ -1,5 +1,6 @@
 (ns precept.impl.rules
-    (:require [precept.spec.rulegen :as rulegen]))
+    (:require [precept.spec.rulegen :as rulegen]
+              [precept.accumulators :as acc]))
 
 ;;TODO. Figure out if we can avoid a circular dependency with rules so we can use
 ;; positional rules syntax
@@ -15,7 +16,7 @@
   {:salience 1}
   [::rulegen/for-macro (= ?req (:e this)) (= :entities (:v this))]
   [:entities/eid (= ?req (:e this)) (= ?e (:v this))]
-  [?entity <- (clara.rules.accumulators/all) :from [:all (= ?e (:e this))]]
+  [?entity <- (precept.accumulators/all) :from [:all (= ?e (:e this))]]
   =>
   (println "[rulegen] inserting entity!" ?entity)
   (precept.util/insert! [?req :entities/entity ?entity]))
@@ -23,7 +24,7 @@
 (clara.rules/defrule entities___impl-b
   {:salience 0}
   [:entities/order (= ?req (:e this)) (= ?eids (:v this))]
-  [?ents <- (clara.rules.accumulators/all :v) :from [:entities/entity (= ?req (:e this))]]
+  [?ents <- (precept.accumulators/all :v) :from [:entities/entity (= ?req (:e this))]]
   =>
   (let [items (group-by :e (flatten ?ents))
         ordered (vals (select-keys items (into [] ?eids)))]
@@ -33,7 +34,7 @@
 (clara.rules/defrule remove-entity___impl
   {:group :action}
   [:remove-entity (= ?v (:v this))]
-  [?entity <- (clara.rules.accumulators/all) :from [:all (= ?v (:e this))]]
+  [?entity <- (precept.accumulators/all) :from [:all (= ?v (:e this))]]
   =>
   (println "Fulfilling remove entity request " ?entity)
   (doseq [tuple ?entity]

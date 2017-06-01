@@ -3,34 +3,40 @@
   <groupId>precept</groupId>
   <artifactId>precept</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.4</version>
+  <version>0.2.1</version>
   <name>precept</name>
   <description/>
   <url>https://github.com/CoNarrative/precept.git</url>
   <licenses>
     <license>
-      <name>Eclipse Public License The Same As Clojure</name>
-      <url>http://www.eclipse.org/legal/epl-v10.html</url>
+      <name>MIT</name>
+      <url>https://github.com/CoNarrative/precept/blob/master/LICENSE</url>
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git://github.com/CoNarrative/todomvc.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/CoNarrative/todomvc.git</developerConnection>
-    <tag>d32a75ab668befd7d5afb3c81e97c7321a42e8e9
+    <connection>scm:git:git://github.com/CoNarrative/precept.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/CoNarrative/precept.git</developerConnection>
+    <tag>65e60bd0f202a73c82ea16bc2a08e1ca7013368c
 </tag>
-    <url>https://github.com/CoNarrative/todomvc</url>
+    <url>https://github.com/CoNarrative/precept</url>
   </scm>
   <build>
     <sourceDirectory>src/clj</sourceDirectory>
-    <testSourceDirectory>test</testSourceDirectory>
+    <testSourceDirectory>test/clj</testSourceDirectory>
     <resources>
       <resource>
         <directory>resources</directory>
+      </resource>
+      <resource>
+        <directory>target/cljsbuild</directory>
       </resource>
     </resources>
     <testResources>
       <testResource>
         <directory>resources</directory>
+      </testResource>
+      <testResource>
+        <directory>target/cljsbuild</directory>
       </testResource>
     </testResources>
     <directory>target</directory>
@@ -42,14 +48,14 @@
         <version>1.7</version>
         <executions>
           <execution>
-            <id>add-source</id>
-            <phase>generate-sources</phase>
+            <id>add-test-source</id>
+            <phase>generate-test-sources</phase>
             <goals>
-              <goal>add-source</goal>
+              <goal>add-test-source</goal>
             </goals>
             <configuration>
               <sources>
-                <source>dev</source>
+                <source>test/cljc</source>
               </sources>
             </configuration>
           </execution>
@@ -99,14 +105,14 @@
       <version>0.3.442</version>
     </dependency>
     <dependency>
-      <groupId>reagent</groupId>
-      <artifactId>reagent</artifactId>
-      <version>0.6.1</version>
-    </dependency>
-    <dependency>
       <groupId>com.cerner</groupId>
       <artifactId>clara-rules</artifactId>
-      <version>0.14.0</version>
+      <version>0.15.0</version>
+    </dependency>
+    <dependency>
+      <groupId>reagent</groupId>
+      <artifactId>reagent</artifactId>
+      <version>0.6.0</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -116,8 +122,44 @@
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
+      <artifactId>tools.reader</artifactId>
+      <version>1.0.0-beta4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
       <artifactId>tools.namespace</artifactId>
       <version>0.2.11</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>devcards</groupId>
+      <artifactId>devcards</artifactId>
+      <version>0.2.3</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.cemerick</groupId>
+      <artifactId>piggieback</artifactId>
+      <version>0.2.2-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>figwheel-sidecar</groupId>
+      <artifactId>figwheel-sidecar</artifactId>
+      <version>0.5.10-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>binaryage</groupId>
+      <artifactId>devtools</artifactId>
+      <version>0.8.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>secretary</groupId>
+      <artifactId>secretary</artifactId>
+      <version>1.2.3</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

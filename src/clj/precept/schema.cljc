@@ -1,7 +1,6 @@
 (ns precept.schema
     (:require [precept.spec.sub :as sub]
               [precept.query :as q]
-              [precept.state :refer [session-hierarchy]]
               [precept.util :refer [guid]]
               [precept.state :as state]))
 
@@ -84,7 +83,7 @@
     (swap! h derive :one-to-many :all)
     (swap! h derive :unique-value :one-to-one)
     (swap! h derive :unique-identity :one-to-one)
-    (reset! session-hierarchy h)
+    (reset! state/session-hierarchy h)
     @h))
 
 (defn init!
