@@ -2,10 +2,17 @@
   (:require-macros [precept.dsl :refer [<- entity entities]])
   (:require [precept.accumulators :as acc]
             [precept.spec.error :as err]
+            [crate.core :refer [html]]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
             [precept.rules :refer-macros [define defsub session rule]]
             [precept.draw.schema :as schema]
             [precept.draw.facts :refer [todo entry done-count active-count visibility-filter]]))
+
+(defn by-id [id]
+  (.getElementById js/document id))
+
+(defn append-new [target new]
+  (.appendChild (by-id target) new))
 
 (rule intercept-mouse-down
   {:group :action}
@@ -18,6 +25,33 @@
   [[_ :mouse/up ?event]]
   =>
   (println "Mouse up event" ?event))
+
+(rule append-element
+  {:group :action}
+  [[:transient :command :create-element]]
+  [[?e :elem/tag ?tag]]
+  [[?container :contains ?e]]
+  [(<- ?ent (entity ?e))]
+  =>
+  (let [avs (mapv (juxt :a :v) ?ent)
+        attrs (reduce (fn [acc [a v]]
+                        (println "Name a" (str a))
+                        (if (clojure.string/includes? (str a) "attr")
+                          (conj acc
+                            (vector
+                              (-> a
+                                (clojure.string/split "/")
+                                (second)
+                                (keyword))
+                              v))
+                          acc))
+                []
+                avs)
+        _ (println "Avs" avs)
+        _ (println "Attrs" (apply hash-map (flatten attrs)))]
+    (append-new
+      ?container
+      (html [?tag (apply hash-map (flatten attrs))]))))
 
 (rule save-edit
   {:group :action}

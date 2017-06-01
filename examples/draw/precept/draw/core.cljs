@@ -4,10 +4,10 @@
             [reagent.core :as reagent]
             [secretary.core :as secretary]
             [precept.core :refer [start! then]]
+            [precept.util :refer [guid]]
             [precept.draw.facts :refer [todo visibility-filter]]
             [precept.draw.rules :refer [app-session]]
-            [precept.draw.schema :refer [db-schema]]
-            [precept.draw.views])
+            [precept.draw.schema :refer [db-schema]])
   (:import [goog History]
            [goog.history EventType]))
 
@@ -22,10 +22,17 @@
     (events/listen EventType.NAVIGATE (fn [event] (secretary/dispatch! (.-token event))))
     (.setEnabled true)))
 
-(defn mount-components []
-  (reagent/render [precept.draw.views/app] (.getElementById js/document "app")))
 
-(def facts (into (todo "Hi") (todo "there!")))
+(defn circle [{:keys [container x y r]}]
+  (let [eid (guid)]
+    [[eid :elem/tag :circle]
+     [eid :attr/cx x]
+     [eid :attr/cy y]
+     [eid :attr/r r]
+     [container :contains eid]
+     [:transient :command :create-element]]))
+
+(def facts (circle {:container "root" :x 50 :y 50 :r 100}))
 
 (defn mouse-move [e]
   [[:transient :mouse/x (.-clientX e)]
@@ -42,5 +49,4 @@
   (doto js/window
     (.addEventListener "mousemove" #(then (mouse-move %)))
     (.addEventListener "mousedown" #(then (mouse-down %)))
-    (.addEventListener "mouseup" #(then (mouse-up %))))
-  (mount-components))
+    (.addEventListener "mouseup" #(then (mouse-up %)))))

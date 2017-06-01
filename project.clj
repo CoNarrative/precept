@@ -7,6 +7,7 @@
                  [org.clojure/core.async "0.3.442"]
                  [com.cerner/clara-rules "0.15.0"]
                  [hipo "0.5.2"]
+                 [crate "0.2.4"]
                  [reagent "0.6.0"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
