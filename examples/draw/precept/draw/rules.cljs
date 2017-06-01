@@ -14,11 +14,49 @@
 (defn append-new [target new]
   (.appendChild (by-id target) new))
 
+(defn set-style!
+  [elem m]
+  (let [style (.-style elem)]
+    (doseq [[k v] m]
+      (.setProperty style (name k) v))
+    elem))
+
+(defn attrs [entity-avs]
+  (reduce
+    (fn [acc [a v]]
+      (if (clojure.string/includes? (str a) "attr")
+        (conj acc
+          (vector
+            (-> a
+              (clojure.string/split "/")
+              (second)
+              (keyword))
+            v))
+        acc))
+    []
+    entity-avs))
+
+(defn hit-node [event]
+  "Takes .path property of a DOM event and returns first element with an id"
+  (first (filter #(not (clojure.string/blank? (.-id %))) (.-path event))))
+
 (rule intercept-mouse-down
   {:group :action}
   [[_ :mouse/down ?event]]
   =>
-  (println "Mouse down event" ?event))
+  (.log js/console "Mouse down event" (hit-node ?event)))
+
+(rule detect-hit
+  {:group :action}
+  [[_ :mouse/down ?event]]
+  [:test (not (nil? (hit-node ?event)))]
+  =>
+  (insert! [:transient :hit/node (hit-node ?event)]))
+
+(rule make-hit-nodes-red
+  [[_ :hit/node ?node]]
+  =>
+  (set-style! ?node {:background-color "red"}))
 
 (rule intercept-mouse-up
   {:group :action}
@@ -33,25 +71,10 @@
   [[?container :contains ?e]]
   [(<- ?ent (entity ?e))]
   =>
-  (let [avs (mapv (juxt :a :v) ?ent)
-        attrs (reduce (fn [acc [a v]]
-                        (println "Name a" (str a))
-                        (if (clojure.string/includes? (str a) "attr")
-                          (conj acc
-                            (vector
-                              (-> a
-                                (clojure.string/split "/")
-                                (second)
-                                (keyword))
-                              v))
-                          acc))
-                []
-                avs)
-        _ (println "Avs" avs)
-        _ (println "Attrs" (apply hash-map (flatten attrs)))]
+  (let [avs (mapv (juxt :a :v) ?ent)]
     (append-new
       ?container
-      (html [?tag (apply hash-map (flatten attrs))]))))
+      (html [?tag (apply hash-map (flatten (attrs avs)))]))))
 
 (rule save-edit
   {:group :action}
