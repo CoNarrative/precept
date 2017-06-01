@@ -13,11 +13,46 @@ A declarative programming framework
 > "You need only specify what you require, not how it must
 be achieved." - [Out of the Tar Pit](http://shaffner.us/cs/papers/tarpit.pdf)
 
-> "If you want everything to be familiar, you will never learn anything new, because it can't be significantly different from what you already know." - Rich Hickey, Simple Made Easy
+## How it works
+Precept manages state with rules. A `session` is a collection of rules and the facts that represent the state. Rules operate over facts as simple when/then statements. If the "when", or left-hand side (LHS), part of the rule is satisfied, the consequence, or right-hand side (RHS), is executed.
 
+Rules can insert additional facts into the session to be processed by other rules. Other times, you may choose to execute an API call or other side effect. Ultimately, the consequence of a rule can be any valid Clojure or Clojurescript code.
+
+Facts are expressed using primitive Clojure data structures and follow the same eav tuple convention as Datomic.
+```clj
+[123 :user/username "foo"]
+```
+
+Components subscribe to queries. They are rerendered whenever the data matching the query changes. Further, because subscription queries are rule treated as rules, they enjoy the same performance benefits as rules: They are not rerun if there is no possible way their results could have changed. See [Rete algorithm](#rules-engine).
+
+Views insert new facts into the session with `then`. An `:on-click` handler that inserts a fact about the world looks like this:
+```clj
+[:button {:on-click #(then [:transient :fact-about-the-world (-> % .-target .-value)])}
+ "Click me!"]
+```
+
+You may want to define your facts as functions or with `clojure.spec`. This can enhance readability, establish default values, and enforce value types.
+```clj
+;; facts.cljs
+
+(defn button-click [e])
+  [:transient :button/click (-> e .-target .-value)]
+
+
+;; views.cljs
+
+[:button {:on-click #(then (button-click %)])}]
+  "Click me!"
+
+```
+
+Precept removes all facts with the entity id `:transient` at the end of every rule firing. This means `:button/click` can be treated as a transient event that does not survive across multiple rule firings.
+
+Rules in the `:action` group can respond to facts being inser
 
 ```clj
 (rule inc-count-when-tick
+  {:group :action}
   [[_ :tick]]
   [[?e :count ?v]]
   =>
@@ -31,9 +66,10 @@ be achieved." - [Out of the Tar Pit](http://shaffner.us/cs/papers/tarpit.pdf)
 (session my-session 'counter-ns)
 
 (defn counter []
-  (let [count @(subscribe [:count])]
-    [:div count]))
-
+  (let [{:keys [count]} @(subscribe [:count])]
+    [:div
+      count]))
+      [:button {:on-click #(then [:transient :])}]
 (.setTimeout js/window #(then [:transient :tick true]) 1000)
 
 (reagent/render [counter] (.-body js/document))
@@ -41,7 +77,7 @@ be achieved." - [Out of the Tar Pit](http://shaffner.us/cs/papers/tarpit.pdf)
 (start! {:session my-session :facts [[:global :count 0]]})
 ```
 
-## Rules engine
+## Rete algorithm
 > “In the ideal world, **we** are not concerned with
 performance, and our language and infrastructure provide all the general
 support we desire.” - Out of the Tar Pit, emphasis added
