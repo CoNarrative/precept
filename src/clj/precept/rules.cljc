@@ -10,7 +10,9 @@
                  [clara.rules.dsl :as dsl]
                  [clara.rules.compiler :as com]))
 
-    #?(:cljs (:require [precept.spec.sub :as sub]))
+    #?(:cljs (:require [precept.spec.sub :as sub]
+                       [precept.schema :as schema]
+                       [precept.accumulators]))
     #?(:cljs (:require-macros precept.rules)))
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
@@ -29,6 +31,8 @@
             (require 'precept.macros)
             (require 'precept.dsl)
             (require 'precept.impl.rules)
+            (require 'precept.schema)
+            (require 'precept.accumulators)
             @v)))))
 
 #?(:clj
