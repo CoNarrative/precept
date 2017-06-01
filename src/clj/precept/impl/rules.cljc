@@ -9,7 +9,6 @@
   {:group :cleanup}
   [?fact <- :all (= :transient (:e this))]
   =>
-  (println "Retracting transient!")
   (clara.rules/retract! ?fact))
 
 (clara.rules/defrule entities___impl-a
