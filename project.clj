@@ -6,6 +6,7 @@
                  [org.clojure/clojurescript "1.9.494"]
                  [org.clojure/core.async "0.3.442"]
                  [com.cerner/clara-rules "0.15.0"]
+                 [hipo "0.5.2"]
                  [reagent "0.6.0"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
@@ -62,7 +63,18 @@
                       :optimizations :none
                       :cache-analysis false
                       :pretty-print true}}
-
+      :draw
+      {:source-paths ["examples/draw" "dev/cljs/precept/draw"]
+       :compiler
+                     {:main "precept.draw.app"
+                      :asset-path "/js/out"
+                      :output-to "target/cljsbuild/public/draw/js/app.js"
+                      :output-dir "target/cljsbuild/public/draw/js/out"
+                      :preloads [devtools.preload]
+                      :source-map true
+                      :optimizations :none
+                      :cache-analysis false
+                      :pretty-print true}}
       :test
        {:source-paths ["src/cljs" "test/cljs" "test/cljc"]
         :compiler
