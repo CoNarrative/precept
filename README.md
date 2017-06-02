@@ -1,4 +1,5 @@
-# Precept
+![Precept](https://github.com/CoNarrative/precept/blob/master/precept-logo%401x.png)
+
 A declarative programming framework
 
 [![CircleCI](https://circleci.com/gh/CoNarrative/precept.svg?style=shield&circle-token=b23498670888edf670832326d50f9d8fab60b2e3)](https://circleci.com/gh/CoNarrative/precept)
