@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="333px" height="107px" viewBox="0 0 333 107" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 43.1 (39012) - http://www.bohemiancoding.com/sketch -->
+    <title>precept-logo</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <linearGradient x1="50%" y1="0%" x2="50%" y2="100%" id="linearGradient-1">
+            <stop stop-color="#FFFFFF" offset="0%"></stop>
+            <stop stop-color="#5B71B3" offset="100%"></stop>
+        </linearGradient>
+        <linearGradient x1="50%" y1="0%" x2="50%" y2="100%" id="linearGradient-2">
+            <stop stop-color="#FFFFFF" offset="0%"></stop>
+            <stop stop-color="#5B9CB3" offset="100%"></stop>
+        </linearGradient>
+        <linearGradient x1="50%" y1="0%" x2="50%" y2="100%" id="linearGradient-3">
+            <stop stop-color="#FFFFFF" offset="0%"></stop>
+            <stop stop-color="#5BB1B3" offset="100%"></stop>
+        </linearGradient>
+        <linearGradient x1="50%" y1="0%" x2="50%" y2="100%" id="linearGradient-4">
+            <stop stop-color="#FFFFFF" offset="0%"></stop>
+            <stop stop-color="#705BB3" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Desktop-HD" transform="translate(-1078.000000, -231.000000)">
+            <g id="precept-logo" transform="translate(1069.000000, 214.000000)">
+                <g id="Group-3" transform="translate(137.000000, 19.000000)" stroke-width="3" stroke="#FFFFFF">
+                    <polygon id="Triangle" fill="url(#linearGradient-1)" transform="translate(35.000000, 29.000000) scale(1, -1) translate(-35.000000, -29.000000) " points="35 7.10542736e-15 70 58 0 58"></polygon>
+                    <polygon id="Triangle" fill="url(#linearGradient-2)" transform="translate(17.500000, 29.000000) scale(1, -1) translate(-17.500000, -29.000000) " points="35 7.10542736e-15 35 58 0 58"></polygon>
+                    <polygon id="Triangle" fill="url(#linearGradient-3)" transform="translate(17.500000, 29.000000) scale(1, -1) translate(-17.500000, -29.000000) " points="35 7.10542736e-15 17.5 58 0 58"></polygon>
+                    <polygon id="Triangle" fill="url(#linearGradient-4)" transform="translate(52.500000, 29.000000) scale(-1, -1) translate(-52.500000, -29.000000) " points="70 7.10542736e-15 52.5 58 35 58"></polygon>
+                </g>
+                <polygon id="Path-7" fill="#FFFFFF" points="153.604441 72.1678895 159.995131 60.4456714 173.922294 54.3429454 184.059566 57.0881084 188.771095 61.5116729 195.594113 70.063999 189.686656 81.2095278"></polygon>
+                <text id="Precept" stroke="#FFFFFF" font-family="Avenir-Light, Avenir" font-size="100" font-weight="300" fill="#5E5E5E">
+                    <tspan x="0.4" y="100">Precept</tspan>
+                </text>
+            </g>
+        </g>
+    </g>
+</svg>
