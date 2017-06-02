@@ -1,7 +1,8 @@
 # Precept
 A declarative programming framework
 
-[![CircleCI](https://circleci.com/gh/CoNarrative/precept.svg?style=shield&circle-token=b23498670888edf670832326d50f9d8fab60b2e3)](https://circleci.com/gh/CoNarrative/todomvc)
+[![CircleCI](https://circleci.com/gh/CoNarrative/precept.svg?style=shield&circle-token=b23498670888edf670832326d50f9d8fab60b2e3)](https://circleci.com/gh/CoNarrative/precept)
+![license](https://img.shields.io/badge/license-MIT-blue.svg)
 
 [Docs](https://conarrative.github.io/precept/)
 | [Example](https://github.com/CoNarrative/precept/tree/master/src/cljs/precept/todomvc)
