@@ -240,13 +240,11 @@
     [{:name (symbol (str nom (-> ast :gen :name-suffix)))
       :lhs (list (parse-with-accumulator matching-expr))
       :rhs `(do
-              (println "[rulegen] Inserting params/order for req" ~var-binding ~req-id)
               (precept.util/insert!
                 [[~req-id ::rulegen/for-macro :entities]
                  [~req-id ::rulegen/request-params ~var-binding]
                  [~req-id :entities/order ~var-binding]])
               (doseq [eid# ~var-binding]
-                (println "[rulegen] Inserting eid fact for req" eid# ~req-id)
                 (precept.util/insert! [~req-id :entities/eid eid#])))}
      {:name nom
       :lhs rw-lhs

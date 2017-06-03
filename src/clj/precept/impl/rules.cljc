@@ -9,7 +9,6 @@
   {:group :cleanup}
   [?fact <- :all (= :transient (:e this))]
   =>
-  (println "Retracting transient!")
   (clara.rules/retract! ?fact))
 
 (clara.rules/defrule entities___impl-a
@@ -18,7 +17,6 @@
   [:entities/eid (= ?req (:e this)) (= ?e (:v this))]
   [?entity <- (precept.accumulators/all) :from [:all (= ?e (:e this))]]
   =>
-  (println "[rulegen] inserting entity!" ?entity)
   (precept.util/insert! [?req :entities/entity ?entity]))
 
 (clara.rules/defrule entities___impl-b
@@ -28,7 +26,6 @@
   =>
   (let [items (group-by :e (flatten ?ents))
         ordered (vals (select-keys items (into [] ?eids)))]
-    (println "[rulegen] inserting response for order" ?eids ordered)
     (precept.util/insert! [?req ::rulegen/response ordered])))
 
 (clara.rules/defrule remove-entity___impl
@@ -36,6 +33,5 @@
   [:remove-entity (= ?v (:v this))]
   [?entity <- (precept.accumulators/all) :from [:all (= ?v (:e this))]]
   =>
-  (println "Fulfilling remove entity request " ?entity)
   (doseq [tuple ?entity]
     (precept.util/retract! tuple)))
