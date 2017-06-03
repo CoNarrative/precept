@@ -19,7 +19,18 @@ be achieved." - [Out of the Tar Pit](http://shaffner.us/cs/papers/tarpit.pdf)
 ## How it works
 There are facts and there are rules. Facts are data, and rules are declarative statements about that data. All application state is represented by facts, and all application logic is expressed with rules.
 
-Rules have two parts: the condition and the consequence. Conditions are expressed with pattern matching, and consequences can be any valid Clojure or Clojurescript code.
+Facts have three parts: an entity id, an attribute, and a value. They model data relationally and are expressed with Clojure vectors.
+
+Here's an example fact:
+```clj
+[123 :todo/title "Use Precept"]
+  |         |         |
+  |         |         |
+  e         a         v
+```
+> *"Thing 123 has the attribute `:todo/title`, the value of which is 'Use Precept'."*
+
+Rules have two parts: the conditions and the consequences. Conditions state what facts must be true for the consequence to happen. They are expressed using pattern matching. Consequences are **any valid Clojure or Clojurescript code**. They have full access to all variables that were matched in the rule's condition.
 
 Here's an example rule:
 
@@ -66,8 +77,8 @@ A `session` is a container for rules and facts. Given a session and an optional 
     [[id :todo/title title]
       id :todo/done false]]))
 
-(defn visibility-filter [kw])
-  [(uuid) :visibility-filter kw]
+(defn visibility-filter [kw]
+  [(uuid) :visibility-filter kw])
 
 (session my-session 'my-ns.rules)     
 
