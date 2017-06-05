@@ -102,5 +102,9 @@
                        :cache-analysis false
                        :devcards true
                        :source-map true
-                       :pretty-print true}}}}}})
+                       :pretty-print true}}}}
 
+    :deploy-repositories [["releases"  {:sign-releases false
+                                        :url "https://clojars.org/repo"}]
+                          ["snapshots" {:sign-releases false
+                                        :url "https://clojars.org/repo"}]]}})
