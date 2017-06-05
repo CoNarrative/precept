@@ -6,11 +6,8 @@ resources/public/js
 /.nrepl-port
 /classes/
 /precept.iml
-/examples/todomvc/todomvc.iml
-/examples/todomvc/figwheel_server.log
-/examples/todomvc/resources/public/js
-/examples/todomvc/target/
 /.lein-failures
 /node_modules/
 .DS_Store
 doo-index.html
+/pom.xml.asc
