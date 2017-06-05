@@ -1,4 +1,4 @@
-(defproject precept "0.2.1"
+(defproject precept "0.3.0-alpha"
   :url          "https://github.com/CoNarrative/precept.git"
   :license      {:name "MIT"
                  :url "https://github.com/CoNarrative/precept/blob/master/LICENSE"}
