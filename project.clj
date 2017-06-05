@@ -11,8 +11,9 @@
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-codox "0.10.3"]]
 
-  :codox {:namespaces [precept.core precept.dsl precept.listeners precept.macros precept.query
-                       precept.schema precept.state precept.rules precept.util
+  :codox {:namespaces [precept.accumulators precept.core precept.dsl precept.listeners
+                       precept.macros precept.query precept.rules precept.schema
+                       precept.state precept.util
                        precept.spec.lang precept.spec.sub precept.spec.error]
           :output-path "docs"
           :metadata {:doc/format :markdown}}
