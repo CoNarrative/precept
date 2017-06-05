@@ -17,6 +17,15 @@ A declarative programming framework
 > "You need only specify what you require, not how it must
 be achieved." - [Out of the Tar Pit](http://shaffner.us/cs/papers/tarpit.pdf)
 
+## Quick start
+From the command line:
+```
+lein new precept myproj
+cd myproj
+lein figwheel
+```
+This will start the todomvc example on localhost:3449 and a nREPL server on localhost:7002. You can interact with the code by calling `(cljs)` once your REPL is connected.
+
 ## How it works
 There are facts and there are rules. Facts are data, and rules are declarative statements about that data. All application state is represented by facts, and all application logic is expressed with rules.
 
