@@ -203,7 +203,16 @@
   [facts]
   (dispatch! (fn [session] (util/insert session facts))))
 
-(defn start! [options]
+(defn start!
+  "Initializes session with facts.
+
+  - :session - the `session` from which changes will be tracked
+  - :facts - initial facts
+
+  Once initialized, facts are synced to a reagent ratom (`state/store`) and accessed via
+  subscriptions.
+  "
+  [{:keys [session facts] :as options}]
   (let [opts (or options (hash-map))]
     (swap-session-sync!
       (l/replace-listener (:session opts))
