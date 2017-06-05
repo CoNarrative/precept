@@ -17,6 +17,19 @@ A declarative programming framework
 > "You need only specify what you require, not how it must
 be achieved." - [Out of the Tar Pit](http://shaffner.us/cs/papers/tarpit.pdf)
 
+## What it is and why
+Precept is an app framework for writing reactive applications using declarative rule-oriented logic and relational data modeling.
+
+We built it because we want to build progessively large, intricate apps using clear and minimalistic units of lego-like code.  
+
+No code style is more clear and concise than simply declaring application logic. *Computations* within functional reactive frameworks offer this in part, but we found stream, store, and object-oriented reactive models too artificial. 
+They make us think too much over the wrong things. We pre-arrange all of our data before we know how it will be used, and then rearrange our code and computations as data locations and access points change over the course of development.
+
+Instead we wanted a framework where we could add new data about the world into a "bag" without worrying about its location in a universal object graph, and then just state our application logic. 
+It should automatically derive computations and receive events *from any combination of data in our state* without any hand-wiring or bookkeeping on our part.
+
+Rule engines operating over facts do exactly that; the Clara rule engine is the foundation of Precept.
+
 ## How it works
 There are facts and there are rules. Facts are data, and rules are declarative statements about that data. All application state is represented by facts, and all application logic is expressed with rules.
 
