@@ -2,6 +2,7 @@
 
 A declarative programming framework
 
+[![Clojars Project](https://img.shields.io/clojars/v/precept.svg)](https://clojars.org/precept)
 [![CircleCI](https://circleci.com/gh/CoNarrative/precept.svg?style=shield&circle-token=b23498670888edf670832326d50f9d8fab60b2e3)](https://circleci.com/gh/CoNarrative/precept)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/CoNarrative/precept/blob/master/LICENSE)
 [![discord](https://img.shields.io/badge/discord-%23precept%20%40%20clojurians-7bb6b9.svg)](https://discord.gg/5GXQwrY)
