@@ -134,6 +134,7 @@ Components subscribe to the keyword defined by `defsub`:
 
 Precept converts all its subscription results to maps, making the work of rendering data in the view layer the same as other frontend libraries and frameworks.
 
+
 ## Inserting facts
 
 Views insert new facts into the session with `then`. An `:on-change` handler that inserts a fact about a todo edit looks like this:
@@ -143,6 +144,50 @@ Views insert new facts into the session with `then`. An `:on-change` handler tha
 ```
 
 Precept will modify the value of `:todo/edit` on each keypress by retracting the previous fact and inserting the new one. This is because Precept enforces one-to-one cardinality for all facts by default (i.e., for any entity-attribute pair, one value can exist at any point in time). In this case that means there can't be more than one value for entity 123's `:todo/edit`.
+
+## Application patterns
+While we do not enforce any structure on your rule session, there are some common patterns.
+
+First, application state will consist of "base state" and "derived state". Both are identical-appearing facts in the session.
+
+Base state may be data from the server, local data, or semi-persistent data about view concerns (active selection, collapsed, etc.).
+
+Mutating base state is done outside of rules using `then`, or from within a rule consequence using `insert-unconditional!`.
+Here is an example of an "action handler" that mutates the state in response to the user surfacing a `:mark-all-done` intent:
+
+```clj
+(rule complete-all
+  {:group :action}
+  [[_ :mark-all-done]]
+  [[?e :todo/done false]]
+  =>
+  (insert-unconditional! [?e :todo/done true]))
+```
+
+Derived (or computed) state is everything else, from intermediate calculations all the way to property bags for view rendering.
+
+Derived state (by necessity) is only expressible within the consequence of a rule using `insert!`
+
+```clj
+(rule define-visibility-of-todo
+  [:or [:and [_ :visibility-filter :all] [?e :todo/title]]
+       [:and [_ :visibility-filter :done] [?e :todo/done true]]
+       [:and [_ :visibility-filter :active] [?e :todo/done false]]]
+  => (insert! [?e :todo/visible true]))
+```
+
+`define` is a more concise way to do the same thing:
+
+```clj
+(define [?e :todo/visible true] :-
+  [:or [:and [_ :visibility-filter :all] [?e :todo/title]]
+       [:and [_ :visibility-filter :done] [?e :todo/done true]]
+       [:and [_ :visibility-filter :active] [?e :todo/done false]]])
+```
+
+Note that derived state calculations can use both base and other derived state as needed; facts are facts whether inserted through mutation or derived.
+
+Subscriptions are (optionally) used to accumulate state (both base and derived) for view rendering.
 
 ## Schema support
 Precept enforces cardinality and uniqueness according to Datomic-format schemas. If we wanted entities to have multiple values for the `:todo/edit` attribute, we can specify a one-to-many relationship for it:
