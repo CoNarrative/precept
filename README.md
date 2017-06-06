@@ -29,10 +29,10 @@ This will start the todomvc example on `localhost:3449` and a nREPL server on `l
 ## What it is and why
 Precept is a framework for creating reactive web applications using a rules engine, declarative logic, and relational data modeling.
 
-###### Large, complex applications
+#### Large, complex applications
 Many frameworks and programming languages introduce complexity that has nothing to do with the applications we are trying to build. Ideally, the only complexity we should face is that which is inherent to the problem. Programming that is truly declarative states logic directly so complex applications can be written in simple terms.
 
-###### Graph data model
+#### Graph data model
 Precept models state as a graph. We can add new facts about the world without concerning ourselves about its location in an object. We can query data and perform derived computations on it just as easily.
 
 ## How it works
