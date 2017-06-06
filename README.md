@@ -17,6 +17,15 @@ A declarative programming framework
 > "You need only specify what you require, not how it must
 be achieved." - [Out of the Tar Pit](http://shaffner.us/cs/papers/tarpit.pdf)
 
+## Quick start
+From the command line:
+```
+lein new precept myproj
+cd myproj
+lein figwheel
+```
+This will start the todomvc example on localhost:3449 and a nREPL server on localhost:7002. You can interact with the code by calling `(cljs)` once your REPL is connected.
+
 ## What it is and why
 Precept is an app framework for writing reactive applications using declarative rule-oriented logic and relational data modeling.
 
