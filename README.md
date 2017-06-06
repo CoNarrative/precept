@@ -24,20 +24,16 @@ lein new precept myproj
 cd myproj
 lein figwheel
 ```
-This will start the todomvc example on localhost:3449 and a nREPL server on localhost:7002. You can interact with the code by calling `(cljs)` once your REPL is connected.
+This will start the todomvc example on `localhost:3449` and a nREPL server on `localhost:7002`. You can interact with the code by calling `(cljs)` once your REPL is connected.
 
 ## What it is and why
-Precept is an app framework for writing reactive applications using declarative rule-oriented logic and relational data modeling.
+Precept is a framework for creating reactive web applications using a rules engine, declarative logic, and relational data modeling.
 
-We built it because we want to build progressively large, intricate apps using clear and minimalistic units of lego-like code.  
+###### Large, complex applications
+Many frameworks and programming languages introduce complexity that has nothing to do with the applications we are trying to build. Ideally, the only complexity we should face is that which is inherent to the problem. Programming that is truly declarative states logic directly so complex applications can be written in simple terms.
 
-No code style is more clear and concise than simply declaring application logic. *Computations* within functional reactive frameworks offer this in part, but we found stream, store, and object-oriented reactive models too artificial. 
-They make us think too much over the wrong things; we pre-arrange all of our data before we know how it will be used, and then rearrange our code and computations as data locations and access points change over the course of development.
-
-Instead we wanted a framework where we could add new data about the world into a "bag" without worrying about its location in a universal object graph, and then just state our application logic. 
-It should automatically derive computations and receive events *from any combination of data in our state* without any hand-wiring or bookkeeping on our part.
-
-Rule engines operating over facts do exactly that; the Clara rule engine is the foundation of Precept.
+###### Graph data model
+Precept models state as a graph. We can add new facts about the world without concerning ourselves about its location in an object. We can query data and perform derived computations on it just as easily.
 
 ## How it works
 There are facts and there are rules. Facts are data, and rules are declarative statements about that data. All application state is represented by facts, and all application logic is expressed with rules.
@@ -144,50 +140,6 @@ Views insert new facts into the session with `then`. An `:on-change` handler tha
 ```
 
 Precept will modify the value of `:todo/edit` on each keypress by retracting the previous fact and inserting the new one. This is because Precept enforces one-to-one cardinality for all facts by default (i.e., for any entity-attribute pair, one value can exist at any point in time). In this case that means there can't be more than one value for entity 123's `:todo/edit`.
-
-## Application patterns
-While we do not enforce any structure on your rule session, there are some common patterns.
-
-First, application state will consist of "base state" and "derived state". Both are identical-appearing facts in the session.
-
-Base state may be data from the server, local data, or semi-persistent data about view concerns (active selection, collapsed, etc.).
-
-Mutating base state is done outside of rules using `then`, or from within a rule consequence using `insert-unconditional!`.
-Here is an example of an "action handler" that mutates the state in response to the user surfacing a `:mark-all-done` intent:
-
-```clj
-(rule complete-all
-  {:group :action}
-  [[_ :mark-all-done]]
-  [[?e :todo/done false]]
-  =>
-  (insert-unconditional! [?e :todo/done true]))
-```
-
-Derived (or computed) state is everything else, from intermediate calculations all the way to property bags for view rendering.
-
-Derived state (by necessity) is only expressible within the consequence of a rule using `insert!`
-
-```clj
-(rule define-visibility-of-todo
-  [:or [:and [_ :visibility-filter :all] [?e :todo/title]]
-       [:and [_ :visibility-filter :done] [?e :todo/done true]]
-       [:and [_ :visibility-filter :active] [?e :todo/done false]]]
-  => (insert! [?e :todo/visible true]))
-```
-
-`define` is a more concise way to do the same thing:
-
-```clj
-(define [?e :todo/visible true] :-
-  [:or [:and [_ :visibility-filter :all] [?e :todo/title]]
-       [:and [_ :visibility-filter :done] [?e :todo/done true]]
-       [:and [_ :visibility-filter :active] [?e :todo/done false]]])
-```
-
-Note that derived state calculations can use both base and other derived state as needed; facts are facts whether inserted through mutation or derived.
-
-Subscriptions are (optionally) used to accumulate state (both base and derived) for view rendering.
 
 ## Schema support
 Precept enforces cardinality and uniqueness according to Datomic-format schemas. If we wanted entities to have multiple values for the `:todo/edit` attribute, we can specify a one-to-many relationship for it:
