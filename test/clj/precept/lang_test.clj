@@ -16,6 +16,7 @@
     (is (not (s/valid? ::lang/variable-binding '['?e :kw 2]))))
   (testing "S-expression"
     (is (s/valid? ::lang/s-expr '(= foo true)))
+    (is (s/valid? ::lang/s-expr '(> 42 ?foo)))
     (is (not (s/valid? ::lang/s-expr '[= foo true])))
     (is (not (s/valid? ::lang/s-expr '{:foo true})))
     (is (not (s/valid? ::lang/s-expr "foo"))))

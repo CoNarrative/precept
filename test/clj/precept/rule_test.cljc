@@ -101,7 +101,10 @@
     (is (= '[[?toggle <- :ui/toggle-complete]]
           (rewrite-lhs '[[?toggle <- [:ui/toggle-complete]]])))
     (is (= '[[:not [:ns/foo (= 3 (:v this))]]]
-           (rewrite-lhs '[[:not [_ :ns/foo 3]]])))))
+           (rewrite-lhs '[[:not [_ :ns/foo 3]]]))))
+  (testing "S-expr in value slot"
+    (is (= '[[:attr (> 42 (:v this)) (= ?v (:v this))]]
+           (rewrite-lhs '[[[_ :attr (> 42 ?v)]]])))))
 
 (deftest rule-test
   (testing "Basic rule with exists"
@@ -262,7 +265,18 @@
                      [?fact <- :all (= ?v (:v this)) (= :this-tick (:e this))]
                      =>
                      (trace "CLEANING this-tick fact because transient" ?fact)
-                     (cr/retract! ?fact))))))))
+                     (cr/retract! ?fact)))))))
+  (testing "Greater than (>) in value position"
+    (is (= (macroexpand
+             '(rule my-rule
+                [[_ :attr (> 42 ?v)]]
+                =>
+                (cr/insert! ?fact)))
+          `(do ~(macroexpand
+                  '(defrule my-rule
+                     [:attr (> 42 (:v this)) (= ?v (:v this))]
+                     =>
+                     (cr/insert! ?fact))))))))
 
 (deftest defquery-test
   (testing "Query with no args"
