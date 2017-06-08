@@ -9,7 +9,7 @@
               [precept.spec.sub :as sub]
               [precept.util :as util]
               [precept.schema :as schema]
-              [clojure.spec :as s]
+              [clojure.spec.alpha :as s]
               [clara.rules :as cr]))
 
 (defn trace [& args]

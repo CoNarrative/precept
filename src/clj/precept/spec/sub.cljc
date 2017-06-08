@@ -1,5 +1,5 @@
 (ns precept.spec.sub
-  (:require [clojure.spec :as s]))
+  (:require [clojure.spec.alpha :as s]))
 
 (s/def ::name keyword?)
 
