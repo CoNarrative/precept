@@ -3,6 +3,7 @@
               [clara.macros :as cm]
               [clara.rules.accumulators :as acc]
               [precept.core :as core]
+              [precept.spec.core :refer [some-conform]]
               [precept.spec.lang :as lang]
               [precept.spec.rulegen :as rulegen]
               [precept.dsl :as dsl]
@@ -78,6 +79,10 @@
   (trace "Has accumulator?" expr (s/valid? ::lang/accum-expr expr))
   (s/valid? ::lang/accum-expr expr))
 
+(defn parsed-boolean-sexpr? [xs]
+  (and (vector? xs)
+    (some (comp #(s/valid? ::lang/boolean-s-expr-ops %) first) xs)))
+
 (defn variable-bindings [tuple]
   (trace "Getting variable bindings for " tuple)
   (into {}
@@ -87,14 +92,25 @@
        :v (nth tuple 2 nil)
        :t (nth tuple 3 nil)})))
 
+(defn parse-bool-sexpr [sexpr]
+  (let [var-binding (some-conform ::lang/variable-binding sexpr)
+        bool-op (some-conform ::lang/boolean-s-expr-ops sexpr)]
+    (if (= var-binding (second sexpr))
+      (vector (list bool-op `(~:v ~'this) (last sexpr))
+              (list '= var-binding `(~:v ~'this)))
+      (vector (list bool-op (second sexpr) `(~:v ~'this))
+              (list '= (last sexpr) `(~:v ~'this))))))
+
 (defn sexprs-with-bindings
-  "[(:id ?v) :foo 'bar'] -> (= (:id ?v) (:e this))"
+  "[(:id ?v) :foo 'bar'] -> [:foo (= (:id ?v) (:e this))
+  [?e :foo (> 42 ?v)] -> [:foo (= ?v (:v this)) (> 42 (:v this))]"
   [tuple]
   (reduce
     (fn [acc [k v]]
-      (if (and (sexpr? v) (some binding? (flatten v)))
-        (assoc acc k (list '= v `(~k ~'this)))
-        acc))
+      (cond
+        (and (= k :v) (s/valid? ::lang/boolean-s-expr v)) (assoc acc k (parse-bool-sexpr v))
+        (and (sexpr? v) (some binding? (flatten v))) (assoc acc k (list '= v `(~k ~'this)))
+        :default acc))
     {}
     {:e (first tuple)
      :a (second tuple)
@@ -134,11 +150,10 @@
     (reduce
       (fn [rule-expr [eav v]]
         (trace "K V" eav v)
-        (conj rule-expr
-          (if (sexpr? v)
-            v
-            (list '= v
-              (list (keyword (name eav)) 'this)))))
+        (cond
+          (sexpr? v) (conj rule-expr v)
+          (parsed-boolean-sexpr? v) (concat rule-expr v)
+          :default (conj rule-expr (list '= v (list (keyword (name eav)) 'this)))))
       (vector attribute)
       bindings-and-constraint-values)))
 

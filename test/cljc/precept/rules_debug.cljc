@@ -60,11 +60,15 @@
 ;  =>
 ;  (println "Found error!" ?error))
 ;
+;(rule greater-than-42
+;  [[_ :interesting-fact (> ?v 42)]]
+;  =>
+;  (println "Greater than 42:" ?v))
 ;
 ;(session app-session
 ;   'precept.todomvc.rules-debug
 ;   :db-schema db-schema)
-;;(reset! precept.state/fact-index {})
+;(reset! precept.state/fact-index {})
 ;
 ;(-> app-session
 ;  (l/replace-listener)
@@ -77,6 +81,7 @@
 ;                [2 :interesting-fact 42]
 ;                [3 :interesting-fact 42]
 ;                [4 :interesting-fact 42]
+;                [4 :interesting-fact 43]
 ;                [2 :todo/title "Second"]
 ;                [3 :todo/title "Second"]
 ;                [5 ::sub/request :my-sub-2]])

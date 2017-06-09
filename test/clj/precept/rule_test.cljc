@@ -83,6 +83,17 @@
             [:attr-4 (= ?e (:e this)) (= ?v (:v this))]
             [:attr-5 (= ?e (:e this)) (= ?v (:v this))]]])))
 
+(deftest parse-bool-sexpr-test
+  (is (= (macros/parse-bool-sexpr '(> 42 ?v))
+        '[(> 42 (:v this)) (= ?v (:v this))]))
+  (is (= (macros/parse-bool-sexpr '(> ?v 42))
+        '[(> (:v this) 42) (= ?v (:v this))])))
+
+(deftest sexprs-with-bindings-test
+  (is (= (:v (macros/sexprs-with-bindings '[?e :attr (> 42 ?v)]))
+         '[(> 42 (:v this)) (= ?v (:v this))]))
+  (is (= (:v (macros/sexprs-with-bindings '[?e :attr (> ?v 42)]))
+        '[(> (:v this) 42) (= ?v (:v this))])))
 
 (deftest rewrite-lhs-test
   (testing "Ops - :exists, :not, :and, :or"
