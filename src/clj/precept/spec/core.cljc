@@ -7,7 +7,7 @@
       "Success!\n" true
       (ex-info msg {}))))
 
-(defn some-conform
+(defn conform-or-nil
   "Takes a spec and x, a collection or value to test. If x is coll, returns first item in
   coll that conforms to spec or nil. If x is not a collection returns x if it conforms to spec
   or nil."

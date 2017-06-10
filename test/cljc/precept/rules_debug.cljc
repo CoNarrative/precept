@@ -60,8 +60,26 @@
 ;  =>
 ;  (println "Found error!" ?error))
 ;
-;(rule greater-than-42
-;  [[_ :interesting-fact (> ?v 42)]]
+;(defn foo? [x y] (not= x y))
+;
+;;(rule greater-than-42
+;;  [[_ :interesting-fact (foo? ?v 42)]]
+;;  =>
+;;  (println "Greater than 42:" ?v))
+;
+;(rule find-43
+;  [[_ :interesting-fact 43]]
+;  =>
+;  (insert! [(guid) :the-number 43]))
+;
+;(rule pred-w-bound-variable
+;  [[_ :interesting-fact ?v2]]
+;  [[_ :the-number (< ?v2 ?v1)]]
+;  =>
+;  (println "42s" ?v2))
+;
+;(cr/defrule greater-than-42
+;  [:interesting-fact (= ?v (:v this)) (foo? ?v 42)]
 ;  =>
 ;  (println "Greater than 42:" ?v))
 ;

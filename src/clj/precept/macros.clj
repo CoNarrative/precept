@@ -3,7 +3,7 @@
               [clara.macros :as cm]
               [clara.rules.accumulators :as acc]
               [precept.core :as core]
-              [precept.spec.core :refer [some-conform]]
+              [precept.spec.core :refer [conform-or-nil]]
               [precept.spec.lang :as lang]
               [precept.spec.rulegen :as rulegen]
               [precept.dsl :as dsl]
@@ -57,18 +57,28 @@
   (trace "Attr only?" x (s/valid? ::lang/attribute-matcher x))
   (s/valid? ::lang/attribute-matcher x))
 
-(defn binding? [x]
+(defn mk-parse-cache
+  ([] (atom {:variable-bindings #{}}))
+  ([initial] (atom initial)))
+
+(defn cache-binding! [cache x]
+  (trace "Adding binding to cache" @cache x)
+  (swap! cache update :variable-bindings conj x))
+
+(defn binding?! [x cache]
   (trace "Is a binding?" x (s/valid? ::lang/variable-binding x))
-  (s/valid? ::lang/variable-binding x))
+  (if (s/valid? ::lang/variable-binding x)
+    (do (cache-binding! cache x)
+        true)
+    false))
 
 (defn special-form? [x]
-  (trace "Found special form " x)
   (s/valid? ::lang/special-form x))
 
 (defn sexpr? [x]
   (s/valid? ::lang/s-expr x))
 
-(defn is-test-expr? [x]
+(defn test-expr? [x]
   (s/valid? ::lang/test-expr x))
 
 (defn value-expr? [x]
@@ -79,42 +89,56 @@
   (trace "Has accumulator?" expr (s/valid? ::lang/accum-expr expr))
   (s/valid? ::lang/accum-expr expr))
 
-(defn parsed-boolean-sexpr? [xs]
+(defn parsed-sexpr? [xs]
   (and (vector? xs)
-    (some (comp #(s/valid? ::lang/boolean-s-expr-ops %) first) xs)))
+       (some #(s/valid? ::lang/s-expr %)  xs)))
 
-(defn variable-bindings [tuple]
-  (trace "Getting variable bindings for " tuple)
-  (into {}
-    (filter (comp binding? second)
-      {:e (first tuple)
-       :a (second tuple)
-       :v (nth tuple 2 nil)
-       :t (nth tuple 3 nil)})))
+(defn variable-bindings
+  ([tuple] (variable-bindings tuple (mk-parse-cache)))
+  ([tuple cache]
+   (trace "Getting variable bindings for " tuple)
+   (into {}
+     (filter (comp #(binding?! % cache) second)
+       {:e (first tuple)
+        :a (second tuple)
+        :v (nth tuple 2 nil)
+        :t (nth tuple 3 nil)}))))
 
-(defn parse-bool-sexpr [sexpr]
-  (let [var-binding (some-conform ::lang/variable-binding sexpr)
-        bool-op (some-conform ::lang/boolean-s-expr-ops sexpr)]
-    (if (= var-binding (second sexpr))
-      (vector (list bool-op `(~:v ~'this) (last sexpr))
-              (list '= var-binding `(~:v ~'this)))
-      (vector (list bool-op (second sexpr) `(~:v ~'this))
-              (list '= (last sexpr) `(~:v ~'this))))))
+(defn existing-binding? [cache x]
+  ((:variable-bindings @cache) x))
+
+(defn parse-sexpr
+  ([sexpr] (parse-sexpr sexpr (mk-parse-cache)))
+  ([sexpr cache]
+   (let [var-bindings (filter #(s/valid? ::lang/variable-binding %) sexpr)
+         ;; If more than one new binding we should surface an error
+         new-bindings (remove #(existing-binding? cache %) var-bindings)
+         new-binding (first new-bindings)
+         pred (first sexpr)
+         existing-binding-or-value (remove #{new-binding pred} sexpr)
+         new-binding-expr (list '= new-binding `(~:v ~'this))
+         rw-sexpr (map #(if (= new-binding %) `(~:v ~'this) %) sexpr)]
+     (if (empty? new-bindings)
+         sexpr
+         (do (cache-binding! cache new-binding)
+             (vector rw-sexpr new-binding-expr))))))
+
 
 (defn sexprs-with-bindings
   "[(:id ?v) :foo 'bar'] -> [:foo (= (:id ?v) (:e this))
   [?e :foo (> 42 ?v)] -> [:foo (= ?v (:v this)) (> 42 (:v this))]"
-  [tuple]
-  (reduce
-    (fn [acc [k v]]
-      (cond
-        (and (= k :v) (s/valid? ::lang/boolean-s-expr v)) (assoc acc k (parse-bool-sexpr v))
-        (and (sexpr? v) (some binding? (flatten v))) (assoc acc k (list '= v `(~k ~'this)))
-        :default acc))
-    {}
-    {:e (first tuple)
-     :a (second tuple)
-     :v (last tuple)}))
+  ([tuple] (sexprs-with-bindings tuple (mk-parse-cache)))
+  ([tuple cache]
+   (reduce
+     (fn [acc [k v]]
+       (cond
+         (and (= k :v) (s/valid? ::lang/s-expr v)) (assoc acc k (parse-sexpr v cache))
+         (and (sexpr? v) (some #(binding?! % cache)(flatten v))) (assoc acc k (list '= v `(~k ~'this)))
+         :default acc))
+     {}
+     {:e (first tuple)
+      :a (second tuple)
+      :v (last tuple)})))
 
 (defn positional-value [tuple]
  (let [match-e (nth tuple 0 nil)
@@ -136,93 +160,99 @@
 (defn parse-as-tuple
   "Parses rule expression as if it contains just a tuple.
   Does not take tuple as input! [ [] ], not []"
-  [expr]
-  (let [tuple                          (first expr)
-        bindings                       (variable-bindings tuple)
-        bindings-and-constraint-values (merge bindings
-                                         (sexprs-with-bindings tuple)
+  ([expr] (parse-as-tuple expr (mk-parse-cache)))
+  ([expr cache]
+   (let [tuple                          (first expr)
+         bindings                       (variable-bindings tuple cache)
+         bindings-and-constraint-values (merge bindings
+                                         (sexprs-with-bindings tuple cache)
                                          (positional-value tuple))
-        attribute                      (if (keyword? (second tuple)) (second tuple) :all)]
-    (trace "Tuple: " tuple)
-    (trace "Variable bindings for form:" bindings)
-    (trace "Value expressions for form" (positional-value tuple))
-    (trace "With s-exprs merged:" bindings-and-constraint-values)
-    (reduce
-      (fn [rule-expr [eav v]]
-        (trace "K V" eav v)
-        (cond
-          (sexpr? v) (conj rule-expr v)
-          (parsed-boolean-sexpr? v) (concat rule-expr v)
-          :default (conj rule-expr (list '= v (list (keyword (name eav)) 'this)))))
-      (vector attribute)
-      bindings-and-constraint-values)))
+         attribute                      (if (keyword? (second tuple)) (second tuple) :all)]
+     (trace "Tuple: " tuple)
+     (trace "Variable bindings for form:" bindings)
+     (trace "Value expressions for form" (positional-value tuple))
+     (trace "With s-exprs merged:" bindings-and-constraint-values)
+     (reduce
+       (fn [rule-expr [eav v]]
+         (trace "K V" eav v)
+         (cond
+           (sexpr? v) (conj rule-expr v)
+           (parsed-sexpr? v) (concat rule-expr v)
+           :default (conj rule-expr (list '= v (list (keyword (name eav)) 'this)))))
+       (vector attribute)
+       bindings-and-constraint-values))))
 
 (defn parse-with-fact-expression
   "Returns Clara DSL for `?binding <- [tuple]`"
-  [expr]
-  (let [fact-expression (take 2 expr)
-        expression      (drop 2 expr)]
-    (conj (lazy-seq (parse-as-tuple expression))
-      (second fact-expression)
-      (first fact-expression))))
+  ([expr] (parse-with-fact-expression expr (mk-parse-cache)))
+  ([expr cache]
+   (let [fact-expression (take 2 expr)
+         expression      (drop 2 expr)]
+     (conj (lazy-seq (parse-as-tuple expression cache))
+       (second fact-expression)
+       (first fact-expression)))))
 
-(defn parse-with-accumulator [expr]
+(defn parse-with-accumulator
   "Returns Clara DSL for `?binding <- (acc/foo) from [tuple]`"
-  (let [fact-expression (take 2 expr)
-        accumulator     (take 2 (drop 2 expr))
-        expression      (drop 4 expr)]
-    (trace "To parse as tuple expr" expression)
-    (vector
-      (first fact-expression)
-      (second fact-expression)
-      (first accumulator)
-      (second accumulator)
-      (if (attr-only? (first expression))
-          (first expression)
-          (parse-as-tuple expression)))))
+  ([expr] (parse-with-accumulator expr (mk-parse-cache)))
+  ([expr cache]
+   (let [fact-expression (take 2 expr)
+         accumulator     (take 2 (drop 2 expr))
+         expression      (drop 4 expr)]
+     (trace "To parse as tuple expr" expression)
+     (vector
+       (first fact-expression)
+       (second fact-expression)
+       (first accumulator)
+       (second accumulator)
+       (if (attr-only? (first expression))
+           (first expression)
+           (parse-as-tuple expression cache))))))
 
 (defn parse-with-op
   "Returns Clara DSL for `[:op x]`, [:op [:op x] where x is
   :keyword, [:keyword] or [tuple]"
-  [expr]
-  (let [op (cr-dsl/ops (first expr))]
-    (into [op]
-      (if (attr-only? (second expr))
-        (vector (second expr))
-        (map
-          (fn [x]
-            (if (contains? cr-dsl/ops (first x))
-              (parse-with-op x)
-              (parse-as-tuple (vector x))))
-          (rest expr))))))
+  ([expr] (parse-with-op expr (mk-parse-cache)))
+  ([expr cache]
+   (let [op (cr-dsl/ops (first expr))]
+     (into [op]
+       (if (attr-only? (second expr))
+         (vector (second expr))
+         (map
+           (fn [x]
+             (if (contains? cr-dsl/ops (first x))
+               (parse-with-op x cache)
+               (parse-as-tuple (vector x) cache)))
+           (rest expr)))))))
 
 (defn rewrite-expr
   "Returns Clara DSL for single expression"
-  [expr]
+  [expr cache]
   (let [leftmost        (first expr)
         op              (keyword? (cr-dsl/ops leftmost))
         fact-expression (and (not (keyword? leftmost))
                              (not (vector? leftmost))
-                             (binding? leftmost))
+                             (binding?! leftmost cache))
         binding-to-type-only (and fact-expression
                                   (attr-only? (first (drop 2 expr))))
         has-accumulator (and (true? fact-expression)
                              (has-accumulator? (drop 2 expr)))
-        is-test-expr (is-test-expr? leftmost)
+        is-test-expr (test-expr? leftmost)
         special-form (special-form? leftmost)]
     (cond
       is-test-expr expr
-      special-form (rewrite-expr (eval (map add-ns-if-special-form leftmost)))
+      special-form (rewrite-expr (eval (map add-ns-if-special-form leftmost)) cache)
       binding-to-type-only (fact-binding-with-type-only expr)
-      op (parse-with-op expr)
-      has-accumulator (parse-with-accumulator expr)
-      fact-expression (parse-with-fact-expression expr)
-      :else (parse-as-tuple expr))))
+      op (parse-with-op expr cache)
+      has-accumulator (parse-with-accumulator expr cache)
+      fact-expression (parse-with-fact-expression expr cache)
+      :else (parse-as-tuple expr cache))))
 
 (defn rewrite-lhs
   "Returns Clara DSL for rule LHS"
   [lhs]
-  (map rewrite-expr lhs))
+  (let [cache (mk-parse-cache)]
+    (map (fn [expr] (rewrite-expr expr cache)) lhs)))
 
 (defn replace-at-index
   "Removes item at idx of coll and adds new list members (xs) starting at idx"
@@ -250,7 +280,8 @@
         gen-conds (list [[id ::rulegen/request-params var-binding]]
                         [[id ::rulegen/for-macro :entities]]
                         [[id ::rulegen/response fact-binding]])
-        rw-lhs (map rewrite-expr (replace-at-index idx gen-conds lhs))
+        cache (mk-parse-cache)
+        rw-lhs (map #(rewrite-expr % cache) (replace-at-index idx gen-conds lhs))
         req-id (precept.util/guid)]
     [{:name (symbol (str nom (-> ast :gen :name-suffix)))
       :lhs (list (parse-with-accumulator matching-expr))

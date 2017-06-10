@@ -12,11 +12,8 @@
 
 (s/def ::ignore-slot #{"_" '_})
 
-(s/def ::boolean-s-expr-ops #{'> '< '>= '<=})
-
-(s/def ::boolean-s-expr
+(s/def ::s-expr-with-binding
   (s/and ::s-expr
-    #(s/valid? ::boolean-s-expr-ops (first %))
     #(some (fn [x] (s/valid? ::variable-binding x)) %)))
 
 (s/def ::value-equals-matcher

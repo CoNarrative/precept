@@ -6,14 +6,17 @@
               [precept.spec.rulegen :as rulegen]
               [precept.rules :refer [rule defquery defsub]]
               [precept.util :refer [insert!] :as util]
-              [precept.macros :refer [binding?
+              [precept.macros :refer [binding?!
                                       variable-bindings
                                       sexprs-with-bindings
                                       positional-value
                                       value-expr?
                                       parse-as-tuple
                                       parse-with-fact-expression
-                                      rewrite-lhs] :as macros]))
+                                      rewrite-lhs] :as macros]
+              [precept.macros :as macros]
+              [precept.macros :as macros]
+              [precept.macros :as macros]))
 
 (deftest tuple-bindings-test
   (let [e1    '[?e :ns/foo 42]
@@ -83,11 +86,19 @@
             [:attr-4 (= ?e (:e this)) (= ?v (:v this))]
             [:attr-5 (= ?e (:e this)) (= ?v (:v this))]]])))
 
-(deftest parse-bool-sexpr-test
-  (is (= (macros/parse-bool-sexpr '(> 42 ?v))
-        '[(> 42 (:v this)) (= ?v (:v this))]))
-  (is (= (macros/parse-bool-sexpr '(> ?v 42))
-        '[(> (:v this) 42) (= ?v (:v this))])))
+(deftest parse-sexpr-test
+  (testing "Correct order (no cached variables)"
+    (is (= (macros/parse-sexpr '(> 42 ?v))
+           '[(> 42 (:v this)) (= ?v (:v this))]))
+    (is (= (macros/parse-sexpr '(> ?v 42))
+          '[(> (:v this) 42) (= ?v (:v this))])))
+  (testing "When the rule has already referenced ?v2"
+    (let [cache (macros/mk-parse-cache {:variable-bindings #{'?v1}})]
+      (is (= (macros/parse-sexpr '(> ?v1 ?v2) cache)
+             '[(> ?v1 (:v this)) (= ?v2 (:v this))]))
+      (is (= (macros/parse-sexpr '(> ?v1 ?v2) cache)
+             '(> ?v1 ?v2))
+          "When ?v1 ?v2 in cache expect no further binding, just sexpr"))))
 
 (deftest sexprs-with-bindings-test
   (is (= (:v (macros/sexprs-with-bindings '[?e :attr (> 42 ?v)]))
