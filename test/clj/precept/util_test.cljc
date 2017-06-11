@@ -173,7 +173,19 @@
       (is (every? #(= Tuple (type %)) rtn))
       (is (every? #(number? (:t %)) rtn))
       (is (every? #(map? (:v %)) rtn))
-      (is (= {:a 1} (:v (first rtn)))))))
+      (is (= {:a 1} (:v (first rtn))))))
+  (testing "Entity map"
+    (let [rtn (insertable {:db/id 123 :foo "bar" :baz "quux"})]
+      (is (vector? rtn))
+      (is (every? #(= Tuple (type %)) rtn))
+      (is (every? #(number? (:t %)) rtn))))
+  (testing "Entity maps"
+    (let [rtn (insertable [{:db/id 123 :foo "bar" :baz "quux"}
+                           {:db/id 234 :bar "foo" :quux "baz"}])]
+      (is (vector? rtn))
+      (is (every? #(= Tuple (type %)) rtn))
+      (is (every? #(number? (:t %)) rtn)))))
+
 
 (deftest insert-test
   (testing "Insert single tuple"
@@ -210,32 +222,33 @@
     (is (= (frequencies (mapv :a to-insert))
            (frequencies [::err/type ::err/existing-fact ::err/failed-insert
                          ::test/unique-identity ::test/one-to-one])))
-    (is (= (mapv :a to-retract) []))))
+    (is (= (mapv :a to-retract) [])))
 
+  (testing "Insert entity map"
+    (let [session @(session mysess)
+          fact-m (todo-tx (guid) "Hi" :tag)
+          trace (trace/get-trace (-> session
+                                   (trace/with-tracing)
+                                   (insert fact-m)
+                                   (fire-rules)))]
+      (is (= :add-facts (:type (first trace))))
+      (is (every? #(= Tuple (type %)) (:facts (first trace)))
+          "Entity map should have been inserted as Tuples")))
 
-  ;; TODO. Reinstate
-  ;(testing "Insert single map"
-  ;  (let [session @(session mysess)
-  ;        fact-m  (todo-tx (guid) "Hi" :tag)
-  ;        trace (trace/get-trace (-> session
-  ;                                 (trace/with-tracing)
-  ;                                 (insert fact-m)
-  ;                                 (fire-rules)))]
-  ;    (is (= :add-facts (:type (first trace)))))))
-  ;    (is (= (map #(apply ->Tuple %) (map->tuples fact-m)) (:facts (first trace)))
-  ;        "Fact map should have been inserted as Tuples"))))
-  ;(testing "Insert vector of maps"
-  ;  (let [session @(session mysess)
-  ;        numfacts 5
-  ;        m-fact  #(todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
-  ;        m-facts (into [] (repeatedly numfacts m-fact))
-  ;        trace (trace/get-trace (-> session
-  ;                                (trace/with-tracing)
-  ;                                (insert m-facts)
-  ;                                (fire-rules)))]
-  ;    (is (= :add-facts (:type (first trace))))
-  ;    (is (= (count (:facts (first trace)))
-  ;           (* numfacts (dec (count (keys (m-fact))))))))))
+  (testing "Insert entity maps"
+    (let [session @(session mysess)
+          numfacts 5
+          m-fact #(todo-tx (java.util.UUID/randomUUID) "Hi" :tag)
+          m-facts (into [] (repeatedly numfacts m-fact))
+          trace (trace/get-trace (-> session
+                                  (trace/with-tracing)
+                                  (insert m-facts)
+                                  (fire-rules)))]
+      (is (= :add-facts (:type (first trace))))
+      (is (= (count (:facts (first trace)))
+             (* numfacts (dec (count (keys (m-fact)))))))
+      (is (every? #(= Tuple (type %)) (:facts (first trace)))
+        "Entity maps should have been inserted as Tuples"))))
 
 (deftest gen-Tuples-from-map-test
   (let [m {:first-name "Bob" :last-name "Smith"}

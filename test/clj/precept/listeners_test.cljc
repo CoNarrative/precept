@@ -43,14 +43,17 @@
 (def background-facts (repeatedly 5 #(vector (guid) :junk 42)))
 
 (deftest trace-parsing-fns
-  (let [traced-session (-> @(session trace-parsing-session)
+  (let [fact-t (inc @state/fact-id)
+        traced-session (-> @(session trace-parsing-session)
                           (l/replace-listener)
                           (util/insert
                             (into
-                              [[1 :attr/a "state-0" 123]
+                              [[1 :attr/a "state-0"]
                                [1 :attr/b "state-0"]]
                               background-facts))
-                          (util/retract [1 :attr/a "state-0" 123])
+                          (util/retract
+                            (->Tuple 1 :attr/a "state-0" fact-t)
+                            #_[1 :attr/a "state-0"])
                           (fire-rules))
         traces (l/fact-traces traced-session)
         keyed-by-type (l/trace-by-type (first traces))

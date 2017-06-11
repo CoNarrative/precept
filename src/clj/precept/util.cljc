@@ -1,6 +1,8 @@
 (ns precept.util
    (:require [clara.rules :as cr]
+             [clojure.spec :as s]
              [precept.state :as state]
+             [precept.spec.fact :as fact]
              [precept.spec.rulegen :as rulegen]
              [precept.spec.error :as err]))
 
@@ -89,6 +91,15 @@
     (vector? (first x)) x
     :else (vector x)))
 
+;; TODO. one-to-many attrs should have own Tuple
+(defn entity-map->Tuples
+  "Transforms entity map to Tuple record
+  {a1 v1 a2 v2 :db/id eid} -> [(Tuple eid a1 v1 t)...]"
+  [m]
+  (mapv (fn [[k v]] (->Tuple (:db/id m) k v (next-fact-id!)))
+    (dissoc m :db/id)))
+
+
 (defn insertable
   "Arguments can be any mixture of vectors and records
   Ensures [], [[]...], Tuple, '(Tuple ...) conform to Tuple record instances."
@@ -96,8 +107,10 @@
   (cond
     (record? x) (vector x)
     (and (coll? x) (record? (first x))) (into [] x)
-    (and (coll? x) (vector? (first x))) (mapv vec->record x)
-    (vector? x) (vector (vec->record x))))
+    (s/valid? ::fact/tuple x) (vector (vec->record x))
+    (s/valid? (s/coll-of ::fact/tuple) x) (mapv vec->record x)
+    (s/valid? ::fact/entity-map x) (entity-map->Tuples x)
+    (s/valid? (s/coll-of ::fact/entity-map) x) (into [] (mapcat entity-map->Tuples x))))
 
 (defn fact-index-path
   "Returns path to store and access a fact in fact-index according to the fact's cardinality,
