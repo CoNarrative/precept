@@ -96,9 +96,13 @@
   "Transforms entity map to Tuple record
   {a1 v1 a2 v2 :db/id eid} -> [(Tuple eid a1 v1 t)...]"
   [m]
-  (mapv (fn [[k v]] (->Tuple (:db/id m) k v (next-fact-id!)))
+  (reduce
+    (fn [acc [k v]]
+      (if ((@state/ancestors-fn k) :one-to-many)
+        (concat acc (map #(->Tuple (:db/id m) k % (next-fact-id!)) v))
+        (conj acc (->Tuple (:db/id m) k v (next-fact-id!)))))
+    []
     (dissoc m :db/id)))
-
 
 (defn insertable
   "Arguments can be any mixture of vectors and records

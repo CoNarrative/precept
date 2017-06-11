@@ -126,6 +126,13 @@
            [{:db/id 1 ::test/one-to-many '(42 42 42 42 42) ::test/one-to-one 42}
             {:db/id 2 ::test/one-to-many '(42 42 42 42 42) ::test/one-to-one 42}]))))
 
+(deftest entity-map->Tuples-test
+  (let [m {:db/id 123 ::test/one-to-one "foo" ::test/one-to-many [42 42 42 42 42]}
+        records (entity-map->Tuples m)]
+    (is (every? #(= Tuple (type %)) records))
+    (is (= 1 (count (filter #(= ::test/one-to-one (:a %)) records))))
+    (is (= 5 (count (filter #(= ::test/one-to-many (:a %)) records))))))
+
 (deftest insertable-test
   (testing "Single vector"
     (let [rtn (insertable [-1 :attr "foo"])]
