@@ -68,6 +68,19 @@
 ;  (println "Attr" ?attr)
 ;  (println "eids" ?x))
 ;
+;; https://github.com/cerner/clara-rules/issues/313
+;(cr/defrule variable-binding-in-accumulator
+;  [:the-keyword-e (= ?v (:v this))]
+;  [?xs <- (acc/all ?v) :from [:interesting-fact]]
+;  =>
+;  (println "[variable-binding-in-acc] " ?xs))
+;
+;;(rule variable-binding-in-accumulator
+;;  [[_ :the-keyword-e ?v]]
+;;  [?xs <- (acc/all ?v) :from [_ :interesting-fact]]
+;;  =>
+;;  (println "[variable-binding-in-acc] " ?xs))
+;
 ;(session app-session
 ;   'precept.todomvc.rules-debug
 ;   :db-schema db-schema)
@@ -79,6 +92,7 @@
 ;                [1 :entry/title "Second"]
 ;                [2 :todo/title "First"]
 ;                [5 :some-type-name :interesting-fact]
+;                [6 :the-keyword-e :e]
 ;                [3 ::sub/request :my-sub]
 ;                [:transient :test "foo"]
 ;                [1 :interesting-fact 42]
