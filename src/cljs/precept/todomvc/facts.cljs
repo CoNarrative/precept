@@ -11,7 +11,6 @@
 (defn todo-edit [e v] [e :todo/edit v])
 
 (defn todo [title]
-  (let [id (random-uuid)]
-    [[id :todo/title title]
-     [id :todo/done false]]))
-
+  {:db/id (random-uuid)
+   :todo/title title
+   :todo/done false})
