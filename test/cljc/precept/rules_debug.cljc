@@ -60,6 +60,13 @@
 ;  =>
 ;  (println "Found error!" ?error))
 ;
+;(rule dynamic-type-tuple
+;  [[_ :some-type-name ?attr]]
+;  [?x <- (acc/all :e) :from [_ ?attr]]
+;  [[_ ?attr]]
+;  =>
+;  (println "Attr" ?attr)
+;  (println "eids" ?x))
 ;
 ;(session app-session
 ;   'precept.todomvc.rules-debug
@@ -71,6 +78,7 @@
 ;  (util/insert [[1 :entry/title "First"]
 ;                [1 :entry/title "Second"]
 ;                [2 :todo/title "First"]
+;                [5 :some-type-name :interesting-fact]
 ;                [3 ::sub/request :my-sub]
 ;                [:transient :test "foo"]
 ;                [1 :interesting-fact 42]

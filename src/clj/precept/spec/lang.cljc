@@ -47,18 +47,18 @@
 (s/def ::tuple-2
   (s/tuple
     (s/and some? #(not (s/valid? ::s-expr %)))
-    keyword?))
+    any?))
 
 (s/def ::tuple-3
   (s/tuple
     (s/and some? #(not (s/valid? ::s-expr %)))
-    keyword?
+    any?
     (s/and some? #(not (s/valid? ::s-expr %)))))
 
 (s/def ::tuple-4
   (s/tuple
     (s/and some? #(not (s/valid? ::s-expr %)))
-    keyword?
+    any?
     (s/and some? #(not (s/valid? ::s-expr %)))
     (s/and some?
       (s/or :match-tx-id number?
