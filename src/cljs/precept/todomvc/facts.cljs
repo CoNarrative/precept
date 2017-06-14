@@ -8,8 +8,6 @@
 
 (defn active-count [v] [:global :active-count v])
 
-(defn todo-edit [e v] [e :todo/edit v])
-
 (defn todo [title]
   {:db/id (random-uuid)
    :todo/title title
