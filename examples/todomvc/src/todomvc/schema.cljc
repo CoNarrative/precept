@@ -1,4 +1,4 @@
-(ns precept.todomvc.schema
+(ns todomvc.schema
     (:require [precept.util :refer [guid]]
               [precept.schema :refer [attribute]]
               [precept.state :as state]))

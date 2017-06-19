@@ -19,7 +19,7 @@
           :output-path "docs"
           :metadata {:doc/format :markdown}}
 
-  :source-paths ["src/clj"]
+  :source-paths ["src/clj" "src/cljc"]
 
   :test-paths ["test/clj" "test/cljc"]
 
@@ -38,8 +38,7 @@
                    [devcards "0.2.3"]
                    [com.cemerick/piggieback "0.2.2-SNAPSHOT"]
                    [figwheel-sidecar "0.5.10-SNAPSHOT"]
-                   [binaryage/devtools "0.8.2"]
-                   [secretary "1.2.3"]]
+                   [binaryage/devtools "0.8.2"]]
 
     :plugins      [[lein-figwheel "0.5.10-SNAPSHOT"]
                    [lein-doo "0.1.7"]]
@@ -52,20 +51,7 @@
 
     :cljsbuild
     {:builds
-     {:app
-      {:source-paths ["src/cljs" "dev/cljs"]
-       :compiler
-                     {:main "precept.todomvc.app"
-                      :asset-path "/js/out"
-                      :output-to "target/cljsbuild/public/js/app.js"
-                      :output-dir "target/cljsbuild/public/js/out"
-                      :preloads [devtools.preload]
-                      :source-map true
-                      :optimizations :none
-                      :cache-analysis false
-                      :pretty-print true}}
-
-      :test
+     {:test
        {:source-paths ["src/cljs" "test/cljs" "test/cljc"]
         :compiler
                      {:main "precept.runner"

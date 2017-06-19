@@ -1,4 +1,4 @@
-(ns precept.todomvc.facts)
+(ns todomvc.facts)
 
 (defn visibility-filter [v] [:global :visibility-filter v])
 
@@ -8,7 +8,12 @@
 
 (defn active-count [v] [:global :active-count v])
 
+;(defn todo [title]
+;  {:db/id (random-uuid)
+;   :todo/title title
+;   :todo/done false})
+
 (defn todo [title]
-  {:db/id (random-uuid)
-   :todo/title title
-   :todo/done false})
+  (let [id (random-uuid)]
+    [[id :todo/title title]
+     [id :todo/done false]]))

@@ -1,0 +1,14 @@
+precept-todomvc.iml
+resources/public/js
+/.idea/
+/target/
+/figwheel_server.log
+/.lein-repl-history
+/.nrepl-port
+/classes/
+/precept.iml
+/.lein-failures
+/node_modules/
+.DS_Store
+doo-index.html
+/pom.xml.asc

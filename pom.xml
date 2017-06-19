@@ -21,7 +21,7 @@
     <url>https://github.com/CoNarrative/precept</url>
   </scm>
   <build>
-    <sourceDirectory>src/clj</sourceDirectory>
+    <sourceDirectory>src/cljc</sourceDirectory>
     <testSourceDirectory>test/clj</testSourceDirectory>
     <resources>
       <resource>

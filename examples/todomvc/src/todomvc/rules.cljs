@@ -1,10 +1,10 @@
-(ns precept.todomvc.rules
+(ns todomvc.rules
   (:require-macros [precept.dsl :refer [<- entity entities]])
   (:require [precept.accumulators :as acc]
             [precept.spec.error :as err]
             [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
             [precept.rules :refer-macros [define defsub session rule]]
-            [precept.todomvc.facts :refer [todo entry done-count active-count visibility-filter]]))
+            [todomvc.facts :refer [todo entry done-count active-count visibility-filter]]))
 
 
 (rule save-edit
@@ -98,6 +98,6 @@
   (retract! ?orphaned))
 
 (session app-session
-  'precept.todomvc.rules
-  :db-schema precept.todomvc.schema/db-schema
-  :client-schema precept.todomvc.schema/client-schema)
+  'todomvc.rules
+  :db-schema todomvc.schema/db-schema
+  :client-schema todomvc.schema/client-schema)

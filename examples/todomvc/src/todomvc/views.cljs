@@ -1,4 +1,4 @@
-(ns precept.todomvc.views
+(ns todomvc.views
   (:require [precept.core :refer [subscribe then]]
             [reagent.core  :as reagent]))
 
