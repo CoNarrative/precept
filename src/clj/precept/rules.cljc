@@ -181,7 +181,7 @@
      (defsub :my-sub-name
        [[_ :my-fact ?v]]
        =>
-       {:my-fact ?v}
+       {:my-fact ?v})
 
        sub-name - keyword of subscription registered with `subscribe`
        LHS - any valid LHS syntax
