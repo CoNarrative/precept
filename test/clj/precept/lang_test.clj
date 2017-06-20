@@ -37,7 +37,7 @@
     (is (s/valid? ::lang/tuple-2 '[?e :foo]))
     (is (s/valid? ::lang/tuple-2 '[1 :foo]))
     (is (s/valid? ::lang/tuple-2 '["x" :foo]))
-    (is (not (s/valid? ::lang/tuple-2 '[?e "foo"])))
+    (is (s/valid? ::lang/tuple-2 '[?e "foo"]))
     (is (not (s/valid? ::lang/tuple-2 '[?e :foo "bar"]))))
   (testing "Tuple-3"
     (is (s/valid? ::lang/tuple-3 '[?e :foo "bar"]))
@@ -51,7 +51,7 @@
     (is (s/valid? ::lang/tuple-4 '[?e :foo "bar" ?tx-id]))
     (is (s/valid? ::lang/tuple-4 '[_ :foo _ ?tx-id]))
     (is (not (s/valid? ::lang/tuple-4 '[?e :foo "bar" _])))
-    (is (not (s/valid? ::lang/tuple-4 '[_ _ _ ?tx-id]))))
+    (is (s/valid? ::lang/tuple-4 '[_ _ _ ?tx-id])))
   (testing "Tuple"
     (is (s/valid? ::lang/tuple '[?e :foo]))
     (is (s/valid? ::lang/tuple '[?e :foo "bar"]))
