@@ -12,6 +12,10 @@
 
 (s/def ::ignore-slot #{"_" '_})
 
+(s/def ::s-expr-with-binding
+  (s/and ::s-expr
+    #(some (fn [x] (s/valid? ::variable-binding x)) %)))
+
 (s/def ::value-equals-matcher
   (s/and some?
     #(not (coll? %))

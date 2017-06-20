@@ -6,7 +6,7 @@
               [precept.spec.rulegen :as rulegen]
               [precept.rules :refer [rule defquery defsub]]
               [precept.util :refer [insert!] :as util]
-              [precept.macros :refer [binding?
+              [precept.macros :refer [binding?!
                                       variable-bindings
                                       sexprs-with-bindings
                                       positional-value
@@ -87,6 +87,25 @@
             [:attr-4 (= ?e (:e this)) (= ?v (:v this))]
             [:attr-5 (= ?e (:e this)) (= ?v (:v this))]]])))
 
+(deftest parse-sexpr-test
+  (testing "Correct order (no cached variables)"
+    (is (= (macros/parse-sexpr '(> 42 ?v))
+           '[(> 42 (:v this)) (= ?v (:v this))]))
+    (is (= (macros/parse-sexpr '(> ?v 42))
+          '[(> (:v this) 42) (= ?v (:v this))])))
+  (testing "When the rule has already referenced ?v2"
+    (let [cache (macros/mk-parse-cache {:variable-bindings #{'?v1}})]
+      (is (= (macros/parse-sexpr '(> ?v1 ?v2) cache)
+             '[(> ?v1 (:v this)) (= ?v2 (:v this))]))
+      (is (= (macros/parse-sexpr '(> ?v1 ?v2) cache)
+             '(> ?v1 ?v2))
+          "When ?v1 ?v2 in cache expect no further binding, just sexpr"))))
+
+(deftest sexprs-with-bindings-test
+  (is (= (:v (macros/sexprs-with-bindings '[?e :attr (> 42 ?v)]))
+         '[(> 42 (:v this)) (= ?v (:v this))]))
+  (is (= (:v (macros/sexprs-with-bindings '[?e :attr (> ?v 42)]))
+        '[(> (:v this) 42) (= ?v (:v this))])))
 
 (deftest rewrite-lhs-test
   (testing "Ops - :exists, :not, :and, :or"
@@ -105,7 +124,10 @@
     (is (= '[[?toggle <- :ui/toggle-complete]]
           (rewrite-lhs '[[?toggle <- [:ui/toggle-complete]]])))
     (is (= '[[:not [:ns/foo (= 3 (:v this))]]]
-           (rewrite-lhs '[[:not [_ :ns/foo 3]]])))))
+           (rewrite-lhs '[[:not [_ :ns/foo 3]]]))))
+  (testing "S-expr in value slot"
+    (is (= '[[:attr (> 42 (:v this)) (= ?v (:v this))]]
+           (rewrite-lhs '[[[_ :attr (> 42 ?v)]]])))))
 
 (deftest rule-test
   (testing "Basic rule with exists"
@@ -279,7 +301,18 @@
                     [:some-type-name (= ?attr (:v this))]
                     [?x <- (acc/all) :from [:all (= ?attr (:a this))]]
                     =>
-                    (println "RHS" ?x))))))))
+                    (println "RHS" ?x)))))))
+  (testing "Greater than (>) in value position"
+    (is (= (macroexpand
+             '(rule my-rule
+                [[_ :attr (> 42 ?v)]]
+                =>
+                (cr/insert! ?fact)))
+          `(do ~(macroexpand
+                  '(defrule my-rule
+                     [:attr (> 42 (:v this)) (= ?v (:v this))]
+                     =>
+                     (cr/insert! ?fact))))))))
 
 (deftest defquery-test
   (testing "Query with no args"

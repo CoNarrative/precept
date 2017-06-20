@@ -60,6 +60,29 @@
 ;  =>
 ;  (println "Found error!" ?error))
 ;
+;(defn foo? [x y] (not= x y))
+;
+;;(rule greater-than-42
+;;  [[_ :interesting-fact (foo? ?v 42)]]
+;;  =>
+;;  (println "Greater than 42:" ?v))
+;
+;(rule find-43
+;  [[_ :interesting-fact 43]]
+;  =>
+;  (insert! [(guid) :the-number 43]))
+;
+;(rule pred-w-bound-variable
+;  [[_ :interesting-fact ?v2]]
+;  [[_ :the-number (< ?v2 ?v1)]]
+;  =>
+;  (println "42s" ?v2))
+;
+;(cr/defrule greater-than-42
+;  [:interesting-fact (= ?v (:v this)) (foo? ?v 42)]
+;  =>
+;  (println "Greater than 42:" ?v))
+;
 ;(rule dynamic-type-tuple
 ;  [[_ :some-type-name ?attr]]
 ;  [?x <- (acc/all :e) :from [_ ?attr]]
@@ -80,7 +103,6 @@
 ;;  [?xs <- (acc/all ?v) :from [_ :interesting-fact]]
 ;;  =>
 ;;  (println "[variable-binding-in-acc] " ?xs))
-;
 ;(session app-session
 ;   'precept.todomvc.rules-debug
 ;   :db-schema db-schema)
@@ -99,6 +121,7 @@
 ;                [2 :interesting-fact 42]
 ;                [3 :interesting-fact 42]
 ;                [4 :interesting-fact 42]
+;                [4 :interesting-fact 43]
 ;                [2 :todo/title "Second"]
 ;                [3 :todo/title "Second"]
 ;                [5 ::sub/request :my-sub-2]])
