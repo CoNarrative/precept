@@ -55,7 +55,9 @@
   (is (= '[:ns/attr (= ?tx-id (:t this))]
         (parse-as-tuple '[[_ :ns/attr _ ?tx-id]])))
   (is (= '[:ns/attr (= -1 (:t this))]
-        (parse-as-tuple '[[_ :ns/attr _ -1]]))))
+        (parse-as-tuple '[[_ :ns/attr _ -1]])))
+  (is (= '[:all (= ?a (:a this))]
+         (parse-as-tuple '[[_ ?a]]))))
 
 (deftest parse-with-accumulator-test
   (is (= (macros/parse-with-accumulator '[?entity <- (acc/all) :from [?e :all]])
@@ -63,7 +65,9 @@
   (is (= (macros/parse-with-accumulator '[?entity <- (acc/all :e) :from [?e :all]])
         '[?entity <- (acc/all :e) :from [:all (= ?e (:e this))]]))
   (is (= (macros/parse-with-accumulator '[?entity <- (acc/all) :from [(:e ?v) :all]])
-        '[?entity <- (acc/all) :from [:all (= (:e ?v) (:e this))]])))
+        '[?entity <- (acc/all) :from [:all (= (:e ?v) (:e this))]]))
+  (is (= (macros/parse-with-accumulator '[?x <- (acc/all) :from [_ ?a]])
+        '[?x <- (acc/all) :from [:all (= ?a (:a this))]])))
 
 (deftest parse-with-op-test
   (is (= (macros/parse-with-op '[:or [?e :attr ?v]
@@ -262,7 +266,20 @@
                      [?fact <- :all (= ?v (:v this)) (= :this-tick (:e this))]
                      =>
                      (trace "CLEANING this-tick fact because transient" ?fact)
-                     (cr/retract! ?fact))))))))
+                     (cr/retract! ?fact)))))))
+  (testing "Accumulator with match on attribute"
+    (is (= (macroexpand
+            '(rule dynamic-type
+               [[_ :some-type-name ?attr]]
+               [?x <- (acc/all) :from [_ ?attr]]
+               =>
+               (println "RHS" ?x)))
+          `(do ~(macroexpand
+                  '(defrule dynamic-type
+                    [:some-type-name (= ?attr (:v this))]
+                    [?x <- (acc/all) :from [:all (= ?attr (:a this))]]
+                    =>
+                    (println "RHS" ?x))))))))
 
 (deftest defquery-test
   (testing "Query with no args"
