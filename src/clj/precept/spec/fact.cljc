@@ -7,6 +7,6 @@
 
 (s/def ::tuple
   (s/tuple
-    some?
+    any?
     keyword?
-    some?))
+    any?))
