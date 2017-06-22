@@ -3,7 +3,7 @@
   <groupId>precept</groupId>
   <artifactId>precept</artifactId>
   <packaging>jar</packaging>
-  <version>0.3.0-alpha</version>
+  <version>0.3.1-alpha</version>
   <name>precept</name>
   <description>A declarative programming framework</description>
   <url>https://github.com/CoNarrative/precept.git</url>
@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/CoNarrative/precept.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/CoNarrative/precept.git</developerConnection>
-    <tag>c11a00dcdf76497e3ce14f66cbcf9a81872783bd
+    <tag>4231ef662fd3f07620b3d6b06133986a4b5da651
 </tag>
     <url>https://github.com/CoNarrative/precept</url>
   </scm>

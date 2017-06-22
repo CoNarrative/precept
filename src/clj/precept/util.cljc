@@ -246,11 +246,12 @@
   [facts]
   (let [[to-insert to-retract] (conform-insertions-and-retractions! facts)]
     (trace "[insert!] : inserting " to-insert)
-    (trace "[insert!] : retracting " to-retract)
+    (trace "[insert!] : conflicting " to-retract)
     (if (empty? to-retract)
       (cr/insert-all! to-insert)
-      (do (cr/insert-all! to-insert)
-          (doseq [x to-retract] (cr/retract! x))))))
+      (do
+        (println "Conflicting logical fact!" to-insert " is blocked by " to-retract)
+        (throw (ex-info "Conflicting logical fact!" {}))))))
 
 (defn insert-unconditional!
   "Insert facts unconditionally within rule context"
