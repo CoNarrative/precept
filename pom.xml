@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/CoNarrative/precept.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/CoNarrative/precept.git</developerConnection>
-    <tag>66ea4bb3eafefaea08b03f00cebc80a34318b5b7
+    <tag>02620e9a0a8f5b01611dd9fbed2fe565b63164f8
 </tag>
     <url>https://github.com/CoNarrative/precept</url>
   </scm>

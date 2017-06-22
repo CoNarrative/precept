@@ -331,11 +331,6 @@
       (is (= {:insert fact-1} (update-index! fact-1)))
       (is (= @state/fact-index {:one-to-one {1 {:foo fact-1}}})))
 
-    ; Removed because fact-id entails no 2 facts identical
-    ;(testing "Removing a fact that exists in index"
-    ;  (is (= {:retract fact-1} (remove-from-fact-index! fact-1 (fact-index-path fact-1))))
-    ;  (is (= @state/fact-index {})))
-
     (testing "Index same e-a one-to-one should upsert"
       (is (= @state/fact-index {:one-to-one {1 {:foo fact-1}}}))
       (is (= {:insert next-1 :retract fact-1} (update-index! next-1)))
@@ -454,6 +449,18 @@
                                ::test/unique-identity unique-upsert}
                             2 {::test/unique-value unique-value}}
                :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
-                        (:a unique-value) {(:v unique-value) unique-value}}}))))))
+                        (:a unique-value) {(:v unique-value) unique-value}}}))))
+
+    (testing "Remove one-to-one fact from cardinality index when identical match"
+      (let [_ (reset! state/fact-index {})
+            _ (update-index! fact-1)]
+        (is (= [true] (remove-fact-from-index! fact-1)))
+        (is (= @state/fact-index {}))))
+
+    (testing "Remove unique fact from cardinality, unique indices when identical match"
+      (let [_ (reset! state/fact-index {})
+            _ (update-index! unique)]
+        (is (= [true true] (remove-fact-from-index! unique)))
+        (is (= @state/fact-index {}))))))
 
 (run-tests)

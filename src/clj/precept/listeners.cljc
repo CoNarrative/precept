@@ -26,7 +26,8 @@
     (do
       (println "auto-retracting (no longer supported):" facts)
       (doseq [fact facts]
-        (util/remove-fact-from-index! fact))
+        (when-let [failed-to-remove? (some false? (util/remove-fact-from-index! fact))]
+          (println "Failed to remove " fact)))
       (append-trace listener {:type :retract-facts-logical :facts facts})))
 
   (to-persistent! [listener]

@@ -127,6 +127,16 @@
       (ancestry :one-to-one) [:one-to-one (:e fact) (:a fact)]
       :else [:one-to-many])))
 
+(defn fact-index-paths [fact]
+  (let [ancestry (@state/ancestors-fn (:a fact))]
+    (cond
+      (ancestry :unique-identity) [[:unique (:a fact) (:v fact)]
+                                   [:one-to-one (:e fact) (:a fact)]]
+      (ancestry :unique-value) [[:unique (:a fact) (:v fact)]
+                                [:one-to-one (:e fact) (:a fact)]]
+      (ancestry :one-to-one) [[:one-to-one (:e fact) (:a fact)]]
+      :else :one-to-many)))
+
 ;;TODO. index-cardinality! or add to cardinality
 (defn upsert-fact-index!
   "Writes value to path in ks. Returns existing fact to retract if overwriting."
@@ -139,12 +149,18 @@
       (swap! state/fact-index assoc-in ks fact)
       {:insert fact})))
 
+;; TODO. Should remove from multiple indices and be named accordingly
 (defn remove-fact-from-index!
-  ([fact] (remove-fact-from-index! fact (fact-index-path fact)))
-  ([fact ks]
-   (if-let [exact-match (= fact (get-in @state/fact-index ks))]
-     (do (println "Removing exact match" exact-match)
-         (swap! state/fact-index dissoc-in ks)))))
+  ([fact] (remove-fact-from-index! fact (fact-index-paths fact)))
+  ([fact paths]
+   (if (= paths :one-to-many) ; Nothing to be done
+     [true]
+     (mapv
+       (fn [ks]
+         (if-let [exact-match (= fact (get-in @state/fact-index ks))]
+           (do (trace "Removing exact match" exact-match)
+               (boolean (swap! state/fact-index dissoc-in ks)))))
+       paths))))
 
 ;;TODO. Rename remove-from-index-path! (can be unique or card)
 (defn remove-from-fact-index!
@@ -191,7 +207,7 @@
   (let [from-unique (add-to-unique-index! fact (into [] (rest ks)))
         from-cardinality (update-index! fact [:one-to-one (:e fact) (:a fact)])]
     (when (and (:retract from-unique)
-            (not= fact from-unique))
+            (not= fact (:retract from-unique)))
       (remove-from-fact-index!
         (:retract from-unique)
         [:one-to-one (:e (:retract from-unique) (:a (:retract from-unique)))]))
@@ -223,7 +239,7 @@
 (defn conform-insertions-and-retractions! [facts]
   (let [insertables (insertable facts)
         indexed (map update-index! insertables)
-        _ (println "Indexed @ fact id" @precept.state/fact-id indexed)
+        _ (trace "Indexed @ fact id" @precept.state/fact-id indexed)
         to-insert (vec (flatten (remove nil? (map :insert indexed))))
         to-retract (vec (flatten (remove nil? (map :retract indexed))))]
     (vector to-insert to-retract)))
@@ -251,7 +267,7 @@
     (if (empty? to-retract)
       (cr/insert-all! to-insert)
       (do
-        (println "Conflicting logical fact!" to-insert " is blocked by " to-retract)))))
+        (trace "Conflicting logical fact!" to-insert " is blocked by " to-retract)))))
         ;(throw (ex-info "Conflicting logical fact!" {}))))))
 
 (defn insert-unconditional!
