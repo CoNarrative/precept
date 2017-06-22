@@ -25,8 +25,8 @@
   (retract-facts-logical! [listener node token facts]
     (do
       (println "auto-retracting (no longer supported):" facts)
-      (doseq [x facts]
-        (util/remove-from-fact-index! x (util/fact-index-path x)))
+      (doseq [fact facts]
+        (util/remove-fact-from-index! fact))
       (append-trace listener {:type :retract-facts-logical :facts facts})))
 
   (to-persistent! [listener]

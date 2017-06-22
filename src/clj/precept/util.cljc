@@ -9,7 +9,7 @@
 (declare update-index!)
 
 (defn trace [& args]
-  (comment (apply prn args)))
+  (apply prn args))
 
 (defn guid []
   #?(:clj (java.util.UUID/randomUUID)
@@ -128,26 +128,26 @@
       :else [:one-to-many])))
 
 ;;TODO. index-cardinality! or add to cardinality
-(defn add-to-fact-index!
-  "Writes value to path in ks. Returns nil if nothing was overwritten. Else returns fact that was
-   overwritten."
+(defn upsert-fact-index!
+  "Writes value to path in ks. Returns existing fact to retract if overwriting."
   [fact ks]
-  (if (= ks [:one-to-many])
-    {:insert fact}
-    (if-let [existing (get-in @state/fact-index ks)]
-      (do
-        (swap! state/fact-index assoc-in ks fact)
-        {:insert fact :retract existing})
-      (do
-        (swap! state/fact-index assoc-in ks fact)
-        {:insert fact}))))
+  (if-let [existing (get-in @state/fact-index ks)]
+    (do
+      (swap! state/fact-index assoc-in ks fact)
+      {:insert fact :retract existing})
+    (do
+      (swap! state/fact-index assoc-in ks fact)
+      {:insert fact})))
+
+(defn remove-fact-from-index!
+  ([fact] (remove-fact-from-index! fact (fact-index-path fact)))
+  ([fact ks]
+   (if-let [exact-match (= fact (get-in @state/fact-index ks))]
+     (do (println "Removing exact match" exact-match)
+         (swap! state/fact-index dissoc-in ks)))))
 
 ;;TODO. Rename remove-from-index-path! (can be unique or card)
 (defn remove-from-fact-index!
-  "Finds in index based on supplied key.
-  Compares value of fact to fact that is indexed. If existing value matches
-  fact to be removed, removes fact and returns true to indicate removal, Else
-  removes nothing and returns false."
   [fact ks]
   (let [existing (get-in @state/fact-index ks)]
     (if (= existing fact)
@@ -216,13 +216,14 @@
    (update-index! fact (fact-index-path fact)))
   ([fact ks]
    (condp = (first ks)
-     :one-to-one (add-to-fact-index! fact ks)
+     :one-to-one (upsert-fact-index! fact ks)
      :unique (update-unique-index! fact ks)
      :one-to-many {:insert fact})))
 
 (defn conform-insertions-and-retractions! [facts]
   (let [insertables (insertable facts)
         indexed (map update-index! insertables)
+        _ (println "Indexed @ fact id" @precept.state/fact-id indexed)
         to-insert (vec (flatten (remove nil? (map :insert indexed))))
         to-retract (vec (flatten (remove nil? (map :retract indexed))))]
     (vector to-insert to-retract)))
@@ -236,9 +237,9 @@
         _ (trace "[insert] to-retract " (mapv vals to-retract))]
     (if (empty? to-retract)
       (cr/insert-all session to-insert)
-      (let [inserted (cr/insert-all session to-insert)]
+      (let [session-with-inserts (cr/insert-all session to-insert)]
           (reduce (fn [session fact] (cr/retract session fact))
-            inserted
+            session-with-inserts
             to-retract)))))
 
 (defn insert!
@@ -250,13 +251,16 @@
     (if (empty? to-retract)
       (cr/insert-all! to-insert)
       (do
-        (println "Conflicting logical fact!" to-insert " is blocked by " to-retract)
-        (throw (ex-info "Conflicting logical fact!" {}))))))
+        (println "Conflicting logical fact!" to-insert " is blocked by " to-retract)))))
+        ;(throw (ex-info "Conflicting logical fact!" {}))))))
 
 (defn insert-unconditional!
   "Insert facts unconditionally within rule context"
   [facts]
   (let [[to-insert to-retract] (conform-insertions-and-retractions! facts)]
+    (trace "[insert-unconditional!] : request " facts)
+    (trace "[insert-unconditional!] : as insertable " (insertable facts))
+    (trace "[insert-unconditional!] : index-path " (fact-index-path (first (insertable facts))))
     (trace "[insert-unconditional!] : inserting " to-insert)
     (trace "[insert-unconditional!] : retracting " to-retract)
     (if (empty? to-retract)

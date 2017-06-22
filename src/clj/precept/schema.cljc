@@ -53,8 +53,8 @@
      :db/unique :db.unique/identity)
 
    (attribute ::sub/response
-     :db.type/any
-     :db/unique :db.unique/identity)
+     :db.type/any)
+     ;:db/unique :db.unique/identity)
 
    (attribute :entities/eid
      :db.type/any
