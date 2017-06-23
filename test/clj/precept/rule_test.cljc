@@ -418,25 +418,30 @@
   ;                    [?eids <- (acc/all :e) :from [:interesting-fact]]
   ;                    =>
   ;                    (let [req-id (precept.util/guid)]
-  ;                       (precept.util/insert-unconditional!
-  ;                         [[req-id ::rulegen/for-macro :entities]
+  ;                       (precept.util/insert!
+  ;                         [[req-id ::rulegen/for-rule my-rule]
+  ;                          [req-id ::rulegen/for-macro :entities]
   ;                          [req-id ::rulegen/request-params ?eids]
   ;                          [req-id :entities/order ?eids]])
   ;                       (doseq [eid ?eids]
-  ;                         (precept.util/insert-unconditional! [req-id :entities/eid eid])))))
+  ;                         (precept.util/insert! [req-id :entities/eid eid])))))
   ;
   ;        rule-2 (macroexpand
   ;                 '(defrule my-rule
-  ;                    [?eids <- (acc/all :e) :from [:interesting-fact]]
-  ;                    [::rulegen/request-params (= ?id (:e this)) (= ?eids (:v this))]
+  ;                    [:some-condition (= ?e (:e this)) (= true (:v this))]
+  ;                    [::rulegen/for-rule (= ?id (:e this)) (= my-rule (:v this))]
   ;                    [::rulegen/for-macro (= ?id (:e this)) (= :entities (:v this))]
+  ;                    [::rulegen/request-params (= ?id (:e this)) (= ?eids (:v this))]
   ;                    [::rulegen/response (= ?id (:e this)) (= ?interesting-facts (:v this))]
+  ;                    [:another-condition (= ?e (:e this)) (= false (:v this))]
   ;                    =>
   ;                    (println nil)))]
   ;    (is (= (macroexpand
   ;             '(rule my-rule
+  ;                [[?e :some-condiition true]]
   ;                [?eids <- (acc/all :e) :from [:interesting-fact]]
   ;                [(<- ?interesting-facts (entities ?eids))]
+  ;                [[?e :another-condition false]]
   ;                =>
   ;                (println nil)))
   ;           `(do ~rule-1 ~rule-2))))))
