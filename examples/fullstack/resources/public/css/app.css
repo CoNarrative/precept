@@ -1,0 +1,34 @@
+/*.root {*/
+    /*color: blue*/
+/*}*/
+
+body{
+    padding-top: 80px;
+}
+.product-tile{
+    box-shadow: 1px 1px 5px #a3a3a3;
+    border-radius: 3px;
+    margin: 15px 0px 15px 0px;
+    max-height: 219px;
+}
+.product-name{
+    margin: 10px 0px 0px 10px;
+}
+.product-price{
+    margin: 10px 0px 0px 10px;
+    color: darkred;
+}
+.product-image{
+    padding: 5px 0px 10px 10px;
+}
+.product-description{
+    padding-right: 10px
+}
+.add-to-cart{
+    width: 100%;
+}
+.filter-sort{
+    padding: 5px;
+    border-top: 1px solid #eeeeee;
+    border-bottom: 1px solid #eeeeee;
+}
