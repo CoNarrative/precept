@@ -9,7 +9,7 @@
 (declare update-index!)
 
 (defn trace [& args]
-  (apply prn args))
+  (comment (apply prn args)))
 
 (defn guid []
   #?(:clj (java.util.UUID/randomUUID)
@@ -127,7 +127,9 @@
       (ancestry :one-to-one) [:one-to-one (:e fact) (:a fact)]
       :else [:one-to-many])))
 
-(defn fact-index-paths [fact]
+(defn fact-index-paths
+  "Returns all index paths for a given fact as [[]...]"
+  [fact]
   (let [ancestry (@state/ancestors-fn (:a fact))]
     (cond
       (ancestry :unique-identity) [[:unique (:a fact) (:v fact)]
@@ -149,8 +151,10 @@
       (swap! state/fact-index assoc-in ks fact)
       {:insert fact})))
 
-;; TODO. Should remove from multiple indices and be named accordingly
 (defn remove-fact-from-index!
+  "Removes fact from all indexed locations according to schema if the indexed value is identical
+  to the `fact` argument.
+  Returns `[bool...]` indicating successful removal from each indexed location."
   ([fact] (remove-fact-from-index! fact (fact-index-paths fact)))
   ([fact paths]
    (if (= paths :one-to-many) ; Nothing to be done
@@ -163,7 +167,10 @@
        paths))))
 
 ;;TODO. Rename remove-from-index-path! (can be unique or card)
+;;TODO. Investigate whether this fn should remove iff exact match vs. e-a match
 (defn remove-from-fact-index!
+  "Removes fact from single path in index, returning a retract instruction if an exact match
+  was found"
   [fact ks]
   (let [existing (get-in @state/fact-index ks)]
     (if (= existing fact)
@@ -239,14 +246,13 @@
 (defn conform-insertions-and-retractions! [facts]
   (let [insertables (insertable facts)
         indexed (map update-index! insertables)
-        _ (trace "Indexed @ fact id" @precept.state/fact-id indexed)
         to-insert (vec (flatten (remove nil? (map :insert indexed))))
         to-retract (vec (flatten (remove nil? (map :retract indexed))))]
     (vector to-insert to-retract)))
 
 (defn insert
   "Inserts facts from outside rule context.
-  Accepts [] [[]...]"
+  Accepts `[e a v]`, `[[e a v]...]`, `{}`, `[{}...]`, where `{}` is a Datomic-style entity map"
   [session facts]
   (let [[to-insert to-retract] (conform-insertions-and-retractions! facts)
         _ (trace "[insert] to-insert " (mapv vals to-insert))
@@ -267,16 +273,21 @@
     (if (empty? to-retract)
       (cr/insert-all! to-insert)
       (do
-        (trace "Conflicting logical fact!" to-insert " is blocked by " to-retract)))))
-        ;(throw (ex-info "Conflicting logical fact!" {}))))))
+        (trace "Conflicting logical fact!" to-insert " is blocked by " to-retract)
+        (throw (ex-info "Conflicting logical fact. You may have rules whose conditions are not
+        mutually exclusive that insert! the same e-a consequence. The conditions for logically
+        inserting an e-a pair must be exclusive if the attribute is one-to-one. If you have two
+        identical accumulators and you are seeing this error, create a separate rule that inserts a
+        fact with the accumulator's result and replace the duplicate accumulators with expressions
+        that match on that fact."
+                 {:arguments facts
+                  :attempted-insert to-insert
+                  :blocking-fact to-retract}))))))
 
 (defn insert-unconditional!
   "Insert facts unconditionally within rule context"
   [facts]
   (let [[to-insert to-retract] (conform-insertions-and-retractions! facts)]
-    (trace "[insert-unconditional!] : request " facts)
-    (trace "[insert-unconditional!] : as insertable " (insertable facts))
-    (trace "[insert-unconditional!] : index-path " (fact-index-path (first (insertable facts))))
     (trace "[insert-unconditional!] : inserting " to-insert)
     (trace "[insert-unconditional!] : retracting " to-retract)
     (if (empty? to-retract)
@@ -285,21 +296,21 @@
           (doseq [x to-retract] (cr/retract! x))))))
 
 (defn retract!
-  "Wrapper around Clara's `retract!`.
-  To be used within RHS of rule only. Converts all input to Facts"
+  "Wrapper around Clara's `retract!`. Use within RHS of rule only.
+  Requires a fact that includes a fact-id produced by matching on a whole fact.
+  e.g. `?fact` in `[?fact <- [?e :attr ?v]`"
   [facts]
   (let [insertables (insertable facts)
         _ (trace "[retract!] :" insertables)]
     (doseq [x insertables]
       (cr/retract! x)
-      (remove-from-fact-index! x (fact-index-path x)))))
+      (remove-fact-from-index! x))))
 
 (defn retract
-  "Retract from outside rule context.
-  [] [[]..]"
+  "Retract from outside rule context."
   [session facts]
   (let [insertables (insertable facts)
-        _ (doseq [x insertables] (remove-from-fact-index! x (fact-index-path x)))
+        _ (doseq [x insertables] (remove-fact-from-index! x))
         _ (trace "[retract] : " insertables)]
     (reduce (fn [s fact] (cr/retract s fact))
       session
@@ -360,7 +371,6 @@
            :group (or (:group (:props m)) default-group)
            :super (:super (:props m))}))
 
-;; Unclear what Clara expects. Could be -1 0 1 but their default sort-fn is >
 (defn make-activation-group-sort-fn
   [groups default-group]
   (let [default-idx (.indexOf groups default-group)]
