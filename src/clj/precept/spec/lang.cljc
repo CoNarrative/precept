@@ -63,7 +63,7 @@
   (s/tuple
     (s/and some? #(not (s/valid? ::s-expr %)))
     any?
-    (s/and some? #(not (s/valid? ::s-expr %)))
+    (s/and any? #(not (s/valid? ::s-expr %)))
     (s/and some?
       (s/or :value-match-t number?
             :bind-to-t ::variable-binding))))
