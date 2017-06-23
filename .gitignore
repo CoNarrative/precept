@@ -11,3 +11,4 @@ resources/public/js
 .DS_Store
 doo-index.html
 /pom.xml.asc
+/pom.xml
