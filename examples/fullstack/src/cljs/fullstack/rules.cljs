@@ -46,7 +46,7 @@
   (api/update-quantity {:db/id ?existing
                         :cart-item/quantity (inc ?quantity)}))
 
-(rule update-quantity-on-user-input
+(rule update-quantity-on-command
   {:group :action}
   [[_ :update-quantity/quantity ?quantity]]
   [[_ :update-quantity/id ?id]]
@@ -65,20 +65,20 @@
 ; item subtotal before any discounts
 (define [?e :cart-item/undiscounted-subtotal (with-precision-2 (* ?quantity ?price))]
   :- [[?e :cart-item/product-id ?product-id]]
-  [[?product-id :product/price ?price]]
-  [[?e :cart-item/quantity ?quantity]])
+     [[?product-id :product/price ?price]]
+     [[?e :cart-item/quantity ?quantity]])
 
 ; item subtotal when no per-item discount
 (define [?e :cart-item/subtotal ?undiscounted-subtotal]
   :- [:not [?e :cart-item/dollars-off]]
-  [[?e :cart-item/undiscounted-subtotal ?undiscounted-subtotal]])
+     [[?e :cart-item/undiscounted-subtotal ?undiscounted-subtotal]])
 
 ; item subtotal when per-item discount
 (define [?e :cart-item/subtotal (with-precision-2 (* ?quantity (- ?price ?dollars-off)))]
   :- [[?e :cart-item/dollars-off ?dollars-off]]
-  [[?e :cart-item/product-id ?product-id]]
-  [[?product-id :product/price ?price]]
-  [[?e :cart-item/quantity ?quantity]])
+     [[?e :cart-item/product-id ?product-id]]
+     [[?product-id :product/price ?price]]
+     [[?e :cart-item/quantity ?quantity]])
 
 ; item price when per-item discount
 (rule adjust-item-price-when-qualifies
@@ -105,31 +105,34 @@
 ; cart total when percent total discount
 (define [:app :cart/total (total-with-percent-off ?total ?percent-discount)]
   :- [[_ :active-discount ?id]]
-  [[?id :discount/percent-total ?percent-discount]]
-  [[_ :summed-subtotals ?total]])
+     [[?id :discount/percent-total ?percent-discount]]
+     [[_ :summed-subtotals ?total]])
 
 
-;; Visibility and sorting
+;; Filtering
+
+; product visible when no filter
+(define [:app :visible-product/id ?e] :- [:not [_ :product-filter/range]]
+                                         [[?e :product/name]])
+
+; product visible when filter active and price in range
+(define [:app :visible-product/id ?e]
+  :- [[_ :product-filter/range ?range]]
+     [[?e :product/price ?price]]
+     [:test (<= (first ?range) ?price (second ?range))])
+
+
+;; Sorting
 
 (define [?e :sort-comparator <] :- [[?e :sort-by :asc]])
 
 (define [?e :sort-comparator >] :- [[?e :sort-by :desc]])
 
 (define [:app :sort-fn identity] :- [:not [_ :sort-by]]
-  [:not [_ :order-by]])
+                                    [:not [_ :order-by]])
 
 (define [:app :sort-fn #(sort-by ?order-by ?sort-by %)] :- [[_ :sort-comparator ?sort-by]]
-  [[_ :order-by ?order-by]])
-
-; product visible when no filter
-(define [:app :visible-product/id ?e] :- [:not [_ :product-filter/range]]
-  [[?e :product/name]])
-
-; product visible when filter active and price in range
-(define [(random-uuid) :visible-product/id ?e]
-  :- [[_ :product-filter/range ?range]]
-  [[?e :product/price ?price]]
-  [:test (<= (first ?range) ?price (second ?range))])
+                                                           [[_ :order-by ?order-by]])
 
 (rule sort-products-list
   [[_ :sort-fn ?sort-fn]]
@@ -139,8 +142,6 @@
   (let [transformed (->> (util/Tuples->maps ?products) (?sort-fn))]
     (insert! [:app :products/list transformed])))
 
-(define [?cart-id :cart-item/product ?product] :- [[?cart-id :cart-item/product-id ?product-id]]
-  [(<- ?product (entity ?product-id))])
 
 ;; Promotions
 
@@ -173,6 +174,9 @@
   =>
   {:products ?products
    :hovered ?e})
+
+(define [?cart-id :cart-item/product ?product] :- [[?cart-id :cart-item/product-id ?product-id]]
+                                                  [(<- ?product (entity ?product-id))])
 
 (defsub :cart
   [[_ :cart/total ?total]]

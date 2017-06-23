@@ -181,8 +181,8 @@
        (for [props (:range filter-option-data)]
          ^{:key (:label props)} [menu-option props])
        [:li {:role "separator" :class "divider"}]
-       [menu-option {:label "Clear"}
-                    :facts {:db/id :transient :remove-entity :product-filter}]]]]))
+       [menu-option {:label "Clear"
+                     :facts {:db/id :transient :remove-entity :product-filter}}]]]]))
 
 (defn sort-menu []
   (let [{:keys [selected]} @(subscribe [:sort-menu])]
