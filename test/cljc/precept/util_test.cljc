@@ -135,7 +135,7 @@
 
 (deftest insertable-test
   (testing "Single vector"
-    (let [rtn (insertable [-1 :attr "foo"])]
+    (let [rtn (insertable [-1 :attr nil])]
       (is (and (not (record? rtn)) (coll? rtn)))
       (is (every? #(= (type %) Tuple) rtn))))
   (testing "Vector of vectors"
@@ -309,8 +309,8 @@
   (let [h (schema/schema->hierarchy test-schema)
         _ (make-ancestors-fn h)
         fact-1 (->Tuple 1 :foo 42 1)
-        fact-2 (->Tuple 1 :bar 42 2)
         next-1 (->Tuple 1 :foo 43 3)
+        fact-2 (->Tuple 1 :bar 42 2)
         next-2 (->Tuple 1 :bar 43 4)
         one-to-many (->Tuple 1 ::test/one-to-many 42 5)
         unique (->Tuple 1 ::test/unique-identity "my unique title" 6)
@@ -319,44 +319,36 @@
         unique-value-conflicting (->Tuple 1 ::test/unique-value "foo" 9)
         unique-value-upsert (->Tuple 2 ::test/unique-value "bar" 10)
         unique-value (->Tuple 2 ::test/unique-value "foo" 11)]
-
+;; attempting to fix the bug approach
+;; when there is a one to one that is in the index (e a) remove itreplace it
     (testing "Initial state"
       (is (= {} (reset! state/fact-index {}))
           "Expected fact index to be {}")
       (is (fn? @state/ancestors-fn)
           "Expected ancestors-fn to be a fn"))
 
-    (testing "Finding existing with empty state"
-      (is (= {:insert fact-1} (add-to-fact-index! fact-1 (fact-index-path fact-1)))))
-
-    (testing "Fact is indexed by find-existing"
+    (testing "Index one-to-one with empty state"
+      (is (= {:insert fact-1} (update-index! fact-1)))
       (is (= @state/fact-index {:one-to-one {1 {:foo fact-1}}})))
 
-    (testing "Removing a fact that exists in index"
-      (is (= {:retract fact-1} (remove-from-fact-index! fact-1 (fact-index-path fact-1))))
-      (is (= @state/fact-index {})))
-
-    (testing "Newer one-to-one facts should return old fact"
-      (is (= @state/fact-index {}))
-      (is (= {:insert fact-1} (add-to-fact-index! fact-1 (fact-index-path fact-1))))
-      (is (= {:retract fact-1 :insert next-1}
-            (add-to-fact-index! next-1 (fact-index-path next-1)))))
-
-    (testing "Existing one-to-one-fact should have been replaced"
+    (testing "Index same e-a one-to-one should upsert"
+      (is (= @state/fact-index {:one-to-one {1 {:foo fact-1}}}))
+      (is (= {:insert next-1 :retract fact-1} (update-index! next-1)))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}})))
 
     (testing "Remove fact from index that does not exist"
       (is (= {:retract nil} (remove-from-fact-index! fact-1 (fact-index-path fact-1))))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}})))
 
-    (testing "Find with same entity, different attribute should index the new fact and return
-              nil (nothing to retract)"
+    (testing "Same eid, different attribute should index the new fact"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1}}}))
-      (is (= {:insert fact-2} (add-to-fact-index! fact-2 (fact-index-path fact-2))))
+      (is (= {:insert fact-2} (update-index! fact-2)))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}})))
 
-    (testing "Removing same entity, same attribute but different fact-id should not alter index and
+    ;; Check if this must be the case, seems like either 1. remove fn should just carry out instrs,
+    ;; 2. we remove if e-a pair matches (not whole fact)
+    (testing "Removing same eid, same attribute but different fact-id should not alter index and
               return false to indicate nothing was removed"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}}))
@@ -367,9 +359,8 @@
     (testing "One-to-many attrs do not affect fact index"
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}}))
-      (is (= {:insert one-to-many}
-             (add-to-fact-index! one-to-many (fact-index-path one-to-many))))
-      (is (= {:retract nil} (remove-from-fact-index! one-to-many (fact-index-path one-to-many))))
+      (is (= (update-index! one-to-many)
+             {:insert one-to-many}))
       (is (= @state/fact-index {:one-to-one {1 {:foo next-1
                                                 :bar fact-2}}})))
 
@@ -458,6 +449,18 @@
                                ::test/unique-identity unique-upsert}
                             2 {::test/unique-value unique-value}}
                :unique {(:a unique-upsert) {(:v unique-upsert) unique-upsert}
-                        (:a unique-value) {(:v unique-value) unique-value}}}))))))
+                        (:a unique-value) {(:v unique-value) unique-value}}}))))
+
+    (testing "Remove one-to-one fact from cardinality index when identical match"
+      (let [_ (reset! state/fact-index {})
+            _ (update-index! fact-1)]
+        (is (= [true] (remove-fact-from-index! fact-1)))
+        (is (= @state/fact-index {}))))
+
+    (testing "Remove unique fact from cardinality, unique indices when identical match"
+      (let [_ (reset! state/fact-index {})
+            _ (update-index! unique)]
+        (is (= [true true] (remove-fact-from-index! unique)))
+        (is (= @state/fact-index {}))))))
 
 (run-tests)

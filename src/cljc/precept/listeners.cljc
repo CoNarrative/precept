@@ -23,7 +23,14 @@
     (append-trace listener {:type :retract-facts :facts facts}))
 
   (retract-facts-logical! [listener node token facts]
-    (append-trace listener {:type :retract-facts-logical :facts facts}))
+    (do
+      (doseq [fact facts]
+        (when-let [failed-to-remove? (some false? (util/remove-fact-from-index! fact))]
+          (throw (ex-info "Failed to remove logical retraction. This is not expected behavior and
+          may result in unexpected schema-based truth maintenence. If you continue to see
+          this error, please file an issue at https://github.com/CoNarrative/precept/issues."
+                   {:fact fact}))))
+      (append-trace listener {:type :retract-facts-logical :facts facts})))
 
   (to-persistent! [listener]
     (PersistentFactListener. @trace))

@@ -269,30 +269,33 @@
   (let [ast (eval (add-ns-if-special-form expr))
         var-binding (:join (:gen ast))
         fact-binding (second (first (nth lhs idx)))
-        nom (:name props)
+        original-name (:name props)
+        gen-name (symbol (str original-name (-> ast :gen :name-suffix)))
         ;; This assumes the binding we're looking for exists in accumulator syntax
         matching-expr (first (filter #(and (has-accumulator? (drop 2 %))
                                         (= var-binding (first %))
                                         (> idx (.indexOf lhs %)))
                                lhs))
-        lhs-mod (assoc (vec lhs) idx (parse-as-tuple `[[~'_ ::rulegen/response ~var-binding]]))
         id (gensym "?")
-        gen-conds (list [[id ::rulegen/request-params var-binding]]
+        gen-conds (list [[id ::rulegen/for-rule original-name]]
                         [[id ::rulegen/for-macro :entities]]
+                        [[id ::rulegen/request-params var-binding]]
                         [[id ::rulegen/response fact-binding]])
+        with-replaced-conditions (remove #{matching-expr} (replace-at-index idx gen-conds lhs))
         cache (mk-parse-cache)
-        rw-lhs (map #(rewrite-expr % cache) (replace-at-index idx gen-conds lhs))
+        rw-lhs (map #(rewrite-expr % cache) with-replaced-conditions)
         req-id (precept.util/guid)]
-    [{:name (symbol (str nom (-> ast :gen :name-suffix)))
+    [{:name gen-name
       :lhs (list (parse-with-accumulator matching-expr))
       :rhs `(do
               (precept.util/insert!
-                [[~req-id ::rulegen/for-macro :entities]
+                [[~req-id ::rulegen/for-rule ~original-name]
+                 [~req-id ::rulegen/for-macro :entities]
                  [~req-id ::rulegen/request-params ~var-binding]
                  [~req-id :entities/order ~var-binding]])
               (doseq [eid# ~var-binding]
                 (precept.util/insert! [~req-id :entities/eid eid#])))}
-     {:name nom
+     {:name original-name
       :lhs rw-lhs
       :rhs rhs}]))
 
