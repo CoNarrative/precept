@@ -14,11 +14,11 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git://github.com/CoNarrative/precept.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/CoNarrative/precept.git</developerConnection>
-    <tag>01da9348bdb80a30257a5824f8d065ae4972c0d6
+    <connection>scm:git:git://github.com/alex-dixon/precept.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/alex-dixon/precept.git</developerConnection>
+    <tag>7a14ecf84134a00d1cc2c43a3daa279303db2454
 </tag>
-    <url>https://github.com/CoNarrative/precept</url>
+    <url>https://github.com/alex-dixon/precept</url>
   </scm>
   <build>
     <sourceDirectory>src/clj</sourceDirectory>
@@ -47,6 +47,18 @@
         <artifactId>build-helper-maven-plugin</artifactId>
         <version>1.7</version>
         <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>src/cljc</source>
+              </sources>
+            </configuration>
+          </execution>
           <execution>
             <id>add-test-source</id>
             <phase>generate-test-sources</phase>
@@ -154,12 +166,6 @@
       <groupId>binaryage</groupId>
       <artifactId>devtools</artifactId>
       <version>0.8.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>secretary</groupId>
-      <artifactId>secretary</artifactId>
-      <version>1.2.3</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

@@ -1,4 +1,4 @@
-(ns precept.todomvc.facts)
+(ns todomvc.facts)
 
 (defn visibility-filter [v] [:global :visibility-filter v])
 

@@ -1,13 +1,13 @@
-(ns ^:figwheel-always precept.todomvc.core
+(ns ^:figwheel-always todomvc.core
   (:require-macros [secretary.core :refer [defroute]])
   (:require [goog.events :as events]
             [reagent.core :as reagent]
             [secretary.core :as secretary]
             [precept.core :refer [start! then]]
-            [precept.todomvc.facts :refer [todo visibility-filter]]
-            [precept.todomvc.rules :refer [app-session]]
-            [precept.todomvc.schema :refer [db-schema]]
-            [precept.todomvc.views])
+            [todomvc.facts :refer [todo visibility-filter]]
+            [todomvc.rules :refer [app-session]]
+            [todomvc.schema :refer [db-schema]]
+            [todomvc.views])
   (:import [goog History]
            [goog.history EventType]))
 
@@ -23,7 +23,7 @@
     (.setEnabled true)))
 
 (defn mount-components []
-  (reagent/render [precept.todomvc.views/app] (.getElementById js/document "app")))
+  (reagent/render [todomvc.views/app] (.getElementById js/document "app")))
 
 (def facts [(todo "Hi") (todo "there!")])
 
