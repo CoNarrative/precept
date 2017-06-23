@@ -12,6 +12,10 @@
 
 (s/def ::ignore-slot #{"_" '_})
 
+(s/def ::s-expr-with-binding
+  (s/and ::s-expr
+    #(some (fn [x] (s/valid? ::variable-binding x)) %)))
+
 (s/def ::value-equals-matcher
   (s/and some?
     #(not (coll? %))
@@ -47,18 +51,18 @@
 (s/def ::tuple-2
   (s/tuple
     (s/and some? #(not (s/valid? ::s-expr %)))
-    keyword?))
+    any?))
 
 (s/def ::tuple-3
   (s/tuple
     (s/and some? #(not (s/valid? ::s-expr %)))
-    keyword?
+    any?
     (s/and some? #(not (s/valid? ::s-expr %)))))
 
 (s/def ::tuple-4
   (s/tuple
     (s/and some? #(not (s/valid? ::s-expr %)))
-    keyword?
+    any?
     (s/and some? #(not (s/valid? ::s-expr %)))
     (s/and some?
       (s/or :value-match-t number?
