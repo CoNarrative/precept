@@ -25,7 +25,7 @@
 (defn mount-components []
   (reagent/render [todomvc.views/app] (.getElementById js/document "app")))
 
-(def facts (into (todo "Hi") (todo "there!")))
+(def facts [(todo "Hi") (todo "there!")])
 
 (defn ^:export main []
   (start! {:session app-session :facts facts})

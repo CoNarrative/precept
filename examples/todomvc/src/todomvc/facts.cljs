@@ -8,12 +8,7 @@
 
 (defn active-count [v] [:global :active-count v])
 
-;(defn todo [title]
-;  {:db/id (random-uuid)
-;   :todo/title title
-;   :todo/done false})
-
 (defn todo [title]
-  (let [id (random-uuid)]
-    [[id :todo/title title]
-     [id :todo/done false]]))
+  {:db/id (random-uuid)
+   :todo/title title
+   :todo/done false})
