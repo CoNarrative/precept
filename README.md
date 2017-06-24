@@ -8,7 +8,7 @@ A declarative programming framework
 [![discord](https://img.shields.io/badge/discord-%23precept%20%40%20clojurians-7bb6b9.svg)](https://discord.gg/5GXQwrY)
 
 [Docs](https://conarrative.github.io/precept/)
-| [Example](https://github.com/CoNarrative/precept/tree/master/src/cljs/precept/todomvc)
+| [Examples](https://github.com/CoNarrative/precept/tree/master/examples)
 | [Issues](https://github.com/CoNarrative/precept/issues)
 | [Roadmap](https://github.com/CoNarrative/precept/projects/1)
 | [Contributing](https://github.com/CoNarrative/precept/blob/master/CONTRIBUTING.md)
