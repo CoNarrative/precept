@@ -1,5 +1,7 @@
 # Precept full stack example
 
+You may download the fullstack example [here](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/CoNarrative/precept/tree/master/examples/fullstack) if you don't want to clone the repo.
+
 In two terminals:
 1. `lein run`
 2. `lein figwheel`
