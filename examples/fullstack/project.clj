@@ -1,6 +1,5 @@
 (defproject fullstack "0.0.0"
   :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
-                 [bouncer "1.0.0"]
                  [ch.qos.logback/logback-classic "1.1.7"]
                  [cljs-ajax "0.5.8"]
                  [compojure "1.5.2"]

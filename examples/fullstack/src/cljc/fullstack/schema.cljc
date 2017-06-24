@@ -6,13 +6,10 @@
   [(attribute
     :products/list
     :db.type/vector)])
-    ;:db/unique :db.unique/identity)])
-
 
 (defn mk-db-schema []
   [(attribute :cart-item/product-id
-     :db.type/ref
-     :db/cardinality :db.cardinality/many)
+     :db.type/ref)
 
    (attribute :product/name
      :db.type/string)
