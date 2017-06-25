@@ -98,9 +98,14 @@
   [m]
   (reduce
     (fn [acc [k v]]
-      (if ((@state/ancestors-fn k) :one-to-many)
-        (concat acc (map #(->Tuple (:db/id m) k % (next-fact-id!)) v))
-        (conj acc (->Tuple (:db/id m) k v (next-fact-id!)))))
+      (let [one-to-many? ((@state/ancestors-fn k) :one-to-many)]
+        (when (and one-to-many? (not (coll? v)))
+          (throw (ex-info (str "Attribute " k "is marked :one-to-many but we received an entity map
+          where its value is " v ". One to many attributes in entity maps must be collections.")
+                   {:attribute k :value v :schema-entry (@state/ancestors-fn k)})))
+        (if one-to-many?
+          (concat acc (map #(->Tuple (:db/id m) k % (next-fact-id!)) v))
+          (conj acc (->Tuple (:db/id m) k v (next-fact-id!))))))
     []
     (dissoc m :db/id)))
 
