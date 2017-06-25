@@ -1,5 +1,4 @@
-(ns ^:figwheel-always precept.core
-    (:refer-clojure :exclude [send])
+(ns precept.core
     (:require [precept.util :as util]
               [precept.listeners :as l]
               [precept.query :as q]
@@ -8,10 +7,7 @@
               [precept.spec.core :refer [validate]]
               [precept.spec.sub :as sub]
               [precept.spec.lang :as lang]
-      #?(:clj
-              [clojure.core.async :refer [<! >! put! take! chan go go-loop]])
-      #?(:clj
-              [reagent.ratom :as rr])
+      #?(:clj [clojure.core.async :refer [<! >! put! take! chan go go-loop]])
       #?(:cljs [cljs.core.async :refer [put! take! chan <! >!]])
       #?(:cljs [reagent.core :as r]))
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))

@@ -1,5 +1,5 @@
 (ns precept.state
-    (:require [reagent.core :as r]))
+    #?(:cljs (:require [reagent.core :as r])))
 
 (defn mk-ratom [args]
   #?(:clj (atom args) :cljs (r/atom args)))
