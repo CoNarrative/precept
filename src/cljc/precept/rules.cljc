@@ -117,6 +117,7 @@
              body            (if doc (rest body) body)
              properties      (if (map? (first body)) (first body) nil)
              definition      (if properties (rest body) body)
+             source-ns-name (ns-name *ns*)
              {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
              rule-defs (macros/get-rule-defs lhs rhs {:props properties :name name})]
          (when-not rhs (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).") {})))
@@ -124,8 +125,8 @@
          `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
                   `(def ~(vary-meta name assoc :rule true :doc doc)
                      (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
-                       ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/"
-                                             (clojure.core/name name)))
+                       ~name (assoc :name ~(str (clojure.core/name source-ns-name) "/"
+                                                (clojure.core/name name)))
                        ~doc (assoc :doc ~doc)))))))))
 
 #?(:clj
@@ -147,7 +148,8 @@
          (core/register-rule "query" definition nil)
          `(def ~(vary-meta name assoc :query true :doc doc)
             (cond-> ~(dsl/parse-query* binding rw-lhs {} (meta &form))
-              ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
+              ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/"
+                                       (clojure.core/name name)))
               ~doc (assoc :doc ~doc)))))))
 
 #?(:clj
@@ -171,7 +173,8 @@
              rhs `(do (precept.util/insert! ~head))]
          `(def ~(vary-meta name assoc :rule true :doc doc)
             (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
-              ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/" (clojure.core/name name)))
+              ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/"
+                                       (clojure.core/name name)))
               ~doc (assoc :doc ~doc)))))))
 
 #?(:clj
