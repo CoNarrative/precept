@@ -278,16 +278,19 @@
     (if (empty? to-retract)
       (cr/insert-all! to-insert)
       (do
-        (trace "Conflicting logical fact!" to-insert " is blocked by " to-retract)
-        (throw (ex-info "Conflicting logical fact. You may have rules whose conditions are not
-        mutually exclusive that insert! the same e-a consequence. The conditions for logically
-        inserting an e-a pair must be exclusive if the attribute is one-to-one. If you have two
-        identical accumulators and you are seeing this error, create a separate rule that inserts a
-        fact with the accumulator's result and replace the duplicate accumulators with expressions
-        that match on that fact."
-                 {:arguments facts
-                  :attempted-insert to-insert
-                  :blocking-fact to-retract}))))))
+        #?(:clj
+           (binding [*out* *err*]
+             (println "Conflicting logical fact!" to-insert " is blocked by " to-retract))
+           :cljs
+            (throw (ex-info "Conflicting logical fact. You may have rules whose conditions are not
+            mutually exclusive that insert! the same e-a consequence. The conditions for logically
+            inserting an e-a pair must be exclusive if the attribute is one-to-one. If you have two
+            identical accumulators and you are seeing this error, create a separate rule that inserts a
+            fact with the accumulator's result and replace the duplicate accumulators with expressions
+            that match on that fact."
+                     {:arguments facts
+                      :attempted-insert to-insert
+                      :blocking-fact to-retract})))))))
 
 (defn insert-unconditional!
   "Insert facts unconditionally within rule context"
