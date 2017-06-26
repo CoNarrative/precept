@@ -20,18 +20,58 @@
 (def groups [:action :calc :report :cleanup])
 (def default-group :calc)
 
-;; TODO. Pass namespace argument from define, rule.
-(defn register-rule [type lhs rhs]
+(defn matching-consequences [rhs rule-index]
+  (filter #(= rhs (:consequences %)) (vals rule-index)))
+
+(defn matching-conditions-and-consequences
+  [lhs rhs rules-index]
+  (filter #(and (= rhs (:consequences %))
+                (= lhs (:conditions %)))
+    (vals rules-index)))
+
+(defmulti register-rule
   "Returns rule name if found in registry, else registers new rule and returns name"
-  (if-let [existing (first (filter #(and (= rhs (:consequences %)) (= lhs (:conditions %))) @rules))]
-    (:name existing)
+  :type)
+
+(defn identical-conditions-and-consequences-error
+  [{:keys [existing-name type]}]
+  (println
+    (str "Found " type " with same conditions and consequences as existing definition: "
+      "Existing name: " existing-name)))
+
+(defmethod register-rule "define" [{:keys [_ ns type lhs rhs]}]
+  (if-let [existing (first (matching-conditions-and-consequences lhs rhs @rules))]
+    (do (identical-conditions-and-consequences-error
+          {:existing-name (:name existing)
+           :type "define"
+           :existing-conditions (:conditions existing)
+           :existing-consequences (:consequences existing)
+           :new-conditions lhs
+           :new-consequences rhs})
+        (symbol (:name existing)))
+    (let [id (util/guid)
+          name (symbol (str "define-" id))
+          entry {:id id
+                 :type type
+                 :name name
+                 :ns ns
+                 :conditions lhs
+                 :consequences rhs}]
+      (swap! rules assoc name entry)
+      (symbol (:name entry)))))
+
+(defmethod register-rule :default [{:keys [name ns type lhs rhs]}]
+  (if-let [existing (get rules name)]
+    (println (str "Found " type " with same conditions and consequences as existing definition: "
+               (:name existing)))
     (let [id (util/guid)
           entry {:id id
                  :type type
-                 :name (str type "-" id)
+                 :name name
+                 :ns ns
                  :conditions lhs
                  :consequences rhs}]
-      (swap! rules conj entry)
+      (swap! rules assoc name entry)
       (:name entry))))
 
 (defn notify! [sub-name update-fn]

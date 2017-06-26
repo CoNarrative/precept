@@ -20,7 +20,7 @@
 
 (def ancestors-fn (atom nil))
 
-(def rules (atom []))
+(def rules (atom {}))
 
 (defonce state (atom initial-state))
 

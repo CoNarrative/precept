@@ -8,11 +8,14 @@
                  [clara.rules :as cr]
                  [clara.macros :as cm]
                  [clara.rules.dsl :as dsl]
+                 [clara.rules.compiler :as com]
+                 [precept.state :as state]
                  [clara.rules.compiler :as com]))
 
     #?(:cljs (:require [precept.spec.sub :as sub]
                        [precept.schema :as schema]
-                       [precept.accumulators]))
+                       [precept.accumulators]
+                       [precept.state :as state]))
     #?(:cljs (:require-macros precept.rules)))
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
@@ -119,9 +122,14 @@
              definition      (if properties (rest body) body)
              source-ns-name (ns-name *ns*)
              {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
-             rule-defs (macros/get-rule-defs lhs rhs {:props properties :name name})]
+             rule-defs (macros/get-rule-defs lhs rhs {:props properties :name name})
+             _ (doseq [{:keys [name lhs rhs]} rule-defs]
+                 (core/register-rule {:name name
+                                      :ns source-ns-name
+                                      :type "rule"
+                                      :lhs lhs
+                                      :rhs rhs}))]
          (when-not rhs (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).") {})))
-         (core/register-rule "rule" lhs rhs)
          `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
                   `(def ~(vary-meta name assoc :rule true :doc doc)
                      (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
@@ -145,7 +153,7 @@
              binding (if doc (second body) (first body))
              definition (if doc (drop 2 body) (rest body))
              rw-lhs (reverse (into '() (macros/rewrite-lhs definition)))]
-         (core/register-rule "query" definition nil)
+         (core/register-rule {:name name :ns *ns* :type "query" :lhs definition :rhs nil})
          `(def ~(vary-meta name assoc :query true :doc doc)
             (cond-> ~(dsl/parse-query* binding rw-lhs {} (meta &form))
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/"
@@ -168,9 +176,15 @@
        (let [{:keys [body head]} (util/split-head-body forms)
              properties nil
              doc nil
-             name (symbol (core/register-rule "define" body head))
              lhs (macros/rewrite-lhs body)
-             rhs `(do (precept.util/insert! ~head))]
+             rhs `(do (precept.util/insert! ~head))
+             name (core/register-rule
+                    {:name nil
+                     :type "define"
+                     :ns (ns-name *ns*)
+                     :lhs lhs
+                     :rhs rhs
+                     :consequent-facts head})]
          `(def ~(vary-meta name assoc :rule true :doc doc)
             (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
               ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/"
@@ -200,13 +214,45 @@
              {:keys [lhs rhs]} (dsl/split-lhs-rhs definition)
              sub-rhs (macros/parse-sub-rhs rhs)
              sub-cond `[[[~'?e___sub___impl ::sub/request ~kw]]]
-             rule-defs (macros/get-rule-defs (into lhs sub-cond) sub-rhs {:name name :props properties})]
-             ;_ (core/register-rule "subscription" rw-lhs sub-rhs)]
+             rule-defs (macros/get-rule-defs
+                         (into lhs sub-cond)
+                         sub-rhs {:name name :props properties})
+             _ (doseq [{:keys [name lhs rhs]} rule-defs]
+                 (core/register-rule {:name name
+                                      :ns (ns-name *ns*)
+                                      :type "subscription"
+                                      :lhs lhs
+                                      :rhs rhs}))]
          `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
                   `(def ~(vary-meta name assoc :rule true :doc doc)
                      (cond-> ~(dsl/parse-rule* lhs rhs {:group :report} {} (meta &form))
                        ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/"
-                                             (clojure.core/name name)))
+                                                (clojure.core/name name)))
                        ~doc (assoc :doc ~doc)))))))))
 
 (def fire-rules clara.rules/fire-rules)
+
+#?(:clj
+   (defn rules-in-ns
+     [ns-sym]
+     (let [rule-syms (map (comp symbol :name)
+                       (filter #(= (:ns %) ns-sym)
+                         (vals @state/rules)))]
+       (set rule-syms)))
+
+   :cljs
+   (defn rules-in-ns
+     [ns-sym]
+     (let [rule-syms (map (comp symbol :name) @state/rules)]
+       (set rule-syms))))
+
+(defn unmap-all-rules
+  "Usage: `(unmap-all-rules *ns*)`
+          `(unmap-all-rules 'my-ns)`"
+  [rule-ns]
+  (let [registered-rules (rules-in-ns (ns-name rule-ns))]
+    (doseq [[k v] (ns-interns rule-ns)]
+      (when (contains? registered-rules k)
+        (ns-unmap rule-ns k)))
+    (do (reset! state/rules {})
+        (ns-interns rule-ns))))

@@ -269,6 +269,22 @@
             session-with-inserts
             to-retract)))))
 
+#?(:clj
+    (defn conflicting-logical-fact-error [facts to-insert to-retract]
+      (binding [*out* *err*]
+        (println "Conflicting logical fact!" to-insert " is blocked by " to-retract))))
+#?(:cljs
+    (defn conflicting-logical-fact-error [facts to-insert to-retract]
+      (throw (ex-info "Conflicting logical fact. You may have rules whose conditions are not
+                  mutually exclusive that insert! the same e-a consequence. The conditions for logically
+                  inserting an e-a pair must be exclusive if the attribute is one-to-one. If you have two
+                  identical accumulators and you are seeing this error, create a separate rule that inserts a
+                  fact with the accumulator's result and replace the duplicate accumulators with expressions
+                  that match on that fact."
+               {:arguments facts
+                :attempted-insert to-insert
+                :blocking-fact to-retract}))))
+
 (defn insert!
   "Insert facts logically within rule context"
   [facts]
@@ -277,20 +293,7 @@
     (trace "[insert!] : conflicting " to-retract)
     (if (empty? to-retract)
       (cr/insert-all! to-insert)
-      (do
-        #?(:clj
-           (binding [*out* *err*]
-             (println "Conflicting logical fact!" to-insert " is blocked by " to-retract))
-           :cljs
-            (throw (ex-info "Conflicting logical fact. You may have rules whose conditions are not
-            mutually exclusive that insert! the same e-a consequence. The conditions for logically
-            inserting an e-a pair must be exclusive if the attribute is one-to-one. If you have two
-            identical accumulators and you are seeing this error, create a separate rule that inserts a
-            fact with the accumulator's result and replace the duplicate accumulators with expressions
-            that match on that fact."
-                     {:arguments facts
-                      :attempted-insert to-insert
-                      :blocking-fact to-retract})))))))
+      (conflicting-logical-fact-error facts to-insert to-retract))))
 
 (defn insert-unconditional!
   "Insert facts unconditionally within rule context"
@@ -433,8 +436,3 @@
   "Returns true if vector tuple attribute is one that should not be in view model"
   [[e a v]]
   (contains? impl-facts (namespace a)))
-
-;; TODO. Find right ns fns
-;(defn unmap-all-rule-nses [nses]
-;  (doseq [[k _] (ns-publics *ns*)]
-;    (ns-unmap *ns* k)))
