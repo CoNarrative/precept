@@ -1,6 +1,5 @@
 (ns precept.schema
     (:require [precept.spec.sub :as sub]
-              [precept.query :as q]
               [precept.util :refer [guid]]
               [precept.state :as state]))
 
@@ -28,8 +27,8 @@
               acc))
     [] tuples))
 
-(defn unique-facts [session unique-attrs]
-  (mapcat #(q/facts-where session %) unique-attrs))
+;(defn unique-facts [session unique-attrs]
+;  (mapcat #(q/facts-where session %) unique-attrs))
 
 (defn attribute
   "Creates a Datomic schema entry for an attribute. Cardinality defaults to
