@@ -10,8 +10,10 @@
               [precept.spec.sub :as sub]
               [precept.util :as util]
               [precept.schema :as schema]
+              [cljs.env :as env]
               [clojure.spec :as s]
-              [clara.rules :as cr]))
+              [clara.rules :as cr]
+              [precept.state :as state]))
 
 (defn trace [& args]
   (comment (apply prn args)))
@@ -30,6 +32,7 @@
                          :activation-group-sort-fn `(util/make-activation-group-sort-fn
                                                       ~core/groups ~core/default-group)}
                    (dissoc options-in :db-schema :client-schema)))
+        ;_ (doseq [source sources] (unmap-all-rules source))
         body (into options (conj sources `'precept.impl.rules))]
     `(cm/defsession ~name ~@body)))
 
@@ -329,7 +332,12 @@
         rule-defs      (get-rule-defs lhs rhs {:props properties :name name})
         passthrough (filter some? (list doc properties))
         unwrite-rhs (rest rhs)]
-    (core/register-rule "rule" lhs rhs)
+        ;_ (doseq [{:keys [name lhs rhs]} rule-defs]
+        ;    (core/register-rule {:name name
+        ;                         :ns (ns-name *ns*)
+        ;                         :type "rule"
+        ;                         :lhs lhs
+        ;                         :rhs rhs)]
     `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
             `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
 
@@ -341,16 +349,23 @@
         definition (if doc (drop 2 body) (rest body))
         rw-lhs      (rewrite-lhs definition)
         passthrough (filter #(not (nil? %)) (list doc binding))]
-    (core/register-rule "query" definition nil)
+    ;(core/register-rule "query" definition nil)
     `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
 
 (defmacro define
   "CLJS version of define"
   [& forms]
   (let [{:keys [body head]} (util/split-head-body forms)
-        name (symbol (core/register-rule "define" body head))
+        ;name (symbol (core/register-rule "define" body head))
         lhs (rewrite-lhs body)
-        rhs (list `(precept.util/insert! ~head))]
+        rhs (list `(precept.util/insert! ~head))
+        name (core/register-rule
+               {:name nil
+                :type "define"
+                :ns (ns-name *ns*)
+                :lhs lhs
+                :rhs rhs
+                :consequent-facts head})]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
 
 (defmacro defsub
@@ -368,3 +383,12 @@
         rule-defs (get-rule-defs (into lhs sub-cond) sub-rhs {:name name :props properties})]
       `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
                `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
+
+
+(defn unmap-all-rules
+  [rule-ns]
+  (let [registered-rules (get-in @env/*compiler* [:clara.macros/productions rule-ns])
+        _ (println "Found registered rules " registered-rules)]
+    (doseq [[k v] registered-rules]
+      (swap! @env/*compiler* util/dissoc-in [:clara.macros/productions rule-ns k]))
+    (println "Removed productions " (get-in @env/*compiler* [:clara.macros/productions rule-ns]))))

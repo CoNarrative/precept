@@ -248,13 +248,14 @@
      (let [rule-syms (map (comp symbol :name) @state/rules)]
        (set rule-syms))))
 
-(defn unmap-all-rules
-  "Usage: `(unmap-all-rules *ns*)`
-          `(unmap-all-rules 'my-ns)`"
-  [rule-ns]
-  (let [registered-rules (rules-in-ns (ns-name rule-ns))]
-    (doseq [[k v] (ns-interns rule-ns)]
-      (when (contains? registered-rules k)
-        (ns-unmap rule-ns k)))
-    (do (reset! state/rules {})
-        (ns-interns rule-ns))))
+#?(:clj
+    (defn unmap-all-rules
+      "Usage: `(unmap-all-rules *ns*)`
+              `(unmap-all-rules 'my-ns)`"
+      [rule-ns]
+      (let [registered-rules (rules-in-ns (ns-name rule-ns))]
+        (doseq [[k v] (ns-interns rule-ns)]
+          (when (contains? registered-rules k)
+            (ns-unmap rule-ns k)))
+        (do (reset! state/rules {})
+            (ns-interns rule-ns)))))

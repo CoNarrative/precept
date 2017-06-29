@@ -64,13 +64,13 @@
                       :pretty-print true}}
 
       :macros
-      {:source-paths ["test/macros"]
+      {:source-paths ["test/macros/clj" "test/macros/cljs" "test/macros/cljc"]
        :compiler
-                     {:main "precept.app-ns"
+                     {:main "precept.app"
                       :output-to "target/cljsbuild/public/js/macros/macros.js"
                       :output-dir "target/cljsbuild/public/js/macros/out"
                       :asset-path "/js/macros/out"
-                      :verbose true
+                      ;:verbose true
                       :optimizations :none
                       :cache-analysis false
                       :source-map true

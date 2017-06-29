@@ -34,20 +34,21 @@
 
 (defn identical-conditions-and-consequences-error
   [{:keys [existing-name type]}]
-  (println
-    (str "Found " type " with same conditions and consequences as existing definition: "
-      "Existing name: " existing-name)))
+  (throw
+    (ex-info (str "Found " type
+               " with same conditions and consequences as existing definition: " "Existing name: " existing-name)
+             {})))
 
 (defmethod register-rule "define" [{:keys [_ ns type lhs rhs]}]
   (if-let [existing (first (matching-conditions-and-consequences lhs rhs @rules))]
-    (do (identical-conditions-and-consequences-error
-          {:existing-name (:name existing)
-           :type "define"
-           :existing-conditions (:conditions existing)
-           :existing-consequences (:consequences existing)
-           :new-conditions lhs
-           :new-consequences rhs})
-        (symbol (:name existing)))
+  ;  (do (identical-conditions-and-consequences-error
+  ;        {:existing-name (:name existing)
+  ;         :type "define"
+  ;         :existing-conditions (:conditions existing)
+  ;         :existing-consequences (:consequences existing)
+  ;         :new-conditions lhs
+  ;         :new-consequences rhs
+    (symbol (:name existing))
     (let [id (util/guid)
           name (symbol (str "define-" id))
           entry {:id id
@@ -61,8 +62,8 @@
 
 (defmethod register-rule :default [{:keys [name ns type lhs rhs]}]
   (if-let [existing (get rules name)]
-    (println (str "Found " type " with same conditions and consequences as existing definition: "
-               (:name existing)))
+    ;(println (str "Found " type " with same conditions and consequences as existing definition: "
+    (:name existing)
     (let [id (util/guid)
           entry {:id id
                  :type type
