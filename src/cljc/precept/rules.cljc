@@ -232,6 +232,8 @@
 
 (def fire-rules clara.rules/fire-rules)
 
+(def q clara.rules/query)
+
 #?(:clj
    (defn rules-in-ns
      [ns-sym]

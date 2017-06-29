@@ -1,7 +1,6 @@
 (ns precept.core
     (:require [precept.util :as util]
               [precept.listeners :as l]
-              [precept.query :as q]
               [precept.state :refer [fact-id rules store state] :as s]
               [clara.rules :refer [fire-rules]]
               [precept.spec.core :refer [validate]]

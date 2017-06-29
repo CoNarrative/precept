@@ -3,7 +3,6 @@
               [precept.util :refer :all]
               [precept.core :as core]
               [precept.state :as state]
-              [precept.query :as q]
               [precept.schema :as schema]
               [precept.rules :refer [session]]
               [precept.schema-fixture :refer [test-schema]]
