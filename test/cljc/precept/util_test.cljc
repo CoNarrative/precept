@@ -318,8 +318,6 @@
         unique-value-conflicting (->Tuple 1 ::test/unique-value "foo" 9)
         unique-value-upsert (->Tuple 2 ::test/unique-value "bar" 10)
         unique-value (->Tuple 2 ::test/unique-value "foo" 11)]
-;; attempting to fix the bug approach
-;; when there is a one to one that is in the index (e a) remove itreplace it
     (testing "Initial state"
       (is (= {} (reset! state/fact-index {}))
           "Expected fact index to be {}")
@@ -461,5 +459,24 @@
             _ (update-index! unique)]
         (is (= [true true] (remove-fact-from-index! unique)))
         (is (= @state/fact-index {}))))))
+
+(deftest unconditional-inserts-test
+  (reset! state/unconditional-inserts #{})
+  (let [empty-session @(session test-session
+                         'precept.util-test
+                         :db-schema test-schema)
+        test-facts (util/entity-map->Tuples
+                     {:db/id 1
+                      ::test/one-to-many [1 2 3 4 5]
+                      ::test/one-to-one "foo!"
+                      ::test/unique-identity "bar!"
+                      ::test/unique-value "baz!"})
+        inserted (-> empty-session
+                    (util/insert test-facts))]
+    (is (= @state/unconditional-inserts (set test-facts))
+      (let [retracted-session (-> inserted
+                                  (util/retract test-facts))]
+        (is (= #{} @state/unconditional-inserts))))))
+
 
 (run-tests)

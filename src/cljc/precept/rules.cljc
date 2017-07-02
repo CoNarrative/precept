@@ -4,13 +4,15 @@
                  [precept.macros :as macros]
                  [precept.schema :as schema]
                  [precept.spec.sub :as sub]
+                 [precept.spec.lang :as lang]
                  [precept.util :as util]
                  [clara.rules :as cr]
                  [clara.macros :as cm]
                  [clara.rules.dsl :as dsl]
                  [clara.rules.compiler :as com]
                  [precept.state :as state]
-                 [clara.rules.compiler :as com]))
+                 [clara.rules.compiler :as com]
+                 [clojure.spec :as s]))
 
     #?(:cljs (:require [precept.spec.sub :as sub]
                        [precept.schema :as schema]
@@ -99,7 +101,10 @@
                                                    ~core/groups ~core/default-group)}
              options (mapcat identity (merge defaults (dissoc options-in :db-schema :client-schema)))
              body (into options (concat sources impl-sources))]
-         `(def ~name (com/mk-session `~[~@body]))))))
+         `(let [x# (com/mk-session `~[~@body])]
+           (do
+             (swap! state/session-defs assoc '~name x#)
+             (def ~name x#) #_(com/mk-session `~[~@body])))))))
 
 #?(:clj
    (defmacro rule
@@ -250,12 +255,23 @@
 
 #?(:clj
     (defn unmap-all-rules
-      "Usage: `(unmap-all-rules *ns*)`
-              `(unmap-all-rules 'my-ns)`"
-      [rule-ns]
-      (let [registered-rules (rules-in-ns (ns-name rule-ns))]
-        (doseq [[k v] (ns-interns rule-ns)]
-          (when (contains? registered-rules k)
-            (ns-unmap rule-ns k)))
-        (do (reset! state/rules {})
-            (ns-interns rule-ns)))))
+      ([rule-ns] (unmap-all-rules rule-ns (:session @state/state)))
+      ([rule-ns sess]
+       ;{:pre [(s/assert ::lang/session session)]}
+       {:pre [(not (nil? sess))]}
+       (let [registered-rules (rules-in-ns (ns-name rule-ns))
+             _ (println "Registered rules" registered-rules)
+             facts (vec @state/unconditional-inserts)
+             empty-session (get @state/session-defs (symbol (name sess)))]
+         (doseq [[k v] (ns-interns rule-ns)]
+           (when (contains? registered-rules k)
+             (ns-unmap rule-ns k)))
+         (do (reset! state/rules {})
+             (reset! state/unconditional-inserts #{})
+             (reset! state/fact-index {})
+             {:session
+               (-> empty-session
+                 (util/insert facts)
+                 (fire-rules))
+              :ns-interns (ns-interns rule-ns)})))))
+

@@ -17,9 +17,10 @@
       #?(:cljs [precept.rules :refer-macros [define defsub session rule]])))
 
 (defn trace [& args]
-  (apply prn args))
+  (apply println args))
 
-(rules/unmap-all-rules *ns*)
+;(declare app-session)
+
 ;@state/rules
 ;(core/matching-consequences
 ;  '(do (precept.util/insert [?e :entry/new-title "Hello again!"]))
@@ -27,8 +28,13 @@
 ;(reset! state/rules {})
 ;(vals @state/rules)
 
-;(define [?e :entry/new-title "Hello again!"]
-;  :- [[?e :entry/title]])
+(define [?e :entry/new-title (str "Hello " ?v)]
+  :- [[?e :entry/title ?v]])
+
+(rule detect-new-title
+  [[_ :entry/new-title ?v]]
+  =>
+  (println "New title!" ?v))
 
 ;(rule check-conflicting-insert-logical
 ;  [?fact <- [?e :entry/title]]
@@ -44,18 +50,19 @@
 
 
 
-(rule all-facts
-  {:group :report}
-  [?facts <- (acc/all) :from [:all]]
-  =>
-  (do nil))
+;(rule all-facts
+;  {:group :report}
+;  [?facts <- (acc/all) :from [:all]]
+;  =>
+;  (do nil))
   ;(println "FACTs at the end!" ?facts))
 
-(rule print-entity
-  [[?e :todo/title]]
-  [(<- ?entity (entity ?e))]
-  =>
-  (trace "Entity!" ?entity))
+;(rule print-entity
+;  [[?e :todo/title]]
+;  [(<- ?entity (entity ?e))]
+;  =>
+;  (insert! {:db/id "hey" :some-entity ?entity})
+;  (trace "Entity!" ?entity))
 
 (defsub :my-sub
   [?name <- [_ :foo/name]]
@@ -79,7 +86,8 @@
   [[?e ::err/type]]
   [(<- ?error (entity ?e))]
   =>
-  (trace "Found error!" ?error))
+  (trace "Found error!" ?error)
+  (retract! ?error))
 
 (defn foo? [x y] (not= x y))
 
@@ -129,6 +137,14 @@
    'precept.rules-debug
    :db-schema test-schema)
 ;(reset! precept.state/fact-index {})
+;(reset! state/session-defs {})
+@state/session-defs
+@state/rules
+@state/unconditional-inserts
+(ns-interns *ns*)
+
+
+;(rules/unmap-all-rules *ns* 'app-session)
 
 (-> app-session
   (l/replace-listener)
@@ -147,8 +163,8 @@
                 [2 :todo/title "Second"]
                 [3 :todo/title "Second"]
                 [5 ::sub/request :my-sub-2]])
-  (cr/fire-rules))
-  ;(l/vec-ops))
+  (cr/fire-rules)
+  (l/vec-ops))
 
 ;(l/vec-ops app-session)
 

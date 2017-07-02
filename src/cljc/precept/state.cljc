@@ -22,6 +22,10 @@
 
 (def rules (atom {}))
 
+(def session-defs (atom {}))
+
+(def unconditional-inserts (atom #{}))
+
 (defonce state (atom initial-state))
 
 (defonce store (mk-ratom {}))
