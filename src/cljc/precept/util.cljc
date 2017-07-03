@@ -54,16 +54,17 @@
 (defn next-fact-id! [] (swap! state/fact-id inc))
 (defn reset-fact-id! [] (reset! state/fact-id -1))
 
+(defrecord Tuple [e a v t])
+
 (defn print-format-Tuple [rec]
   (let [vec (mapv
               (fn [[k v]]
                 (if (= Tuple (type v))
-                  (print-format-Tuple v)
+                  (symbol (print-format-Tuple v))
                   v))
               rec)]
    (str "Tuple" vec "\n")))
 
-(defrecord Tuple [e a v t])
 
 #?(:clj
     (defmethod print-method Tuple [v ^java.io.Writer w]
@@ -284,9 +285,9 @@
   Accepts `[e a v]`, `[[e a v]...]`, `{}`, `[{}...]`, where `{}` is a Datomic-style entity map"
   [session facts]
   (let [[to-insert to-retract] (conform-insertions-and-retractions! facts)
-        _ (println "[insert] facts" facts)
-        _ (println "[insert] to-insert " to-insert)
-        _ (println "[insert] to-retract " to-retract)]
+        _ (trace "[insert] facts" facts)
+        _ (trace "[insert] to-insert " to-insert)
+        _ (trace "[insert] to-retract " to-retract)]
     (if (empty? to-retract)
       (do (swap! state/unconditional-inserts clojure.set/union (set to-insert))
           (cr/insert-all session to-insert))
