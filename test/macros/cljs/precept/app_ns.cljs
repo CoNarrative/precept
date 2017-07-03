@@ -38,11 +38,12 @@
 
 (session my-session 'precept.app-ns)
 
-(reset! precept.state/fact-index {})
-(some-macro 'precept.app-ns)
+;(reset! precept.state/fact-index {})
+;(some-macro 'precept.app-ns)
 ;@precept.state/fact-index
 ;(println @precept.state/fact-index)
 ;
+;@precept.state/session-defs
 ;(ns-interns 'precept.app-ns)
 
 ;(ns-unmap 'precept.app-ns 'next-rule)

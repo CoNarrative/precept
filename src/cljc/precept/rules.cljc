@@ -100,11 +100,16 @@
                        :activation-group-sort-fn `(util/make-activation-group-sort-fn
                                                    ~core/groups ~core/default-group)}
              options (mapcat identity (merge defaults (dissoc options-in :db-schema :client-schema)))
-             body (into options (concat sources impl-sources))]
-         `(let [x# (com/mk-session `~[~@body])]
+             body (into options (concat sources impl-sources))
+             interned-ns-name (ns-name *ns*)]
+         `(let [body# `~[~@body]
+                rule-nses# (vector ~@sources ~@impl-sources)
+                session-obj# (com/mk-session body#)]
            (do
-             (swap! state/session-defs assoc '~name x#)
-             (def ~name x#) #_(com/mk-session `~[~@body])))))))
+             (swap! state/session-defs assoc '~name {:body body#
+                                                     :ns-name '~interned-ns-name
+                                                     :rule-nses rule-nses#})
+             (def ~name session-obj#)))))))
 
 #?(:clj
    (defmacro rule
@@ -238,40 +243,3 @@
 (def fire-rules clara.rules/fire-rules)
 
 (def q clara.rules/query)
-
-#?(:clj
-   (defn rules-in-ns
-     [ns-sym]
-     (let [rule-syms (map (comp symbol :name)
-                       (filter #(= (:ns %) ns-sym)
-                         (vals @state/rules)))]
-       (set rule-syms)))
-
-   :cljs
-   (defn rules-in-ns
-     [ns-sym]
-     (let [rule-syms (map (comp symbol :name) @state/rules)]
-       (set rule-syms))))
-
-#?(:clj
-    (defn unmap-all-rules
-      ([rule-ns] (unmap-all-rules rule-ns (:session @state/state)))
-      ([rule-ns sess]
-       ;{:pre [(s/assert ::lang/session session)]}
-       {:pre [(not (nil? sess))]}
-       (let [registered-rules (rules-in-ns (ns-name rule-ns))
-             _ (println "Registered rules" registered-rules)
-             facts (vec @state/unconditional-inserts)
-             empty-session (get @state/session-defs (symbol (name sess)))]
-         (doseq [[k v] (ns-interns rule-ns)]
-           (when (contains? registered-rules k)
-             (ns-unmap rule-ns k)))
-         (do (reset! state/rules {})
-             (reset! state/unconditional-inserts #{})
-             (reset! state/fact-index {})
-             {:session
-               (-> empty-session
-                 (util/insert facts)
-                 (fire-rules))
-              :ns-interns (ns-interns rule-ns)})))))
-

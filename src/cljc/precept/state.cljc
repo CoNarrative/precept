@@ -2,9 +2,10 @@
     #?(:cljs (:require [reagent.core :as r])))
 
 (defn mk-ratom [args]
-  #?(:clj (atom args) :cljs (r/atom args)))
+  #?(:clj (atom args)
+     :cljs (r/atom args)))
 
-(def initial-state
+(defonce initial-state
   {:session nil
    :session-history false ;; TODO. To enable/disable
    ;:session-history '() ;; TODO. Own atom (public).
@@ -21,6 +22,8 @@
 (def ancestors-fn (atom nil))
 
 (def rules (atom {}))
+
+(def rule-files (atom #{}))
 
 (def session-defs (atom {}))
 

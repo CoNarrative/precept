@@ -20,12 +20,12 @@
 (def default-group :calc)
 
 (defn matching-consequences [rhs rule-index]
-  (filter #(= rhs (:consequences %)) (vals rule-index)))
+  (filter #(= rhs (:rhs %)) (vals rule-index)))
 
 (defn matching-conditions-and-consequences
   [lhs rhs rules-index]
-  (filter #(and (= rhs (:consequences %))
-                (= lhs (:conditions %)))
+  (filter #(and (= rhs (:rhs %))
+                (= lhs (:lhs %)))
     (vals rules-index)))
 
 (defmulti register-rule
@@ -55,8 +55,8 @@
                  :type type
                  :name name
                  :ns ns
-                 :conditions lhs
-                 :consequences rhs}]
+                 :lhs lhs
+                 :rhs rhs}]
       (swap! rules assoc name entry)
       (symbol (:name entry)))))
 
@@ -69,8 +69,8 @@
                  :type type
                  :name name
                  :ns ns
-                 :conditions lhs
-                 :consequences rhs}]
+                 :lhs lhs
+                 :rhs rhs}]
       (swap! rules assoc name entry)
       (:name entry))))
 

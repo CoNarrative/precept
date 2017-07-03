@@ -23,6 +23,7 @@
   [name & sources-and-options]
   (let [sources (take-while (complement keyword?) sources-and-options)
         options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
+        impl-sources `['precept.impl.rules]
         hierarchy `(schema/init! (select-keys ~options-in [:db-schema :client-schema]))
         ancestors-fn `(util/make-ancestors-fn ~hierarchy)
         options (mapcat identity
@@ -32,9 +33,15 @@
                          :activation-group-sort-fn `(util/make-activation-group-sort-fn
                                                       ~core/groups ~core/default-group)}
                    (dissoc options-in :db-schema :client-schema)))
-        ;_ (doseq [source sources] (unmap-all-rules source))
-        body (into options (conj sources `'precept.impl.rules))]
-    `(cm/defsession ~name ~@body)))
+        body (into options (conj sources `'precept.impl.rules))
+        interned-ns-name (ns-name *ns*)]
+    `(let [body# `~[~@body]
+           rule-nses# (vector ~@sources ~@impl-sources)]
+       (do
+         (swap! state/session-defs assoc '~name {:body body#
+                                                 :ns-name '~interned-ns-name
+                                                 :rule-nses rule-nses#})
+        (cm/defsession ~name ~@body)))))
 
 (defn parse-sub-rhs [rhs]
   (let [map-only? (map? (first (rest rhs)))
