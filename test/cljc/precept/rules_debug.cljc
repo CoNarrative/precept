@@ -11,13 +11,17 @@
               [precept.state :as state]
               [precept.schema-fixture :refer [test-schema]]
               [clara.rules.compiler :as com]
+              [precept.repl :as repl]
               [precept.util :refer [insert! insert-unconditional! retract! guid] :as util]
-      #?(:clj [precept.dsl :refer [<- entity entities]])
-      #?(:clj [precept.rules :refer [session rule define defsub] :as rules])
+      #?(:clj
+              [precept.dsl :refer [<- entity entities]])
+      #?(:clj
+              [precept.rules :refer [session rule define defsub] :as rules])
       #?(:cljs [precept.rules :refer-macros [define defsub session rule]])))
 
 (defn trace [& args]
   (apply println args))
+
 
 ;(declare app-session)
 
@@ -37,7 +41,7 @@
   (println "New title!" ?v))
 
 ;(rule check-conflicting-insert-logical
-;  [?fact <- [?e :entry/title]]
+  ;  [?fact <- [?e :entry/title]]
 ;  =>
 ;  (println "This should produce a conflict" (into [] (vals ?fact)))
 ;  (insert! [?e :entry/new-title "Hello again!"]))
@@ -138,33 +142,35 @@
    :db-schema test-schema)
 ;(reset! precept.state/fact-index {})
 ;(reset! state/session-defs {})
+@state/fact-index
 @state/session-defs
+;(reset! state/session-defs {})
 @state/rules
+@state/rule-files
 @state/unconditional-inserts
 (ns-interns *ns*)
 
 
-;(rules/unmap-all-rules *ns* 'app-session)
-
-(-> app-session
-  (l/replace-listener)
-  (util/insert [[1 :entry/title "First"]
-                [1 :entry/title "Second"]
-                [2 :todo/title "First"]
-                [5 :some-type-name :todo/title]
-                [6 :the-keyword-e :e]
-                [3 ::sub/request :my-sub]
-                [:transient :test "foo"]
-                [1 :interesting-fact 42]
-                [2 :interesting-fact 42]
-                [3 :interesting-fact 42]
-                [4 :interesting-fact 42]
-                [4 :interesting-fact 43]
-                [2 :todo/title "Second"]
-                [3 :todo/title "Second"]
-                [5 ::sub/request :my-sub-2]])
-  (cr/fire-rules)
-  (l/vec-ops))
+(def end-session
+  (-> app-session
+    (l/replace-listener)
+    (util/insert [[1 :entry/title "First"]
+                  [1 :entry/title "Second"]
+                  [2 :todo/title "First"]
+                  [5 :some-type-name :todo/title]
+                  [6 :the-keyword-e :e]
+                  [3 ::sub/request :my-sub]
+                  [:transient :test "foo"]
+                  [1 :interesting-fact 42]
+                  [2 :interesting-fact 42]
+                  [3 :interesting-fact 42]
+                  [4 :interesting-fact 42]
+                  [4 :interesting-fact 43]
+                  [2 :todo/title "Second"]
+                  [3 :todo/title "Second"]
+                  [5 ::sub/request :my-sub-2]])
+    (cr/fire-rules)))
+  ;(l/vec-ops))
 
 ;(l/vec-ops app-session)
 
