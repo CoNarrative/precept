@@ -1,4 +1,4 @@
-(defproject precept "0.3.1-alpha"
+(defproject precept "0.3.2-alpha"
   :description "A declarative programming framework"
   :url          "https://github.com/CoNarrative/precept.git"
   :license      {:name "MIT"
@@ -7,8 +7,7 @@
                  [org.clojure/spec.alpha "0.1.109"]
                  [org.clojure/clojurescript "1.9.562"]
                  [org.clojure/core.async "0.3.442"]
-                 [com.cerner/clara-rules "0.15.0" :exclusions [prismatic/schema]]
-                 [prismatic/schema "1.1.6"]
+                 [com.cerner/clara-rules "0.15.1"]
                  [reagent "0.6.0"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]

@@ -329,7 +329,6 @@
         rule-defs      (get-rule-defs lhs rhs {:props properties :name name})
         passthrough (filter some? (list doc properties))
         unwrite-rhs (rest rhs)]
-    (core/register-rule "rule" lhs rhs)
     `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
             `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
 
@@ -341,14 +340,13 @@
         definition (if doc (drop 2 body) (rest body))
         rw-lhs      (rewrite-lhs definition)
         passthrough (filter #(not (nil? %)) (list doc binding))]
-    (core/register-rule "query" definition nil)
     `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
 
 (defmacro define
   "CLJS version of define"
   [& forms]
   (let [{:keys [body head]} (util/split-head-body forms)
-        name (symbol (core/register-rule "define" body head))
+        name (symbol (core/register-rule {:type "define" :lhs body :rhs head}))
         lhs (rewrite-lhs body)
         rhs (list `(precept.util/insert! ~head))]
     `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
