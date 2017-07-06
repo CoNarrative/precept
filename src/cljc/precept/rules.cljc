@@ -13,12 +13,14 @@
                  [precept.state :as state]
                  [clara.rules.compiler :as com]
                  [clojure.spec :as s]))
-
     #?(:cljs (:require [precept.spec.sub :as sub]
                        [precept.schema :as schema]
+                       [precept.core :as core]
                        [precept.accumulators]
                        [precept.state :as state]))
     #?(:cljs (:require-macros precept.rules)))
+
+
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj

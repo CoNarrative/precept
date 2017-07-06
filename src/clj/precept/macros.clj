@@ -37,11 +37,9 @@
         interned-ns-name (ns-name *ns*)]
     `(let [body# `~[~@body]
            rule-nses# (vector ~@sources ~@impl-sources)]
-       (do
-         (swap! state/session-defs assoc '~name {:body body#
-                                                 :ns-name '~interned-ns-name
-                                                 :rule-nses rule-nses#})
-        (cm/defsession ~name ~@body)))))
+       (do (swap! state/session-defs assoc '~name
+             {:body body# :ns-name '~interned-ns-name :rule-nses rule-nses#})
+           (cm/defsession ~name ~@body)))))
 
 (defn parse-sub-rhs [rhs]
   (let [map-only? (map? (first (rest rhs)))
@@ -338,15 +336,20 @@
         {:keys [lhs rhs]} (cr-dsl/split-lhs-rhs definition)
         rule-defs      (get-rule-defs lhs rhs {:props properties :name name})
         passthrough (filter some? (list doc properties))
-        unwrite-rhs (rest rhs)]
-        ;_ (doseq [{:keys [name lhs rhs]} rule-defs]
-        ;    (core/register-rule {:name name
-        ;                         :ns (ns-name *ns*)
-        ;                         :type "rule"
-        ;                         :lhs lhs
-        ;                         :rhs rhs)]
+        unwrite-rhs (rest rhs)
+        ;; Probably don't need to register rules at compile time, just defines. Revisit
+        ;; at end of REPL PR
+        register-compilation (core/register-rule
+                               {:name name :ns *ns* :type "rule" :lhs lhs :rhs rhs})]
     `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
-            `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
+              `(let [rule-data# {:name '~name
+                                 :ns *ns*
+                                 :type "rule"
+                                 :lhs '~lhs
+                                 :rhs '~rhs}]
+                (do
+                  (core/register-rule rule-data#)
+                  (cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))))
 
 (defmacro defquery
   "CLJS version of defquery"
@@ -356,24 +359,34 @@
         definition (if doc (drop 2 body) (rest body))
         rw-lhs      (rewrite-lhs definition)
         passthrough (filter #(not (nil? %)) (list doc binding))]
-    ;(core/register-rule "query" definition nil)
-    `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
+    `(let [lhs# '~rw-lhs
+           ns# *ns*]
+       (do
+         (core/register-rule
+            {:name '~name :ns ns# :type "query" :lhs lhs# :rhs nil})
+         (cm/defquery ~name ~@passthrough ~@rw-lhs)))))
 
 (defmacro define
   "CLJS version of define"
   [& forms]
   (let [{:keys [body head]} (util/split-head-body forms)
-        ;name (symbol (core/register-rule "define" body head))
         lhs (rewrite-lhs body)
         rhs (list `(precept.util/insert! ~head))
         name (core/register-rule
                {:name nil
                 :type "define"
                 :ns (ns-name *ns*)
-                :lhs lhs
+                :lhs `'~lhs ;; must be quoted for hash equivalence between CLJS, CLJ
                 :rhs rhs
                 :consequent-facts head})]
-    `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
+    `(let [name# (core/register-rule
+                     {:name nil
+                      :type "define"
+                      :ns nil
+                      :lhs ''~lhs
+                      :rhs '~rhs
+                      :consequent-facts '~head})]
+       (cm/defrule ~name ~@lhs ~'=> ~@rhs))))
 
 (defmacro defsub
   [kw & body]

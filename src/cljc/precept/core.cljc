@@ -49,7 +49,7 @@
   ;         :new-conditions lhs
   ;         :new-consequences rhs
     (symbol (:name existing))
-    (let [id (util/guid)
+    (let [id (str (hash (str lhs rhs)))
           name (symbol (str "define-" id))
           entry {:id id
                  :type type

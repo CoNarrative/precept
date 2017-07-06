@@ -1,19 +1,21 @@
 (ns precept.app-ns
   (:require [precept.rules :refer [rule define session q defquery fire-rules]]
             [precept.util :as util]
-            [precept.macros-cljc-ns :refer-macros [some-macro]]
-            [precept.accumulators :as acc]))
+    ;[precept.macros-cljc-ns :refer-macros [some-macro]]
+            [precept.repl :as repl]
+            [precept.accumulators :as acc]
+            [precept.state :as state]))
 
 
 (enable-console-print!)
 
-(rule hello-world
-  [?fact <- [_ :foo]]
-  =>
-  (.log js/console "1" ?fact)
-  (util/insert! [1 :duplicate-fact-error 1]))
-
-;(define [?e :fact 3] :- [[?e :foo]])
+;(rule hello-world
+;  [?fact <- [_ :foo]]
+;  =>
+;  (.log js/console "1" ?fact)
+;  (util/insert! [1 :duplicate-fact-error 1]))
+;
+(define [?e :fact 3] :- [[?e :foo]])
 
 ;(rule next-rule
 ;  [?fact <- [_ :duplicate-fact-error]]
@@ -43,21 +45,27 @@
 ;@precept.state/fact-index
 ;(println @precept.state/fact-index)
 ;
-;@precept.state/session-defs
-;(ns-interns 'precept.app-ns)
+@precept.state/session-defs
+@precept.state/unconditional-inserts
+@state/rules
+(ns-interns 'precept.app-ns)
+;(ns-unmap 'precept.app-ns 'hello-world)
 
-;(ns-unmap 'precept.app-ns 'next-rule)
-
-
+;(defn foob []
+; (some-macro 'my-session)
+;(foob)
+;(repl/foob 'my-session)
 (defn main []
   (enable-console-print!)
-  (let [x (-> my-session
+  (let [
+        x (-> my-session
             (util/insert [:transient :foo "bar"])
             (fire-rules)
             (q everything))]
-    (println "res" x)))
+    (println "res" x)
+    (println @state/rules)))
 
-;(main)
+
 
 ;; Successful result combo of
 ;; uninterning rule in ns
