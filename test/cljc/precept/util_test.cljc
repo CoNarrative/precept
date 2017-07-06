@@ -8,7 +8,7 @@
               [precept.schema-fixture :refer [test-schema]]
               [clara.tools.inspect :as inspect]
               [clara.tools.tracing :as trace]
-              [clojure.spec :as s]
+              [clojure.spec.alpha :as s]
               [precept.spec.test :as test]
               [precept.spec.error :as err]
               [clara.rules :refer [query defquery fire-rules] :as cr]

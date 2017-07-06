@@ -1,8 +1,8 @@
 (ns precept.lang-test
     (:require [clojure.test :refer [deftest is testing run-tests]]
               [precept.spec.lang :as lang]
-              [clojure.spec :as s]
-              [clojure.spec.gen :as gen]))
+              [clojure.spec.alpha :as s]
+              [clojure.spec.gen.alpha :as gen]))
 
 (deftest lang-test
   (testing "Variable binding"

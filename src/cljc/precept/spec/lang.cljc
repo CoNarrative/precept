@@ -1,5 +1,5 @@
 (ns precept.spec.lang
-    (:require [clojure.spec :as s]
+    (:require [clojure.spec.alpha :as s]
               [precept.spec.rulegen :as rulegen]))
 
 (s/def ::variable-binding

@@ -3,10 +3,12 @@
   :url          "https://github.com/CoNarrative/precept.git"
   :license      {:name "MIT"
                  :url "https://github.com/CoNarrative/precept/blob/master/LICENSE"}
-  :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
-                 [org.clojure/clojurescript "1.9.494"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha17"]
+                 [org.clojure/spec.alpha "0.1.109"]
+                 [org.clojure/clojurescript "1.9.562"]
                  [org.clojure/core.async "0.3.442"]
-                 [com.cerner/clara-rules "0.15.0"]
+                 [com.cerner/clara-rules "0.15.0" :exclusions [prismatic/schema]]
+                 [prismatic/schema "1.1.6"]
                  [reagent "0.6.0"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]

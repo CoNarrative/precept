@@ -1,5 +1,5 @@
 (ns precept.spec.fact
-    (:require [clojure.spec :as s]))
+    (:require [clojure.spec.alpha :as s]))
 
 
 (s/def ::entity-map

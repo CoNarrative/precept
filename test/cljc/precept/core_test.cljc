@@ -11,7 +11,7 @@
             [precept.schema :as schema]
             [precept.schema-fixture :refer [test-schema]]
             [clara.rules :as cr]
-            [clojure.spec :as s]
+            [clojure.spec.alpha :as s]
             [precept.test-helpers :as h]
     #?(:clj [clojure.test :refer [use-fixtures deftest is testing run-tests]]))
   (:import [precept.util Tuple]))
