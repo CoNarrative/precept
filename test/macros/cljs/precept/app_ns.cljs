@@ -1,8 +1,7 @@
 (ns precept.app-ns
   (:require [precept.rules :refer [rule define session q defquery fire-rules]]
             [precept.util :as util]
-    ;[precept.macros-cljc-ns :refer-macros [some-macro]]
-            [precept.repl :as repl]
+            [precept.repl :as repl :refer-macros [reload-session-cljs!]]
             [precept.accumulators :as acc]
             [precept.state :as state]))
 
@@ -15,7 +14,7 @@
 ;  (.log js/console "1" ?fact)
 ;  (util/insert! [1 :duplicate-fact-error 1]))
 ;
-(define [?e :fact 3] :- [[?e :foo]])
+;(define [?e :fact 3] :- [[?e :foo]])
 
 ;(rule next-rule
 ;  [?fact <- [_ :duplicate-fact-error]]
@@ -40,32 +39,46 @@
 
 (session my-session 'precept.app-ns)
 
-;(reset! precept.state/fact-index {})
-;(some-macro 'precept.app-ns)
-;@precept.state/fact-index
-;(println @precept.state/fact-index)
-;
-@precept.state/session-defs
-@precept.state/unconditional-inserts
-@state/rules
-(ns-interns 'precept.app-ns)
-;(ns-unmap 'precept.app-ns 'hello-world)
+(comment
+  (def my-ns 'precept.app-ns)
 
-;(defn foob []
-; (some-macro 'my-session)
-;(foob)
-;(repl/foob 'my-session)
+  my-ns ;; => precept.app-ns
+  (ns-interns my-ns) ;; nth not supported on Symbol
+
+  (ns-interns 'precept.app-ns) ;; works
+  (ns-interns (quote precept.app-ns)) ;; works
+
+  'precept.app-ns ;; => precept.app-ns
+  (quote precept.app-ns) ;; => precept.app-ns
+  `~my-ns ;; => precept.app-ns
+  (ns-interns `~my-ns) ;; nth not supported on Symbol
+
+  (quote (quote precept.app-ns)) ;; => 'precept.app-ns
+  `(quote ~my-ns) ;; => 'precept.app-ns
+  (ns-interns `(quote ~my-ns))) ;; argument must be quoted Symbol
+
+(keys @precept.state/session-defs)
+
+;;;;;;;;;;;
+(reload-session-cljs! 'my-session)
+;;;;;;;;;;;
+
+@state/fact-index
+@precept.state/rules
+@precept.state/unconditional-inserts
+(ns-interns 'precept.app-ns)
+;(q everything my-session)
+
 (defn main []
   (enable-console-print!)
-  (let [
-        x (-> my-session
+  (let [x (-> my-session
             (util/insert [:transient :foo "bar"])
             (fire-rules)
             (q everything))]
     (println "res" x)
     (println @state/rules)))
 
-
+;(main)
 
 ;; Successful result combo of
 ;; uninterning rule in ns

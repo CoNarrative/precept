@@ -473,17 +473,11 @@
   [[e a v]]
   (contains? impl-facts (namespace a)))
 
-#?(:clj
-   (defn rules-in-ns
-     [ns-sym]
-     (let [rule-syms (map (comp symbol :name)
-                       (filter #(= (:ns %) ns-sym)
-                         (vals @state/rules)))]
-       (set rule-syms)))
+(defn rules-in-ns
+  [ns-sym]
+  (let [rule-syms (map (comp symbol :name)
+                    (filter #(= (:ns %) ns-sym)
+                      (vals @state/rules)))]
+    (set rule-syms)))
 
-   :cljs
-   (defn rules-in-ns
-     [ns-sym]
-     (let [rule-syms (map (comp symbol :name) @state/rules)]
-       (set rule-syms))))
 
