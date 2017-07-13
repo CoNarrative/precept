@@ -13,33 +13,49 @@
               [cljs.env :as env]
               [clojure.spec :as s]
               [clara.rules :as cr]
-              [precept.state :as state]))
+              [precept.state :as state]
+              [clara.rules.compiler :as com]))
 
 (defn trace [& args]
   (comment (apply prn args)))
 
+(defn store-session-def-in-compiler!
+  [session-def]
+  (swap! env/*compiler* update :precept.macros/session-defs
+    (fn [x] (set (conj x session-def)))))
+
 (defmacro session
   "For CLJS. Wraps Clara's `defsession` macro."
-  [name & sources-and-options]
-  (let [sources (take-while (complement keyword?) sources-and-options)
-        options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
-        impl-sources `['precept.impl.rules]
-        hierarchy `(schema/init! (select-keys ~options-in [:db-schema :client-schema]))
-        ancestors-fn `(util/make-ancestors-fn ~hierarchy)
-        options (mapcat identity
-                 (merge {:fact-type-fn :a
-                         :ancestors-fn ancestors-fn
-                         :activation-group-fn `(util/make-activation-group-fn ~core/default-group)
-                         :activation-group-sort-fn `(util/make-activation-group-sort-fn
-                                                      ~core/groups ~core/default-group)}
-                   (dissoc options-in :db-schema :client-schema)))
-        body (into options (conj sources `'precept.impl.rules))
-        interned-ns-name (ns-name *ns*)]
-    `(let [body# `~[~@body]
-           rule-nses# (vector ~@sources ~@impl-sources)]
-       (do (swap! state/session-defs assoc '~name
-             {:body body# :ns-name '~interned-ns-name :rule-nses rule-nses#})
-           (cm/defsession ~name ~@body)))))
+  ([m]
+   (let [name (:name m)
+         body (:body m)]
+     `(precept.macros/session ~name ~@body)))
+  ([name & sources-and-options]
+   (let [sources (take-while (complement keyword?) sources-and-options)
+         options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
+         impl-sources `['precept.impl.rules]
+         hierarchy `(schema/init! (select-keys ~options-in [:db-schema :client-schema]))
+         ancestors-fn `(util/make-ancestors-fn ~hierarchy)
+         options (mapcat identity
+                  (merge {:fact-type-fn :a
+                          :ancestors-fn ancestors-fn
+                          :activation-group-fn `(util/make-activation-group-fn ~core/default-group)
+                          :activation-group-sort-fn `(util/make-activation-group-sort-fn
+                                                       ~core/groups ~core/default-group)}
+                    (dissoc options-in :db-schema :client-schema)))
+         rule-nses (conj sources `'precept.impl.rules)
+         body (into options rule-nses)
+         interned-ns-name (com/cljs-ns)
+         _ (store-session-def-in-compiler!
+             {:name name
+              :body body
+              :ns-name interned-ns-name
+              :rule-nses rule-nses})]
+     `(let [body# `~[~@body]
+            rule-nses# (vector ~@sources ~@impl-sources)]
+        (do (swap! state/session-defs assoc '~name
+              {:body body# :ns-name '~interned-ns-name :rule-nses rule-nses#})
+            (cm/defsession ~name ~@body))))))
 
 (defn parse-sub-rhs [rhs]
   (let [map-only? (map? (first (rest rhs)))

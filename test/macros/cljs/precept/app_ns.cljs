@@ -22,11 +22,11 @@
 ;  (.log js/console "3 ---------- " ?fact)
 ;  (util/insert! [1 :xyz 1]))
 
-(rule report-facts-at-start
-  {:group :action}
-  [?fact <- [_ :all]]
-  =>
-  (println "Fact at start" ?fact))
+;(rule report-facts-at-start
+;  {:group :action}
+;  [?fact <- [_ :all]]
+;  =>
+;  (println "Fact at start" ?fact))
 
 ;(rule report-facts-at-end
 ;  {:group :report}
@@ -57,12 +57,12 @@
   `(quote ~my-ns) ;; => 'precept.app-ns
   (ns-interns `(quote ~my-ns))) ;; argument must be quoted Symbol
 
-(keys @precept.state/session-defs)
-
 ;;;;;;;;;;;
-(reload-session-cljs! 'my-session)
+;(reload-session-cljs! 'my-session)
 ;;;;;;;;;;;
 
+
+;@precept.state/session-defs
 @state/fact-index
 @precept.state/rules
 @precept.state/unconditional-inserts
