@@ -7,6 +7,7 @@
       #?(:clj [cljs.env :as env])
       #?(:clj [cljs.analyzer.api :as ana-api])
       #?(:clj [cljs.analyzer :as ana])
+      #?(:clj [cljs.build.api :as build-api])
       #?(:clj [clara.macros :as cm]))
   #?(:cljs (:require-macros [precept.repl])))
 
@@ -53,7 +54,7 @@
       "REPL utility function to reload a session.
       Clears all interned rules from nses and loads files containing those namespaces to ensure
       rules are in sync. Redefines the session with the arguments it was created with.
-      Synchronizes session state by re-inserting all unconditinal inserts and firing rules."
+      Synchronizes session state by re-inserting all unconditional inserts and firing rules."
       (do
         (unmap-all-rules! sess)
         (doseq [filename @state/rule-files]
@@ -114,7 +115,15 @@
         `(doseq [[rule-ns# rule-name#] ~quoted-productions]
            (swap! precept.state/rules precept.util/dissoc-in [rule-name#])))))
 
-;; TODO. - [ ] Reset state/fact-id to max-fact-id
+(defn ns-name-intern-pairs [rule-ns]
+  (let [syms (keys (ana-api/ns-interns rule-ns))]
+    (->> syms
+      (interleave (repeat (count syms) rule-ns))
+      (partition 2)
+      (map vec))))
+
+;; TODO. - [ ] Programmatically force reload of session's namespace https://github.com/bhauman/lein-figwheel/issues/341
+;; TODO. - [x] Reset state/fact-id to max-fact-id
 ;; TODO. - [x] Sync runtime rule defs
 ;; TODO. - [x] Unmap old session ~~or silence Google Closure :duplicate-vars warning~~ so Figwheel
 ;; can compile when session is deffed in file and macro is invoked
@@ -142,33 +151,23 @@
      (let [compiled-rules (all-compiled-rules env/*compiler*)
            non-impl-rules (without-impl-rules compiled-rules)
            rule-nses (vec (set (map first non-impl-rules)))
-           interns (mapcat
-                     (fn [rule-ns]
-                       (let [syms (keys (ana-api/ns-interns rule-ns))]
-                         ;(->> syms
-                         ;  (interleave (repeat (count syms) rule-ns))
-                         ;  (partition 2)
-                         ;  (map vec)
-                         (map vec
-                           (partition 2
-                             (interleave (repeat (count syms) rule-ns)
-                                         syms)))))
-                     rule-nses)
+           interns (mapcat #(ns-name-intern-pairs %) rule-nses)
            stale-productions (clojure.set/difference (set non-impl-rules) (set interns))
            [quot session-name] sess
            session-defs (get @env/*compiler* :precept.macros/session-defs)
            session-def (first (filter #(= session-name (:name %)) session-defs))]
        (remove-stale-productions! env/*compiler* stale-productions)
-       `(let [uncond-inserts# (vec @precept.state/unconditional-inserts)]
+       (build-api/mark-cljs-ns-for-recompile! (:ns-name session-def))
+       `(let [uncond-inserts# (vec @precept.state/unconditional-inserts)
+              max-fact-id# (apply max (map :t uncond-inserts#))]
          (do
            (cljs.core/ns-unmap '~(:name session-def) '~(:ns-name session-def))
            (remove-stale-runtime-rule-defs! ~'precept.state/rules ~stale-productions)
            (reset! precept.state/unconditional-inserts #{})
            (reset! precept.state/fact-index {})
+           (reset! precept.state/fact-id max-fact-id#)
            (precept.macros/session ~session-def)
            (-> ~session-name
              (precept.listeners/replace-listener)
              (precept.util/insert uncond-inserts#)
              (precept.rules/fire-rules)))))))
-
-(map (fn [x] `'~x) ['sym1 'sym2])
