@@ -101,8 +101,8 @@ A `session` is a container for rules and facts. Given a session and an optional 
 
 (session my-session 'my-ns.rules)     
 
-(start! {:session my-session :initial-facts [(todo "Use Precept")
-                                             (visibility-filter :active)]})
+(start! {:session my-session :facts [(todo "Use Precept")
+                                     (visibility-filter :active)]})
 
 => The todo with this entity id is visible: 123
 => Visible todo title: Use Precept
