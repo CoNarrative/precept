@@ -108,7 +108,15 @@
      (doseq [[rule-ns rule-name] stale-productions]
        (remove-production! cenv rule-ns rule-name))))
 
-;; TODO. - [ ] Unmap old session ~~or silence Google Closure :duplicate-vars warning~~ so Figwheel
+#?(:clj
+    (defmacro remove-stale-runtime-rule-defs! [rule-defs stale-productions]
+      (let [quoted-productions (mapv (fn [[l r]] (vector `'~l `'~r)) stale-productions)]
+        `(doseq [[rule-ns# rule-name#] ~quoted-productions]
+           (swap! precept.state/rules precept.util/dissoc-in [rule-name#])))))
+
+;; TODO. - [ ] Reset state/fact-id to max-fact-id
+;; TODO. - [x] Sync runtime rule defs
+;; TODO. - [x] Unmap old session ~~or silence Google Closure :duplicate-vars warning~~ so Figwheel
 ;; can compile when session is deffed in file and macro is invoked
 ;; https://clojurescript.org/reference/compiler-options#warnings
 ;; Note: Added ns-unmap in CLJS for session, warning still generated sometimes. Verify unmap
@@ -127,7 +135,7 @@
 ;; TODO. - [x] Get uncond inserts from runtime
 ;; TODO. - [x] Clear productions from compiler env
 ;; TODO. - [x] Clear state/rules, let reregister on recompile
-;; TODO - [x] Determine whether session registry CLJS should be accessible at compile time
+;; TODO. - [x] Determine whether session registry CLJS should be accessible at compile time
 ;; instead of runtime only so that we can pass the same arguments to (session)
 #?(:clj
    (defmacro reload-session-cljs! [sess]
@@ -137,6 +145,10 @@
            interns (mapcat
                      (fn [rule-ns]
                        (let [syms (keys (ana-api/ns-interns rule-ns))]
+                         ;(->> syms
+                         ;  (interleave (repeat (count syms) rule-ns))
+                         ;  (partition 2)
+                         ;  (map vec)
                          (map vec
                            (partition 2
                              (interleave (repeat (count syms) rule-ns)
@@ -150,6 +162,7 @@
        `(let [uncond-inserts# (vec @precept.state/unconditional-inserts)]
          (do
            (cljs.core/ns-unmap '~(:name session-def) '~(:ns-name session-def))
+           (remove-stale-runtime-rule-defs! ~'precept.state/rules ~stale-productions)
            (reset! precept.state/unconditional-inserts #{})
            (reset! precept.state/fact-index {})
            (precept.macros/session ~session-def)
@@ -157,3 +170,5 @@
              (precept.listeners/replace-listener)
              (precept.util/insert uncond-inserts#)
              (precept.rules/fire-rules)))))))
+
+(map (fn [x] `'~x) ['sym1 'sym2])

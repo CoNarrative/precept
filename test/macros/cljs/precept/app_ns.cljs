@@ -26,8 +26,8 @@
 ;  {:group :action}
 ;  [?fact <- [_ :all]]
 ;  =>
-;  (println "Fact at start" ?fact))
-
+;  (println "<<<<<<<<<<<<<Fact at start>>>>>>>>>>>>>>>>" ?fact))
+;
 ;(rule report-facts-at-end
 ;  {:group :report}
 ;  [?facts <- (acc/all) :from [_ :all]]
@@ -38,24 +38,6 @@
   [?facts <- (acc/all) :from [_ :all]])
 
 (session my-session 'precept.app-ns)
-
-(comment
-  (def my-ns 'precept.app-ns)
-
-  my-ns ;; => precept.app-ns
-  (ns-interns my-ns) ;; nth not supported on Symbol
-
-  (ns-interns 'precept.app-ns) ;; works
-  (ns-interns (quote precept.app-ns)) ;; works
-
-  'precept.app-ns ;; => precept.app-ns
-  (quote precept.app-ns) ;; => precept.app-ns
-  `~my-ns ;; => precept.app-ns
-  (ns-interns `~my-ns) ;; nth not supported on Symbol
-
-  (quote (quote precept.app-ns)) ;; => 'precept.app-ns
-  `(quote ~my-ns) ;; => 'precept.app-ns
-  (ns-interns `(quote ~my-ns))) ;; argument must be quoted Symbol
 
 ;;;;;;;;;;;
 ;(reload-session-cljs! 'my-session)

@@ -53,7 +53,7 @@
     :cljsbuild
     {:builds
      {:test
-       {:source-paths ["src/cljs" "test/cljs" "test/cljc"]
+       {:source-paths ["test/cljs" "test/cljc"]
         :compiler
                      {:main "precept.runner"
                       :output-to "target/cljsbuild/public/js/test/test.js"
