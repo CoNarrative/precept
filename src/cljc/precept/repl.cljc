@@ -3,12 +3,18 @@
               [precept.listeners :as l]
               [precept.util :as util]
               [precept.rules :refer [fire-rules] :as rules]
-      #?(:clj [clara.rules.compiler :as com])
-      #?(:clj [cljs.env :as env])
-      #?(:clj [cljs.analyzer.api :as ana-api])
-      #?(:clj [cljs.analyzer :as ana])
-      #?(:clj [cljs.build.api :as build-api])
-      #?(:clj [clara.macros :as cm]))
+      #?(:clj
+              [clara.rules.compiler :as com])
+      #?(:clj
+              [cljs.env :as env])
+      #?(:clj
+              [cljs.analyzer.api :as ana-api])
+      #?(:clj
+              [cljs.analyzer :as ana])
+      #?(:clj
+              [cljs.build.api :as build-api])
+      #?(:clj
+              [clara.macros :as cm]))
   #?(:cljs (:require-macros [precept.repl])))
 
 #?(:clj
@@ -147,7 +153,9 @@
 ;; TODO. - [x] Determine whether session registry CLJS should be accessible at compile time
 ;; instead of runtime only so that we can pass the same arguments to (session)
 #?(:clj
-   (defmacro reload-session-cljs! [sess]
+   (defmacro reload-session-cljs!
+     [sess]
+     "Reloads session's rules and facts in CLJS."
      (let [compiled-rules (all-compiled-rules env/*compiler*)
            non-impl-rules (without-impl-rules compiled-rules)
            rule-nses (vec (set (map first non-impl-rules)))
@@ -159,7 +167,8 @@
        (remove-stale-productions! env/*compiler* stale-productions)
        (build-api/mark-cljs-ns-for-recompile! (:ns-name session-def))
        `(let [uncond-inserts# (vec @precept.state/unconditional-inserts)
-              max-fact-id# (apply max (map :t uncond-inserts#))]
+              max-fact-id# (if (empty? uncond-inserts#) -1 (apply max (map :t uncond-inserts#)))
+              session-name# '~(:name session-def)]
          (do
            (cljs.core/ns-unmap '~(:name session-def) '~(:ns-name session-def))
            (remove-stale-runtime-rule-defs! ~'precept.state/rules ~stale-productions)
@@ -167,7 +176,8 @@
            (reset! precept.state/fact-index {})
            (reset! precept.state/fact-id max-fact-id#)
            (precept.macros/session ~session-def)
-           (-> ~session-name
-             (precept.listeners/replace-listener)
-             (precept.util/insert uncond-inserts#)
-             (precept.rules/fire-rules)))))))
+           (def session-name#
+             (-> ~session-name
+               (precept.listeners/replace-listener)
+               (precept.util/insert uncond-inserts#)
+               (precept.rules/fire-rules))))))))

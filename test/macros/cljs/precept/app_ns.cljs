@@ -14,7 +14,6 @@
 ;  (.log js/console "1" ?fact)
 ;  (util/insert! [1 :duplicate-fact-error 1]))
 ;
-;(define [?e :fact 3] :- [[?e :foo]])
 
 ;(rule next-rule
 ;  [?fact <- [_ :duplicate-fact-error]]
@@ -27,24 +26,23 @@
 ;  [?fact <- [_ :all]]
 ;  =>
 ;  (println "<<<<<<<<<<<<<Fact at start>>>>>>>>>>>>>>>>" ?fact))
-;
-;(rule report-facts-at-end
-;  {:group :report}
-;  [?facts <- (acc/all) :from [_ :all]]
-;  =>
-;  (println "All facts" ?facts))
+
+(rule report-facts-at-end
+  {:group :report}
+  [?facts <- (acc/all) :from [_ :all]]
+  =>
+  (println "All facts" ?facts))
 
 (defquery everything []
   [?facts <- (acc/all) :from [_ :all]])
 
+(define [?e :fact 3] :- [[?e :foo]])
+
 (session my-session 'precept.app-ns)
-
-;;;;;;;;;;;
-;(reload-session-cljs! 'my-session)
-;;;;;;;;;;;
-
+(reload-session-cljs! 'my-session)
 
 ;@precept.state/session-defs
+@state/fact-id
 @state/fact-index
 @precept.state/rules
 @precept.state/unconditional-inserts
