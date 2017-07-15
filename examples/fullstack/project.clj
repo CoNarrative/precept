@@ -8,10 +8,11 @@
                  [luminus-http-kit "0.1.4"]
                  [luminus-nrepl "0.1.4"]
                  [luminus/ring-ttl-session "0.3.1"]
-                 [metosin/compojure-api "1.1.10"]
+                 [metosin/compojure-api "1.1.10" :exclusions [prismatic/schema]]
                  [metosin/ring-http-response "0.8.1"]
                  [mount "0.1.11"]
-                 [org.clojure/clojurescript "1.9.671" :scope "provided"]
+                 [prismatic/schema "1.1.6"]
+                 [org.clojure/clojurescript "1.9.671"]
                  [org.clojure/core.async "0.3.442"]
                  [org.clojure/tools.cli "0.3.5"]
                  [org.clojure/tools.logging "0.3.1"]
@@ -66,7 +67,7 @@
                   :plugins      [[com.jakemccrary/lein-test-refresh "0.18.1"]
                                  [lein-doo "0.1.7"]
                                  [lein-figwheel "0.5.10-SNAPSHOT"]
-                                 [org.clojure/clojurescript "1.9.473"]]
+                                 [org.clojure/clojurescript "1.9.671"]]
                   :cljsbuild
                                {:builds
                                 {:app
