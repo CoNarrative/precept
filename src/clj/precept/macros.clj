@@ -11,7 +11,7 @@
               [precept.util :as util]
               [precept.schema :as schema]
               [cljs.env :as env]
-              [clojure.spec :as s]
+              [clojure.spec.alpha :as s]
               [clara.rules :as cr]
               [precept.state :as state]
               [clara.rules.compiler :as com]))

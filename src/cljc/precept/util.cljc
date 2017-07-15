@@ -1,6 +1,6 @@
 (ns precept.util
    (:require [clara.rules :as cr]
-             [clojure.spec :as s]
+             [clojure.spec.alpha :as s]
              [precept.state :as state]
              [precept.spec.fact :as fact]
              [precept.spec.rulegen :as rulegen]

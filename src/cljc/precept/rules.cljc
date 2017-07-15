@@ -5,21 +5,19 @@
                  [precept.schema :as schema]
                  [precept.spec.sub :as sub]
                  [precept.spec.lang :as lang]
+                 [precept.state :as state]
                  [precept.util :as util]
                  [clara.rules :as cr]
                  [clara.macros :as cm]
                  [clara.rules.dsl :as dsl]
                  [clara.rules.compiler :as com]
-                 [precept.state :as state]
-                 [clara.rules.compiler :as com]
-                 [clojure.spec :as s]))
+                 [clojure.spec.alpha :as s]))
     #?(:cljs (:require [precept.spec.sub :as sub]
                        [precept.schema :as schema]
                        [precept.core :as core]
                        [precept.accumulators]
                        [precept.state :as state]))
     #?(:cljs (:require-macros precept.rules)))
-
 
 
 ;; This technique borrowed from Prismatic's schema library (via clara).

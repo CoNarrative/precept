@@ -1,5 +1,5 @@
 (ns precept.spec.error
-  (:require [clojure.spec :as s]))
+  (:require [clojure.spec.alpha :as s]))
 
 
 (s/def ::unique-identity-conflict string?)
