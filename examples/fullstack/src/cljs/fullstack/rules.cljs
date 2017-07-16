@@ -1,10 +1,12 @@
 (ns fullstack.rules
-  (:require-macros [precept.dsl :refer [<- entities entity]])
+  (:require-macros [precept.dsl :refer [<- entities entity]]
+                   [precept.repl :refer [reload-session-cljs!]])
   (:require [precept.rules :refer [rule session defsub define]]
             [precept.util :refer [retract! insert! insert-unconditional!] :as util]
             [precept.accumulators :as acc]
             [fullstack.schema :refer [db-schema client-schema]]
-            [fullstack.api :as api]))
+            [fullstack.api :as api]
+            [precept.state :as state]))
 
 (defn with-precision-2 [n]
    (.parseFloat js/Number (.toFixed n 2)))
@@ -219,3 +221,6 @@
 (session app-session 'fullstack.rules
   :db-schema db-schema
   :client-schema client-schema)
+
+;; Call from REPL to reload session state and rules
+;(swap! state/state assoc :session (reload-session-cljs! 'app-session))

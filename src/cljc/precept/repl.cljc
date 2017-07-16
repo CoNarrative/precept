@@ -86,7 +86,7 @@
     (defn compiled-rule-names [compiled-rules]
       (keys (first (vals compiled-rules)))))
 
-(defn impl-rule? [m]
+(defn impl-namespace? [m]
   (cond
     (not (contains? m :ns-name)) false ;; until cr queries have ns name
     (= (:ns-name m) '(quote precept.impl.rules)) true))
@@ -97,7 +97,7 @@
     (fn [acc [rule-ns m]]
       (let [v (reduce
                 (fn [acc2 [rule-name m2]]
-                  (if (impl-rule? m2)
+                  (if (impl-namespace? m2)
                     acc2
                     (conj acc2 [rule-ns rule-name])))
                 []

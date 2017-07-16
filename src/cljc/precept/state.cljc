@@ -29,7 +29,7 @@
 
 (def unconditional-inserts (atom #{}))
 
-(defonce state (atom initial-state))
+(def state (atom initial-state))
 
 (defonce store (mk-ratom {}))
 
