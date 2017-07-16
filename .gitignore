@@ -12,3 +12,7 @@ resources/public/js
 doo-index.html
 /pom.xml.asc
 /pom.xml
+/devtools/figwheel_server.log
+/devtools/pom.xml
+/devtools/precept-devtools.iml
+/devtools/target/

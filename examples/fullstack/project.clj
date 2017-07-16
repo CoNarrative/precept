@@ -56,6 +56,7 @@
    :test          [:project/dev :project/test :profiles/test]
 
    :project/dev  {:dependencies [[prone "1.1.4"]
+                                 [precept-devtools "0.0.0"]
                                  [ring/ring-mock "0.3.0"]
                                  [ring/ring-devel "1.5.1"]
                                  [pjstadig/humane-test-output "0.8.1"]
