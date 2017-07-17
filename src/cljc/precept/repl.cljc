@@ -176,8 +176,17 @@
            (reset! precept.state/fact-index {})
            (reset! precept.state/fact-id max-fact-id#)
            (precept.macros/session ~session-def)
-           (def session-name#
-             (-> ~session-name
-               (precept.listeners/replace-listener)
-               (precept.util/insert uncond-inserts#)
-               (precept.rules/fire-rules))))))))
+           (-> ~session-name
+             (precept.listeners/replace-listener)
+             (precept.util/insert uncond-inserts#)
+             (precept.rules/fire-rules)))))))
+
+#?(:clj
+   (defmacro redef-session-cljs!
+     [sess]
+     "Reloads session's rules and facts in CLJS and returns a def."
+     (let [[quot session-name] sess
+           session-defs (get @env/*compiler* :precept.macros/session-defs)
+           session-def (first (filter #(= session-name (:name %)) session-defs))]
+       `(let [session-name# '~(:name session-def)]
+          (def session-name# (reload-session-cljs! ~sess))))))
