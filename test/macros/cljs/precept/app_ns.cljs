@@ -40,20 +40,19 @@
 
 (define [?e :fact 3] :- [[?e :foo]])
 
-(session my-session 'precept.app-ns)
+(session my-session 'precept.app-ns :reload true)
 ;(reload-session-cljs! 'my-session)
-(redef-session-cljs! 'my-session)
-
-;(swap! precept.state/state assoc :session (reload-session-cljs! 'my-session))
-;@precept.state/session-defs
-;@state/fact-id
-@state/fact-index
+;(redef-session-cljs! 'my-session)
+;@state/fact-index
+@state/session-defs
 @precept.state/rules
 @precept.state/unconditional-inserts
 (ns-interns 'precept.app-ns)
+;(redef-session-cljs! 'my-session)
+;(ns-unmap 'precept-app-ns 'session-name__56486__auto__)
 ;(q everything my-session)
-(core/start! {:session my-session
-              :facts [[:transient :foo "bar"]]})
+;(core/start! {:session my-session
+;              :facts [[:transient :foo "bar"]])
 
 (defn main []
   (enable-console-print!))

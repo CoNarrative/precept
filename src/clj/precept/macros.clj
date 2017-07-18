@@ -20,9 +20,32 @@
   (comment (apply prn args)))
 
 (defn store-session-def-in-compiler!
+  "Stores session definition in cljs.env/*compiler*. May be accessed to recreate a session with
+  identical name, arguments."
   [session-def]
   (swap! env/*compiler* update :precept.macros/session-defs
     (fn [x] (set (conj x session-def)))))
+
+(defn existing-session-def
+  [cenv session-name]
+  (let [session-defs (get @cenv :precept.macros/session-defs)]
+      (first (filter #(= session-name (:name %)) session-defs))))
+
+(defn options-map [sources-and-options]
+  (apply hash-map (drop-while (complement keyword?) sources-and-options)))
+
+(defn sources-list [sources-and-options]
+  (take-while (complement keyword?) sources-and-options))
+
+(defn merge-default-options
+  [options-in ancestors-fn]
+  (merge {:fact-type-fn :a
+          :ancestors-fn ancestors-fn
+          :activation-group-fn `(util/make-activation-group-fn ~core/default-group)
+          :activation-group-sort-fn `(util/make-activation-group-sort-fn
+                                       ~core/groups ~core/default-group)}))
+
+(def precept-only-options [:db-schema :client-schema :reload])
 
 (defmacro session
   "For CLJS. Wraps Clara's `defsession` macro."
@@ -31,31 +54,42 @@
          body (:body m)]
      `(precept.macros/session ~name ~@body)))
   ([name & sources-and-options]
-   (let [sources (take-while (complement keyword?) sources-and-options)
-         options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
-         impl-sources `['precept.impl.rules]
+   (let [options (options-map sources-and-options)
+         existing-def (existing-session-def env/*compiler* name)
+         reloading? (and (:reload options) (seq existing-def))]
+     (if reloading?
+       `(def ~name (precept.repl/reload-session-cljs! '~name))
+       `(precept.macros/session* ~name ~@sources-and-options)))))
+
+(defmacro session*
+  ([m]
+   (let [name (:name m)
+         body (:body m)]
+     `(precept.macros/session* ~name ~@body)))
+  ([name & sources-and-options]
+   (let [sources (sources-list sources-and-options)
+         options-in (options-map sources-and-options)
          hierarchy `(schema/init! (select-keys ~options-in [:db-schema :client-schema]))
          ancestors-fn `(util/make-ancestors-fn ~hierarchy)
-         options (mapcat identity
-                  (merge {:fact-type-fn :a
-                          :ancestors-fn ancestors-fn
-                          :activation-group-fn `(util/make-activation-group-fn ~core/default-group)
-                          :activation-group-sort-fn `(util/make-activation-group-sort-fn
-                                                       ~core/groups ~core/default-group)}
-                    (dissoc options-in :db-schema :client-schema)))
+         precept-options-map (merge-default-options options-in ancestors-fn)
+         cr-options (mapcat identity (apply dissoc precept-options-map precept-only-options))
          rule-nses (conj sources `'precept.impl.rules)
-         body (into options rule-nses)
+         cr-body (into cr-options rule-nses)
          interned-ns-name (com/cljs-ns)
-         _ (store-session-def-in-compiler!
-             {:name name
-              :body body
-              :ns-name interned-ns-name
-              :rule-nses rule-nses})]
-     `(let [body# `~[~@body]
-            rule-nses# (vector ~@sources ~@impl-sources)]
-        (do (swap! state/session-defs assoc '~name
-              {:body body# :ns-name '~interned-ns-name :rule-nses rule-nses#})
-            (cm/defsession ~name ~@body))))))
+         session-def-clj {:name name
+                          :ns-name interned-ns-name
+                          :body sources-and-options
+                          :rule-nses rule-nses
+                          :options precept-options-map}
+         session-def `{:name '~name
+                       :ns-name '~interned-ns-name
+                       :body '~sources-and-options
+                       :rule-nses '~rule-nses
+                       :options '~precept-options-map}]
+        (store-session-def-in-compiler! session-def-clj)
+        `(do (swap! state/session-defs assoc '~name ~session-def)
+             (cm/defsession ~name ~@cr-body)))))
+
 
 (defn parse-sub-rhs [rhs]
   (let [map-only? (map? (first (rest rhs)))
@@ -419,12 +453,3 @@
         rule-defs (get-rule-defs (into lhs sub-cond) sub-rhs {:name name :props properties})]
       `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
                `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
-
-
-(defn unmap-all-rules
-  [rule-ns]
-  (let [registered-rules (get-in @env/*compiler* [:clara.macros/productions rule-ns])
-        _ (println "Found registered rules " registered-rules)]
-    (doseq [[k v] registered-rules]
-      (swap! @env/*compiler* util/dissoc-in [:clara.macros/productions rule-ns k]))
-    (println "Removed productions " (get-in @env/*compiler* [:clara.macros/productions rule-ns]))))
