@@ -6,7 +6,6 @@
 (enable-console-print!)
 
 (figwheel/watch-and-reload
-  :load-warninged-code true
   :on-jsload #(do (println "Loaded.")
                   (app-ns/main)))
 

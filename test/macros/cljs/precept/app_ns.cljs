@@ -44,15 +44,15 @@
 ;(reload-session-cljs! 'my-session)
 ;(redef-session-cljs! 'my-session)
 ;@state/fact-index
-@state/session-defs
+;@state/session-defs
 @precept.state/rules
 @precept.state/unconditional-inserts
-(ns-interns 'precept.app-ns)
+;(ns-interns 'precept.app-ns)
 ;(redef-session-cljs! 'my-session)
 ;(ns-unmap 'precept-app-ns 'session-name__56486__auto__)
 ;(q everything my-session)
-(core/start! {:session my-session
-              :facts [[:transient :foo "bar"]]})
+;(core/start! {:session my-session
+;              :facts [[:transient :foo "bar"]])
 
 (defn main []
   (enable-console-print!))
