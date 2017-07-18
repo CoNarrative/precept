@@ -23,11 +23,11 @@
 ;  (.log js/console "3 ---------- " ?fact)
 ;  (util/insert! [1 :xyz 1]))
 
-(rule report-facts-at-start
-  {:group :action}
-  [?fact <- [_ :all]]
-  =>
-  (println "<<<<<<<<<<<<<Fact at start>>>>>>>>>>>>>>>>" ?fact))
+;(rule report-facts-at-start
+;  {:group :action}
+;  [?fact <- [_ :all]]
+;  =>
+;  (println "<<<<<<<<<<<<<Fact at start>>>>>>>>>>>>>>>>" ?fact))
 
 (rule report-facts-at-end
   {:group :report}
@@ -42,7 +42,7 @@
 
 (session my-session 'precept.app-ns)
 ;(reload-session-cljs! 'my-session)
-;(redef-session-cljs! 'my-session)
+(redef-session-cljs! 'my-session)
 
 ;(swap! precept.state/state assoc :session (reload-session-cljs! 'my-session))
 ;@precept.state/session-defs

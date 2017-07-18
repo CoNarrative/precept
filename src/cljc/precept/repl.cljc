@@ -184,9 +184,25 @@
 #?(:clj
    (defmacro redef-session-cljs!
      [sess]
-     "Reloads session's rules and facts in CLJS and returns a def."
-     (let [[quot session-name] sess
-           session-defs (get @env/*compiler* :precept.macros/session-defs)
-           session-def (first (filter #(= session-name (:name %)) session-defs))]
-       `(let [session-name# '~(:name session-def)]
-          (def session-name# (reload-session-cljs! ~sess))))))
+     "- `sess` - quoted symbol (name of session)
+
+     Reloads session's rules and facts in CLJS and returns a def.
+     Overwrites existing session definition when the file is reloaded using the same semantics as
+    `reload-session-cljs!`. Eliminates the need for an explicit REPL call to `reload-session-cljs!`
+     when commenting out, renaming, or removing rules.
+
+     Usage:
+     ```clj
+     (session 'my-session <options>)
+     (redef-session-cljs! 'my-session)
+     ```
+
+     Make changes to rules, save file.
+
+     **IMPORTANT**: If using figwheel, ensure `:load-warninged-code` option is set to `true`.
+     This macro redefines the session programmatically by adding a new def to the session's
+     namespace. In the future this requirement may be removed (`session` may return the reloaded
+     definition automatically if a `:reload true` argument is provided).
+     "
+     (let [[quot session-name] sess]
+       `(def ~session-name (reload-session-cljs! ~sess)))))
