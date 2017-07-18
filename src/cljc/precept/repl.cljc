@@ -142,11 +142,11 @@
        ;(build-api/mark-cljs-ns-for-recompile! (:ns-name session-def))
        `(let [uncond-inserts# (vec @precept.state/unconditional-inserts)
               max-fact-id# (if (empty? uncond-inserts#) -1 (apply max (map :t uncond-inserts#)))
-              session-name# '~(:name session-def)]
+              session-name# '~(:name session-def)
+              session-name2# '~(:name session-def)
+              session-ns# '~(:ns-name session-def)]
          (do
-           ;;TODO. This *might* avoid a compiler warning regarding redefinition if we can provide
-           ;; the correctly quoted namespace and session-name arguments
-           ;(cljs.core/ns-unmap '~(:name session-def) '~(:ns-name session-def))
+           (cljs.core/ns-unmap '~(:ns-name session-def) '~(:name session-def))
            (remove-stale-runtime-rule-defs! ~stale-productions)
            (reset! precept.state/unconditional-inserts #{})
            (reset! precept.state/fact-index {})

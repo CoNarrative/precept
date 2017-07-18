@@ -23,11 +23,11 @@
 ;  (.log js/console "3 ---------- " ?fact)
 ;  (util/insert! [1 :xyz 1]))
 
-;(rule report-facts-at-start
-;  {:group :action}
-;  [?fact <- [_ :all]]
-;  =>
-;  (println "<<<<<<<<<<<<<Fact at start>>>>>>>>>>>>>>>>" ?fact))
+(rule report-facts-at-start
+  {:group :action}
+  [?fact <- [_ :all]]
+  =>
+  (println "<<<<<<<<<<<<<Fact at start>>>>>>>>>>>>>>>>" ?fact))
 
 (rule report-facts-at-end
   {:group :report}
@@ -51,8 +51,8 @@
 ;(redef-session-cljs! 'my-session)
 ;(ns-unmap 'precept-app-ns 'session-name__56486__auto__)
 ;(q everything my-session)
-;(core/start! {:session my-session
-;              :facts [[:transient :foo "bar"]])
+(core/start! {:session my-session
+              :facts [[:transient :foo "bar"]]})
 
 (defn main []
   (enable-console-print!))
