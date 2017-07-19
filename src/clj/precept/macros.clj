@@ -452,4 +452,11 @@
         sub-cond `[[[~'?e___sub___impl ::sub/request ~kw]]]
         rule-defs (get-rule-defs (into lhs sub-cond) sub-rhs {:name name :props properties})]
       `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
-               `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
+               `(let [rule-data# {:name '~name
+                                  :ns *ns*
+                                  :type "subscription"
+                                  :lhs '~lhs
+                                  :rhs '~rhs}]
+                  (do
+                    (core/register-rule rule-data#)
+                    (cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))))
