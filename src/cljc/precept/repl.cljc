@@ -78,7 +78,7 @@
     (not (contains? m :ns-name)) false ;; until cr queries have ns name
     (= (:ns-name m) '(quote precept.impl.rules)) true))
 
-(defn without-impl-rules
+(defn without-impl-ns-rules
   [compiled-rules]
   (reduce
     (fn [acc [rule-ns m]]
@@ -131,7 +131,7 @@
      [sess]
      "Reloads session's rules and facts in CLJS."
      (let [compiled-rules (all-compiled-rules env/*compiler*)
-           non-impl-rules (without-impl-rules compiled-rules)
+           non-impl-rules (without-impl-ns-rules compiled-rules)
            rule-nses (vec (set (map first non-impl-rules)))
            interns (mapcat #(ns-name-intern-pairs %) rule-nses)
            stale-productions (clojure.set/difference (set non-impl-rules) (set interns))
@@ -140,11 +140,11 @@
            session-def (first (filter #(= session-name (:name %)) session-defs))]
        (remove-stale-productions! env/*compiler* stale-productions)
        ;(build-api/mark-cljs-ns-for-recompile! (:ns-name session-def))
-       `(let [uncond-inserts# (vec @precept.state/unconditional-inserts)
+       `(let [uncond-inserts# (vec (remove #(= (:e %) :transient)
+                                     @precept.state/unconditional-inserts))
               max-fact-id# (if (empty? uncond-inserts#) -1 (apply max (map :t uncond-inserts#)))
-              session-name# '~(:name session-def)
-              session-name2# '~(:name session-def)
-              session-ns# '~(:ns-name session-def)]
+              session-ns# '~(:ns-name session-def)
+              session-name# '~(:name session-def)]
          (do
            (cljs.core/ns-unmap '~(:ns-name session-def) '~(:name session-def))
            (remove-stale-runtime-rule-defs! ~stale-productions)
@@ -152,10 +152,8 @@
            (reset! precept.state/fact-index {})
            (reset! precept.state/fact-id max-fact-id#)
            (precept.macros/session* ~session-def)
-           (-> ~session-name
-             (precept.listeners/replace-listener)
-             (precept.util/insert uncond-inserts#)
-             (clara.rules/fire-rules)))))))
+           (precept.core/start! {:session ~session-name :facts uncond-inserts#})
+           (:session @precept.state/state))))))
 
 #?(:clj
    (defmacro redef-session-cljs!

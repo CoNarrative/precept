@@ -17,7 +17,7 @@
                        [precept.core :as core]
                        [precept.accumulators]
                        [precept.state :as state]))
-    #?(:cljs (:require-macros precept.rules)))
+    #?(:cljs (:require-macros precept.rules precept.repl)))
 
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
