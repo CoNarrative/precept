@@ -60,13 +60,13 @@
 (rule insert-done-count
   [?n <- (acc/count) :from [_ :todo/done true]]
   =>
-  (insert-unconditional! (done-count ?n)))
+  (insert! (done-count ?n)))
 
 (rule insert-active-count
   [[_ :done-count ?done]]
   [?total <- (acc/count) :from [:todo/title]]
   =>
-  (insert-unconditional! (active-count (- ?total ?done))))
+  (insert! (active-count (- ?total ?done))))
 
 (defsub :task-list
   [?eids <- (acc/by-fact-id :e) :from [:todo/visible]]
@@ -100,4 +100,5 @@
 (session app-session
   'todomvc.rules
   :db-schema todomvc.schema/db-schema
-  :client-schema todomvc.schema/client-schema)
+  :client-schema todomvc.schema/client-schema
+  :reload true)

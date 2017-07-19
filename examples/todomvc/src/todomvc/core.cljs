@@ -17,7 +17,7 @@
 
 (defroute "/:filter" [filter] (then (visibility-filter (keyword filter))))
 
-(def history
+(defonce history
   (doto (History.)
     (events/listen EventType.NAVIGATE (fn [event] (secretary/dispatch! (.-token event))))
     (.setEnabled true)))
