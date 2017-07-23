@@ -220,7 +220,8 @@
 
 (session app-session 'fullstack.rules
   :db-schema db-schema
-  :client-schema client-schema)
+  :client-schema client-schema
+  :reload true)
 
 ;; Call from REPL to reload session state and rules
 ;(swap! state/state assoc :session (reload-session-cljs! 'app-session))
