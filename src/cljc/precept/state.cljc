@@ -5,7 +5,7 @@
   #?(:clj (atom args)
      :cljs (r/atom args)))
 
-(defonce initial-state
+(def initial-state
   {:session nil
    :session-history false ;; TODO. To enable/disable
    ;:session-history '() ;; TODO. Own atom (public).

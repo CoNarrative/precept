@@ -30,6 +30,7 @@
             max-fact-id (apply max (map :t unconditional-insert-history))]
         (do (reset! state/fact-index {})
             (reset! state/fact-id max-fact-id)
+            (reset! state/unconditional-inserts #{})
             {:session-before (var-get session-var)
              :session-after (-> (var-get session-var)
                               (l/replace-listener)
@@ -54,9 +55,13 @@
     (defn reload-session!
       [sess]
       "REPL utility function to reload a session.
+
+      `sess`        Session var
+
       Clears all interned rules from nses and loads files containing those namespaces to ensure
       rules are in sync. Redefines the session with the arguments it was created with.
-      Synchronizes session state by re-inserting all unconditional inserts and firing rules."
+      Synchronizes session state by re-inserting all unconditional inserts and firing rules.
+      Should not be evaluated inside a file being reloaded. This will cause a loop."
       (do
         (unmap-all-rules! sess)
         (doseq [filename @state/rule-files]
@@ -129,7 +134,9 @@
 #?(:clj
    (defmacro reload-session-cljs!
      [sess]
-     "Reloads session's rules and facts in CLJS."
+     "Reloads session's rules and facts in CLJS.
+
+     `sess`        Name of session to reload as a quoted symbol"
      (let [compiled-rules (all-compiled-rules env/*compiler*)
            non-impl-rules (without-impl-ns-rules compiled-rules)
            rule-nses (vec (set (map first non-impl-rules)))
@@ -152,31 +159,15 @@
            (reset! precept.state/fact-index {})
            (reset! precept.state/fact-id max-fact-id#)
            (precept.macros/session* ~session-def)
-           (precept.core/start! {:session ~session-name :facts uncond-inserts#})
-           (:session @precept.state/state))))))
+           (precept.core/resume! {:session ~session-name :facts uncond-inserts#}))))))
 
 #?(:clj
    (defmacro redef-session-cljs!
      [sess]
-     "- `sess` - quoted symbol (name of session)
+     "`sess`        Quoted symbol (name of session)
 
-     Reloads session's rules and facts in CLJS and returns a def.
-     Overwrites existing session definition when the file is reloaded using the same semantics as
-    `reload-session-cljs!`. Eliminates the need for an explicit REPL call to `reload-session-cljs!`
-     when commenting out, renaming, or removing rules.
-
-     Usage:
-     ```clj
-     (session 'my-session <options>)
-     (redef-session-cljs! 'my-session)
-     ```
-
-     Make changes to rules, save file.
-
-     **IMPORTANT**: If using figwheel, ensure `:load-warninged-code` option is set to `true`.
-     This macro redefines the session programmatically by adding a new def to the session's
-     namespace. In the future this requirement may be removed (`session` may return the reloaded
-     definition automatically if a `:reload true` argument is provided).
+     Reloads session's rules and facts and returns a def that points to the recreated session.
+     Mainly used as implementation of `:reload true` session option in CLJS.
      "
      (let [[quot session-name] sess]
        `(def ~session-name (reload-session-cljs! ~sess)))))

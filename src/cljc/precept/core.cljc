@@ -86,19 +86,20 @@
 (defn update-session-history
   "First history entry is most recent"
   [session]
-  (if (= 5 (count (:session-history @state)))
-    (swap! state update :session-history
+  (if (= 5 (count (:session-history @s/state)))
+    (swap! s/state update :session-history
       (fn [sessions] (conj (butlast sessions) session)))
-    (swap! state update :session-history conj session)))
+    (swap! s/state update :session-history conj session)))
 
 (defn swap-session!
   [next]
   (trace "Swapping session!")
-  (swap! state assoc :session next))
+  (swap! s/state assoc :session next))
 
 (defn swap-session-sync! [next f]
-  (swap! state assoc :session next)
-  (f))
+  (swap! s/state assoc :session next)
+  (f)
+  (:session @s/state))
 
 (defn dispatch! [f] (put! action-ch f))
 
@@ -114,7 +115,7 @@
   (let [out (chan)]
     (go-loop []
       (let [f (<! in)
-            applied (f (:session @state))
+            applied (f (:session @s/state))
             fired (fire-rules applied)]
         (>! out fired)
         (recur)))
@@ -224,7 +225,7 @@
         name (first req)
         lens (lens store [id ::sub/response])]
     (dispatch! (fn [session] (util/insert session [id ::sub/request name])))
-    (swap! state assoc-in [:subscriptions id] {:id id :name name :lens lens})
+    (swap! s/state assoc-in [:subscriptions id] {:id id :name name :lens lens})
     lens))
 
 (defn subscribe
@@ -251,7 +252,20 @@
   "
   [{:keys [session facts] :as options}]
   (let [opts (or options (hash-map))]
-    (swap-session-sync!
-      (l/replace-listener (:session opts))
-      #(dispatch! (fn [session] (util/insert session (:facts opts)))))))
+    (do
+      (swap-session-sync!
+        (l/replace-listener (:session opts))
+        #(dispatch! (fn [session] (util/insert session (:facts opts)))))
+      (swap! s/state assoc :started? true))))
+
+(defn resume!
+  "Used to reload session."
+  [{:keys [session facts] :as options}]
+  (let [opts (or options (hash-map))]
+    (if (:started? @s/state)
+      (swap-session-sync!
+        (l/replace-listener (:session opts))
+        #(dispatch! (fn [session] (util/insert session (:facts opts)))))
+      session)))
+
 
