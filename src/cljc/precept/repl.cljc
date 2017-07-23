@@ -147,8 +147,9 @@
            session-def (first (filter #(= session-name (:name %)) session-defs))]
        (remove-stale-productions! env/*compiler* stale-productions)
        ;(build-api/mark-cljs-ns-for-recompile! (:ns-name session-def))
-       `(let [uncond-inserts# (vec (remove #(= (:e %) :transient)
-                                     @precept.state/unconditional-inserts))
+       `(let [uncond-inserts# (sort-by :t
+                                (vec (remove #(= (:e %) :transient)
+                                       @precept.state/unconditional-inserts)))
               max-fact-id# (if (empty? uncond-inserts#) -1 (apply max (map :t uncond-inserts#)))
               session-ns# '~(:ns-name session-def)
               session-name# '~(:name session-def)]
