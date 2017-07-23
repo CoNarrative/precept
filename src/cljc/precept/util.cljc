@@ -15,6 +15,12 @@
   #?(:clj (java.util.UUID/randomUUID)
      :cljs (random-uuid)))
 
+(defn unknown-ancestry-error [fact ancestry]
+  (throw (ex-info (str "Unknown fact type. Expected one of #{:one-to-one :one-to-many
+        :unique-identity :unique-value} but received " ancestry)
+           {:fact fact
+            :fact-ancestry ancestry})))
+
 ;; From clojure.core.incubator
 (defn dissoc-in
   "Dissociates an entry from a nested associative structure returning a new
@@ -49,6 +55,21 @@
 (defn reset-fact-id! [] (reset! state/fact-id -1))
 
 (defrecord Tuple [e a v t])
+
+(defn print-format-Tuple [rec]
+  (let [vec (mapv
+              (fn [[k v]]
+                (if (= Tuple (type v))
+                  (symbol (print-format-Tuple v))
+                  v))
+              rec)]
+   (str "Tuple" vec "\n")))
+
+
+#?(:clj
+    (defmethod print-method Tuple [v ^java.io.Writer w]
+        (.write w (print-format-Tuple v))))
+
 #?(:cljs
     (extend-protocol IPrintWithWriter
       precept.util/Tuple
@@ -130,7 +151,8 @@
       (ancestry :unique-identity) [:unique (:a fact) (:v fact)]
       (ancestry :unique-value) [:unique (:a fact) (:v fact)]
       (ancestry :one-to-one) [:one-to-one (:e fact) (:a fact)]
-      :else [:one-to-many])))
+      (ancestry :one-to-many) [:one-to-many]
+      :default (unknown-ancestry-error fact ancestry))))
 
 (defn fact-index-paths
   "Returns all index paths for a given fact as [[]...]"
@@ -142,7 +164,8 @@
       (ancestry :unique-value) [[:unique (:a fact) (:v fact)]
                                 [:one-to-one (:e fact) (:a fact)]]
       (ancestry :one-to-one) [[:one-to-one (:e fact) (:a fact)]]
-      :else :one-to-many)))
+      (ancestry :one-to-many) :one-to-many
+      :default (unknown-ancestry-error fact ancestry))))
 
 ;;TODO. index-cardinality! or add to cardinality
 (defn upsert-fact-index!
@@ -188,14 +211,16 @@
   "Prepreds :unique to keyseq path in second argument. Overwrites existing value and returns it if
   found."
   [fact ks]
-  (if-let [existing (get-in @state/fact-index (into [:unique] ks))]
-    (do
-      (swap! state/fact-index dissoc-in (into [:unique] ks))
-      (swap! state/fact-index update-in (into [:unique] ks) (fn [_] fact))
-      {:insert fact :retract existing})
-    (do
-      (swap! state/fact-index assoc-in (into [:unique] ks) fact)
-      {:insert fact :retract nil})))
+  (let [unique-path (into [:unique] ks)
+        existing (get-in @state/fact-index unique-path)]
+    (if existing
+      (do
+        (swap! state/fact-index dissoc-in unique-path) ;; do we need this?
+        (swap! state/fact-index update-in unique-path (fn [_] fact))
+        {:insert fact :retract existing})
+      (do
+        (swap! state/fact-index assoc-in (into [:unique] ks) fact)
+        {:insert fact :retract nil}))))
 
 ; TODO. Separate unique type operations into own functions
 (defn check-unique-conflict [fact ks]
@@ -260,14 +285,18 @@
   Accepts `[e a v]`, `[[e a v]...]`, `{}`, `[{}...]`, where `{}` is a Datomic-style entity map"
   [session facts]
   (let [[to-insert to-retract] (conform-insertions-and-retractions! facts)
-        _ (trace "[insert] to-insert " (mapv vals to-insert))
-        _ (trace "[insert] to-retract " (mapv vals to-retract))]
+        _ (trace "[insert] facts" facts)
+        _ (trace "[insert] to-insert " to-insert)
+        _ (trace "[insert] to-retract " to-retract)]
     (if (empty? to-retract)
-      (cr/insert-all session to-insert)
+      (do (swap! state/unconditional-inserts clojure.set/union (set to-insert))
+          (cr/insert-all session to-insert))
       (let [session-with-inserts (cr/insert-all session to-insert)]
-          (reduce (fn [session fact] (cr/retract session fact))
-            session-with-inserts
-            to-retract)))))
+        (do (swap! state/unconditional-inserts clojure.set/union (set to-insert))
+            (swap! state/unconditional-inserts clojure.set/difference (set to-retract)))
+        (reduce (fn [session fact] (cr/retract session fact))
+          session-with-inserts
+          to-retract)))))
 
 #?(:clj
     (defn conflicting-logical-fact-error [facts to-insert to-retract]
@@ -302,9 +331,12 @@
     (trace "[insert-unconditional!] : inserting " to-insert)
     (trace "[insert-unconditional!] : retracting " to-retract)
     (if (empty? to-retract)
-      (cr/insert-all-unconditional! to-insert)
+      (do (swap! state/unconditional-inserts clojure.set/union (set to-insert))
+          (cr/insert-all-unconditional! to-insert))
       (do (cr/insert-all-unconditional! to-insert)
-          (doseq [x to-retract] (cr/retract! x))))))
+          (swap! state/unconditional-inserts clojure.set/difference (set to-retract))
+          (doseq [x to-retract]
+            (cr/retract! x))))))
 
 (defn retract!
   "Wrapper around Clara's `retract!`. Use within RHS of rule only.
@@ -313,17 +345,21 @@
   [facts]
   (let [insertables (insertable facts)
         _ (trace "[retract!] :" insertables)]
-    (doseq [x insertables]
-      (cr/retract! x)
-      (remove-fact-from-index! x))))
+    (do (swap! state/unconditional-inserts clojure.set/difference (set insertables))
+        (doseq [x insertables]
+          (remove-fact-from-index! x)
+          (cr/retract! x)))))
 
 (defn retract
   "Retract from outside rule context."
   [session facts]
   (let [insertables (insertable facts)
-        _ (doseq [x insertables] (remove-fact-from-index! x))
         _ (trace "[retract] : " insertables)]
-    (reduce (fn [s fact] (cr/retract s fact))
+    (reduce
+      (fn [s fact]
+        (do (swap! state/unconditional-inserts disj fact)
+            (remove-fact-from-index! fact)
+            (cr/retract s fact)))
       session
       insertables)))
 
@@ -436,3 +472,12 @@
   "Returns true if vector tuple attribute is one that should not be in view model"
   [[e a v]]
   (contains? impl-facts (namespace a)))
+
+(defn rules-in-ns
+  [ns-sym]
+  (let [rule-syms (map (comp symbol :name)
+                    (filter #(= (:ns %) ns-sym)
+                      (vals @state/rules)))]
+    (set rule-syms)))
+
+

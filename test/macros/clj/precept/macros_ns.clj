@@ -1,11 +1,18 @@
 (ns precept.macros-ns
-  (:require [clara.rules.compiler :as com]))
+    (:require [clara.rules.compiler :as com]
+              [cljs.env :as env]
+              [cljs.analyzer :as ana]))
+
+;(defmacro get-productions [namespace]
+  ;(let [_ (println "compiler env" @env/*compiler*)]
+  ;(get-in @env/*compiler* [:clara.macros/productions namespace]))
 
 (defmacro inner-macro [s]
-  `['(my-ns/my-fn) :from ['~s :all]])
+  ;(let [_ (println "Productions" (get-productions (ns-name *ns*)))]
+    `['(my-ns/my-fn) :from ['~s :all]])
 
 (defmacro outer-macro [y xs]
-  (let [_ (println "CLJS NS outer macro" (com/cljs-ns))])
+  (let [_ (println "CLJS NS outerr macro" (com/cljs-ns))])
   `(into ['~y '~'<-] ~xs))
 
 (def special-forms #{'inner-macro 'outer-macro})
@@ -26,7 +33,11 @@
         _ (println "Expanded in macro context" symbols)]
     {:result `(list '~symbols '~'+ '~'further-rearrangement)}))
 
-
-
-(macro-context (outer-macro ?sym-a (inner-macro ?sym-b)))
+;(defmacro some-macro [namespace]
+;  (let [_ (println "Hi")] ;; in CLJS is output as code and cause error
+  ;(let [v# @env/*compiler*]
+        ;_ (vary-meta some-var assoc :hey "there")]
+    ;`v#))
+  ;(get-in @env/*compiler* [:clara.macros/productions namespace]))
+    ;'(map identity ["some" "macro"])))
 

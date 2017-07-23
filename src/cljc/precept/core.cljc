@@ -20,12 +20,12 @@
 (def default-group :calc)
 
 (defn matching-consequences [rhs rule-index]
-  (filter #(= rhs (:consequences %)) (vals rule-index)))
+  (filter #(= rhs (:rhs %)) (vals rule-index)))
 
 (defn matching-conditions-and-consequences
   [lhs rhs rules-index]
-  (filter #(and (= rhs (:consequences %))
-                (= lhs (:conditions %)))
+  (filter #(and (= rhs (:rhs %))
+                (= lhs (:lhs %)))
     (vals rules-index)))
 
 (defmulti register-rule
@@ -34,42 +34,44 @@
 
 (defn identical-conditions-and-consequences-error
   [{:keys [existing-name type]}]
-  (println
-    (str "Found " type " with same conditions and consequences as existing definition: "
-      "Existing name: " existing-name)))
+  (throw
+    (ex-info (str "Found " type
+               " with same conditions and consequences as existing definition: "
+               "Existing name: " existing-name)
+      {})))
 
 (defmethod register-rule "define" [{:keys [_ ns type lhs rhs]}]
   (if-let [existing (first (matching-conditions-and-consequences lhs rhs @rules))]
-    (do (identical-conditions-and-consequences-error
-          {:existing-name (:name existing)
-           :type "define"
-           :existing-conditions (:conditions existing)
-           :existing-consequences (:consequences existing)
-           :new-conditions lhs
-           :new-consequences rhs})
-        (symbol (:name existing)))
-    (let [id (util/guid)
+    ;(do (identical-conditions-and-consequences-error
+    ;      {:existing-name (:name existing)
+    ;       :type "define"
+    ;       :existing-conditions (:conditions existing)
+    ;       :existing-consequences (:consequences existing)
+    ;       :new-conditions lhs
+    ;       :new-consequences rhs]
+    (symbol (:name existing))
+    (let [id (str (hash (str lhs rhs)))
           name (symbol (str "define-" id))
           entry {:id id
                  :type type
                  :name name
                  :ns ns
-                 :conditions lhs
-                 :consequences rhs}]
+                 :lhs lhs
+                 :rhs rhs}]
       (swap! rules assoc name entry)
       (symbol (:name entry)))))
 
 (defmethod register-rule :default [{:keys [name ns type lhs rhs]}]
   (if-let [existing (get rules name)]
-    (println (str "Found " type " with same conditions and consequences as existing definition: "
-               (:name existing)))
+    ;(println (str "Found " type " with same conditions and consequences as existing definition: "
+    (:name existing)
     (let [id (util/guid)
           entry {:id id
                  :type type
                  :name name
                  :ns ns
-                 :conditions lhs
-                 :consequences rhs}]
+                 :lhs lhs
+                 :rhs rhs}]
       (swap! rules assoc name entry)
       (:name entry))))
 
@@ -84,19 +86,20 @@
 (defn update-session-history
   "First history entry is most recent"
   [session]
-  (if (= 5 (count (:session-history @state)))
-    (swap! state update :session-history
+  (if (= 5 (count (:session-history @s/state)))
+    (swap! s/state update :session-history
       (fn [sessions] (conj (butlast sessions) session)))
-    (swap! state update :session-history conj session)))
+    (swap! s/state update :session-history conj session)))
 
 (defn swap-session!
   [next]
   (trace "Swapping session!")
-  (swap! state assoc :session next))
+  (swap! s/state assoc :session next))
 
 (defn swap-session-sync! [next f]
-  (swap! state assoc :session next)
-  (f))
+  (swap! s/state assoc :session next)
+  (f)
+  (:session @s/state))
 
 (defn dispatch! [f] (put! action-ch f))
 
@@ -112,7 +115,7 @@
   (let [out (chan)]
     (go-loop []
       (let [f (<! in)
-            applied (f (:session @state))
+            applied (f (:session @s/state))
             fired (fire-rules applied)]
         (>! out fired)
         (recur)))
@@ -222,7 +225,7 @@
         name (first req)
         lens (lens store [id ::sub/response])]
     (dispatch! (fn [session] (util/insert session [id ::sub/request name])))
-    (swap! state assoc-in [:subscriptions id] {:id id :name name :lens lens})
+    (swap! s/state assoc-in [:subscriptions id] {:id id :name name :lens lens})
     lens))
 
 (defn subscribe
@@ -249,7 +252,20 @@
   "
   [{:keys [session facts] :as options}]
   (let [opts (or options (hash-map))]
-    (swap-session-sync!
-      (l/replace-listener (:session opts))
-      #(dispatch! (fn [session] (util/insert session (:facts opts)))))))
+    (do
+      (swap-session-sync!
+        (l/replace-listener (:session opts))
+        #(dispatch! (fn [session] (util/insert session (:facts opts)))))
+      (swap! s/state assoc :started? true))))
+
+(defn resume!
+  "Used to reload session."
+  [{:keys [session facts] :as options}]
+  (let [opts (or options (hash-map))]
+    (if (:started? @s/state)
+      (swap-session-sync!
+        (l/replace-listener (:session opts))
+        #(dispatch! (fn [session] (util/insert session (:facts opts)))))
+      session)))
+
 

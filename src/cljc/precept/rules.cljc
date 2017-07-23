@@ -4,19 +4,21 @@
                  [precept.macros :as macros]
                  [precept.schema :as schema]
                  [precept.spec.sub :as sub]
+                 [precept.spec.lang :as lang]
+                 [precept.state :as state]
                  [precept.util :as util]
                  [clara.rules :as cr]
                  [clara.macros :as cm]
                  [clara.rules.dsl :as dsl]
                  [clara.rules.compiler :as com]
-                 [precept.state :as state]
-                 [clara.rules.compiler :as com]))
-
+                 [clojure.spec.alpha :as s]))
     #?(:cljs (:require [precept.spec.sub :as sub]
                        [precept.schema :as schema]
+                       [precept.core :as core]
                        [precept.accumulators]
                        [precept.state :as state]))
-    #?(:cljs (:require-macros precept.rules)))
+    #?(:cljs (:require-macros precept.rules precept.repl)))
+
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
 #?(:clj
@@ -98,8 +100,16 @@
                        :activation-group-sort-fn `(util/make-activation-group-sort-fn
                                                    ~core/groups ~core/default-group)}
              options (mapcat identity (merge defaults (dissoc options-in :db-schema :client-schema)))
-             body (into options (concat sources impl-sources))]
-         `(def ~name (com/mk-session `~[~@body]))))))
+             body (into options (concat sources impl-sources))
+             interned-ns-name (ns-name *ns*)]
+         `(let [body# `~[~@body]
+                rule-nses# (vector ~@sources ~@impl-sources)
+                session-obj# (com/mk-session body#)]
+           (do
+             (swap! state/session-defs assoc '~name {:body body#
+                                                     :ns-name '~interned-ns-name
+                                                     :rule-nses rule-nses#})
+             (def ~name session-obj#)))))))
 
 #?(:clj
    (defmacro rule
@@ -233,28 +243,3 @@
 (def fire-rules clara.rules/fire-rules)
 
 (def q clara.rules/query)
-
-#?(:clj
-   (defn rules-in-ns
-     [ns-sym]
-     (let [rule-syms (map (comp symbol :name)
-                       (filter #(= (:ns %) ns-sym)
-                         (vals @state/rules)))]
-       (set rule-syms)))
-
-   :cljs
-   (defn rules-in-ns
-     [ns-sym]
-     (let [rule-syms (map (comp symbol :name) @state/rules)]
-       (set rule-syms))))
-
-;(defn unmap-all-rules
-;  "Usage: `(unmap-all-rules *ns*)`
-;          `(unmap-all-rules 'my-ns)`"
-;  [rule-ns]
-;  (let [registered-rules (rules-in-ns (ns-name rule-ns))]
-;    (doseq [[k v] (ns-interns rule-ns)]
-;      (when (contains? registered-rules k)
-;        (ns-unmap rule-ns k)))
-;    (do (reset! state/rules {})
-;        (ns-interns rule-ns))))

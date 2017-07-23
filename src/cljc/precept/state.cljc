@@ -2,7 +2,8 @@
     #?(:cljs (:require [reagent.core :as r])))
 
 (defn mk-ratom [args]
-  #?(:clj (atom args) :cljs (r/atom args)))
+  #?(:clj (atom args)
+     :cljs (r/atom args)))
 
 (def initial-state
   {:session nil
@@ -22,7 +23,13 @@
 
 (def rules (atom {}))
 
-(defonce state (atom initial-state))
+(def rule-files (atom #{}))
+
+(def session-defs (atom {}))
+
+(def unconditional-inserts (atom #{}))
+
+(def state (atom initial-state))
 
 (defonce store (mk-ratom {}))
 

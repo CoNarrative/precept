@@ -1,37 +1,101 @@
 (ns precept.macros
-    (:require [clara.rules.dsl :as cr-dsl]
-              [clara.macros :as cm]
+    (:require [clara.macros :as cm]
+              [clara.rules :as cr]
               [clara.rules.accumulators :as acc]
+              [clara.rules.compiler :as com]
+              [clara.rules.dsl :as cr-dsl]
+              [cljs.env :as env]
+              [clojure.spec.alpha :as s]
               [precept.core :as core]
+              [precept.dsl :as dsl]
+              [precept.util :as util]
+              [precept.schema :as schema]
               [precept.spec.core :refer [conform-or-nil]]
               [precept.spec.lang :as lang]
               [precept.spec.rulegen :as rulegen]
-              [precept.dsl :as dsl]
               [precept.spec.sub :as sub]
-              [precept.util :as util]
-              [precept.schema :as schema]
-              [clojure.spec.alpha :as s]
-              [clara.rules :as cr]))
+              [precept.state :as state]))
 
 (defn trace [& args]
   (comment (apply prn args)))
 
+(defn store-session-def-in-compiler!
+  "Stores session definition in cljs.env/*compiler*. May be accessed to recreate a session with
+  identical name, arguments."
+  [session-def]
+  (swap! env/*compiler* update :precept.macros/session-defs
+    (fn [x] (set (conj x session-def)))))
+
+(defn existing-session-def
+  "Returns session definition hash-map matching session-name from registry in compiler-env or nil
+  if no match found"
+  [cenv session-name]
+  (let [session-defs (get @cenv :precept.macros/session-defs)]
+      (first (filter #(= session-name (:name %)) session-defs))))
+
+(defn options-map
+  "Returns arguments to `session` minus rule sources as hash-map."
+  [sources-and-options]
+  (apply hash-map (drop-while (complement keyword?) sources-and-options)))
+
+(defn sources-list
+  "Returns rule sources from arguments to `session` as list."
+  [sources-and-options]
+  (take-while (complement keyword?) sources-and-options))
+
+(defn merge-default-options
+  [options-in ancestors-fn]
+  (merge {:fact-type-fn :a
+          :ancestors-fn ancestors-fn
+          :activation-group-fn `(util/make-activation-group-fn ~core/default-group)
+          :activation-group-sort-fn `(util/make-activation-group-sort-fn
+                                       ~core/groups ~core/default-group)}
+    options-in))
+
+(def precept-options-keys [:db-schema :client-schema :reload])
+
 (defmacro session
   "For CLJS. Wraps Clara's `defsession` macro."
-  [name & sources-and-options]
-  (let [sources (take-while (complement keyword?) sources-and-options)
-        options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
-        hierarchy `(schema/init! (select-keys ~options-in [:db-schema :client-schema]))
-        ancestors-fn `(util/make-ancestors-fn ~hierarchy)
-        options (mapcat identity
-                 (merge {:fact-type-fn :a
-                         :ancestors-fn ancestors-fn
-                         :activation-group-fn `(util/make-activation-group-fn ~core/default-group)
-                         :activation-group-sort-fn `(util/make-activation-group-sort-fn
-                                                      ~core/groups ~core/default-group)}
-                   (dissoc options-in :db-schema :client-schema)))
-        body (into options (conj sources `'precept.impl.rules))]
-    `(cm/defsession ~name ~@body)))
+  ([m]
+   (let [name (:name m)
+         body (:body m)]
+     `(precept.macros/session ~name ~@body)))
+  ([name & sources-and-options]
+   (let [options (options-map sources-and-options)
+         existing-def (existing-session-def env/*compiler* name)
+         reloading? (and (:reload options) (seq existing-def))]
+     (if reloading?
+       `(def ~name (precept.repl/reload-session-cljs! '~name))
+       `(precept.macros/session* ~name ~@sources-and-options)))))
+
+(defmacro session*
+  ([m]
+   (let [name (:name m)
+         body (:body m)]
+     `(precept.macros/session* ~name ~@body)))
+  ([name & sources-and-options]
+   (let [sources (sources-list sources-and-options)
+         options-in (options-map sources-and-options)
+         hierarchy `(schema/init! (select-keys ~options-in [:db-schema :client-schema]))
+         ancestors-fn `(util/make-ancestors-fn ~hierarchy)
+         precept-options-map (merge-default-options options-in ancestors-fn)
+         cr-options-list (mapcat identity (apply dissoc precept-options-map precept-options-keys))
+         rule-nses (conj sources `'precept.impl.rules)
+         cr-body (into cr-options-list rule-nses)
+         interned-ns-name (com/cljs-ns)
+         session-def-clj {:name name
+                          :ns-name interned-ns-name
+                          :body sources-and-options
+                          :rule-nses rule-nses
+                          :options precept-options-map}
+         session-def `{:name '~name
+                       :ns-name '~interned-ns-name
+                       :body '~sources-and-options
+                       :rule-nses '~rule-nses
+                       :options '~precept-options-map}]
+        (store-session-def-in-compiler! session-def-clj)
+        `(do (swap! state/session-defs assoc '~name ~session-def)
+             (cm/defsession ~name ~@cr-body)))))
 
 (defn parse-sub-rhs [rhs]
   (let [map-only? (map? (first (rest rhs)))
@@ -330,7 +394,14 @@
         passthrough (filter some? (list doc properties))
         unwrite-rhs (rest rhs)]
     `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
-            `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
+              `(let [rule-data# {:name '~name
+                                 :ns *ns*
+                                 :type "rule"
+                                 :lhs '~lhs
+                                 :rhs '~rhs}]
+                (do
+                  (core/register-rule rule-data#)
+                  (cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))))
 
 (defmacro defquery
   "CLJS version of defquery"
@@ -340,16 +411,37 @@
         definition (if doc (drop 2 body) (rest body))
         rw-lhs      (rewrite-lhs definition)
         passthrough (filter #(not (nil? %)) (list doc binding))]
-    `(cm/defquery ~name ~@passthrough ~@rw-lhs)))
+    `(let [lhs# '~rw-lhs
+           ns# *ns*]
+       (do
+         (core/register-rule
+            {:name '~name :ns ns# :type "query" :lhs lhs# :rhs nil})
+         (cm/defquery ~name ~@passthrough ~@rw-lhs)))))
 
 (defmacro define
   "CLJS version of define"
   [& forms]
   (let [{:keys [body head]} (util/split-head-body forms)
-        name (symbol (core/register-rule {:type "define" :lhs body :rhs head}))
         lhs (rewrite-lhs body)
-        rhs (list `(precept.util/insert! ~head))]
-    `(cm/defrule ~name ~@lhs ~'=> ~@rhs)))
+        rhs (list `(precept.util/insert! ~head))
+        ;; Call `register-rule` at compile time to get an autogenerated name for the rule via a
+        ;; hash so we can pass to defrule. Call again at runtime to register the rule and have
+        ;; the name match what was compiled
+        name (core/register-rule
+               {:name nil
+                :type "define"
+                :ns (ns-name *ns*)
+                :lhs `'~lhs ;; must be quoted for hash equivalence between CLJS, CLJ
+                :rhs rhs
+                :consequent-facts head})]
+    `(let [name# (core/register-rule
+                     {:name nil
+                      :type "define"
+                      :ns nil
+                      :lhs ''~lhs
+                      :rhs '~rhs
+                      :consequent-facts '~head})]
+       (cm/defrule ~name ~@lhs ~'=> ~@rhs))))
 
 (defmacro defsub
   [kw & body]
@@ -365,4 +457,11 @@
         sub-cond `[[[~'?e___sub___impl ::sub/request ~kw]]]
         rule-defs (get-rule-defs (into lhs sub-cond) sub-rhs {:name name :props properties})]
       `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
-               `(cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))
+               `(let [rule-data# {:name '~name
+                                  :ns *ns*
+                                  :type "subscription"
+                                  :lhs '~lhs
+                                  :rhs '~rhs}]
+                  (do
+                    (core/register-rule rule-data#)
+                    (cm/defrule ~name ~@passthrough ~@lhs ~'=> (do ~rhs))))))))

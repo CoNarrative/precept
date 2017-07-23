@@ -29,6 +29,7 @@
   :figwheel
   {:http-server-root "public"
    :nrepl-port 7002
+   :reload-clj-files {:clj true :cljc true}
    :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
   :profiles
@@ -53,7 +54,7 @@
     :cljsbuild
     {:builds
      {:test
-       {:source-paths ["src/cljs" "test/cljs" "test/cljc"]
+       {:source-paths ["test/cljs" "test/cljc"]
         :compiler
                      {:main "precept.runner"
                       :output-to "target/cljsbuild/public/js/test/test.js"
@@ -65,13 +66,14 @@
                       :pretty-print true}}
 
       :macros
-      {:source-paths ["test/macros"]
+      {:source-paths ["test/macros/clj" "test/macros/cljs" "test/macros/cljc"]
+       :figwheel {:load-warninged-code true}
        :compiler
-                     {:main "precept.app-ns"
+                     {:main "precept.app"
                       :output-to "target/cljsbuild/public/js/macros/macros.js"
                       :output-dir "target/cljsbuild/public/js/macros/out"
                       :asset-path "/js/macros/out"
-                      :verbose true
+                      :warnings false ;{:redef false :redef-in-file false :dynamic false}
                       :optimizations :none
                       :cache-analysis false
                       :source-map true

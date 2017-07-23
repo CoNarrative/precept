@@ -218,4 +218,5 @@
 
 (session app-session 'fullstack.rules
   :db-schema db-schema
-  :client-schema client-schema)
+  :client-schema client-schema
+  :reload true)
