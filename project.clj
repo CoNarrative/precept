@@ -40,10 +40,10 @@
                    [org.clojure/tools.namespace "0.2.11"]
                    [devcards "0.2.3"]
                    [com.cemerick/piggieback "0.2.2-SNAPSHOT"]
-                   [figwheel-sidecar "0.5.10-SNAPSHOT"]
+                   [figwheel-sidecar "0.5.11"]
                    [binaryage/devtools "0.8.2"]]
 
-    :plugins      [[lein-figwheel "0.5.10-SNAPSHOT"]
+    :plugins      [[lein-figwheel "0.5.11"]
                    [lein-doo "0.1.7"]]
 
     :repl-options {:init-ns user}

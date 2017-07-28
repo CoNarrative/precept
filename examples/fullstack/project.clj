@@ -63,10 +63,10 @@
                                  [com.cemerick/piggieback "0.2.2-SNAPSHOT"]
                                  [doo "0.1.7"]
                                  [org.clojure/test.check "0.9.0"]
-                                 [figwheel-sidecar "0.5.10-SNAPSHOT"]]
+                                 [figwheel-sidecar "0.5.11"]]
                   :plugins      [[com.jakemccrary/lein-test-refresh "0.18.1"]
                                  [lein-doo "0.1.7"]
-                                 [lein-figwheel "0.5.10-SNAPSHOT"]
+                                 [lein-figwheel "0.5.11"]
                                  [org.clojure/clojurescript "1.9.671"]]
                   :cljsbuild
                                {:builds
