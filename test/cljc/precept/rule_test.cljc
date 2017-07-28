@@ -123,6 +123,10 @@
   (testing "Fact assignment: Attribute-only with brackets"
     (is (= '[[?toggle <- :ui/toggle-complete]]
           (rewrite-lhs '[[?toggle <- [:ui/toggle-complete]]])))
+    ;; Returns persistent list instead of vector. Appears OK; test where we expand this
+    ;; inside of a rule and pass to clara passes.
+    ;(is (vector? (first (rewrite-lhs '[[?toggle <- [:ui/toggle-complete]]]))))
+    ;(is (vector? (first (rewrite-lhs '[[?toggle <- [_ :ui/toggle-complete]]]))))
     (is (= '[[:not [:ns/foo (= 3 (:v this))]]]
            (rewrite-lhs '[[:not [_ :ns/foo 3]]]))))
   (testing "S-expr in value slot"

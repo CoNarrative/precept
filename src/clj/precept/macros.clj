@@ -68,6 +68,10 @@
        `(def ~name (precept.repl/reload-session-cljs! '~name))
        `(precept.macros/session* ~name ~@sources-and-options)))))
 
+(defn precept->clara-options
+  [precept-options-map precept-options-keys]
+  (mapcat identity (apply dissoc precept-options-map precept-options-keys)))
+
 (defmacro session*
   ([m]
    (let [name (:name m)
@@ -79,7 +83,7 @@
          hierarchy `(schema/init! (select-keys ~options-in [:db-schema :client-schema]))
          ancestors-fn `(util/make-ancestors-fn ~hierarchy)
          precept-options-map (merge-default-options options-in ancestors-fn)
-         cr-options-list (mapcat identity (apply dissoc precept-options-map precept-options-keys))
+         cr-options-list (precept->clara-options precept-options-map precept-options-keys)
          rule-nses (conj sources `'precept.impl.rules)
          cr-body (into cr-options-list rule-nses)
          interned-ns-name (com/cljs-ns)
