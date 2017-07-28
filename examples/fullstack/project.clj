@@ -16,7 +16,7 @@
                  [org.clojure/core.async "0.3.442"]
                  [org.clojure/tools.cli "0.3.5"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [precept "0.3.2-alpha"]
+                 [precept "0.4.0-alpha"]
                  [reagent "0.6.0"]
                  [reagent-utils "0.2.0"]
                  [ring-middleware-format "0.7.2"]

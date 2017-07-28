@@ -5,7 +5,7 @@
                  :url "https://github.com/CoNarrative/precept/blob/master/LICENSE"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha17"]
                  [org.clojure/clojurescript "1.9.671"]
-                 [precept "0.3.2-alpha"]
+                 [precept "0.4.0-alpha"]
                  [reagent "0.6.0"]
                  [secretary "1.2.3"]]
 

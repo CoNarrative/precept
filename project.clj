@@ -1,4 +1,4 @@
-(defproject precept "0.3.2-alpha"
+(defproject precept "0.4.0-alpha"
   :description "A declarative programming framework"
   :url          "https://github.com/CoNarrative/precept.git"
   :license      {:name "MIT"
