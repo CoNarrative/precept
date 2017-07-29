@@ -7,11 +7,14 @@ A declarative programming framework
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/CoNarrative/precept/blob/master/LICENSE)
 [![discord](https://img.shields.io/badge/discord-%23precept%20%40%20clojurians-7bb6b9.svg)](https://discord.gg/5GXQwrY)
 
-[Docs](https://conarrative.github.io/precept/)
+[API Docs](https://conarrative.github.io/precept/)
+| [Syntax](https://github.com/CoNarrative/precept/wiki/Syntax)
 | [Examples](https://github.com/CoNarrative/precept/tree/master/examples)
+| [Wiki](https://github.com/CoNarrative/precept/wiki)
 | [Issues](https://github.com/CoNarrative/precept/issues)
-| [Roadmap](https://github.com/CoNarrative/precept/projects/1)
 | [Contributing](https://github.com/CoNarrative/precept/blob/master/CONTRIBUTING.md)
+| [Roadmap](https://github.com/CoNarrative/precept/projects/1)
+
 
 
 > "You need only specify what you require, not how it must
