@@ -1,4 +1,4 @@
-(defproject precept "0.3.2-alpha"
+(defproject precept "0.4.0-alpha"
   :description "A declarative programming framework"
   :url          "https://github.com/CoNarrative/precept.git"
   :license      {:name "MIT"
@@ -14,9 +14,10 @@
             [lein-codox "0.10.3"]]
 
   :codox {:namespaces [precept.accumulators precept.core precept.dsl precept.listeners
-                       precept.macros precept.query precept.rules precept.schema
-                       precept.state precept.util
-                       precept.spec.lang precept.spec.sub precept.spec.error]
+                       precept.macros precept.query precept.rules precept.repl precept.schema
+                       precept.spec.lang precept.spec.sub precept.spec.error
+                       precept.state precept.util]
+
           :output-path "docs"
           :metadata {:doc/format :markdown}}
 
@@ -39,10 +40,10 @@
                    [org.clojure/tools.namespace "0.2.11"]
                    [devcards "0.2.3"]
                    [com.cemerick/piggieback "0.2.2-SNAPSHOT"]
-                   [figwheel-sidecar "0.5.10-SNAPSHOT"]
+                   [figwheel-sidecar "0.5.11"]
                    [binaryage/devtools "0.8.2"]]
 
-    :plugins      [[lein-figwheel "0.5.10-SNAPSHOT"]
+    :plugins      [[lein-figwheel "0.5.11"]
                    [lein-doo "0.1.7"]]
 
     :repl-options {:init-ns user}
@@ -80,7 +81,7 @@
                       :pretty-print true}}
 
       :devcards-test
-       {:source-paths ["src/cljs" "test/cljs"]
+       {:source-paths ["test/cljs"]
         :compiler
                       {:main "precept.runner"
                        :output-to "target/cljsbuild/public/js/devcards/main.js"

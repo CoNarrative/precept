@@ -2,19 +2,15 @@
     (:require [precept.state :as state]
               [precept.listeners :as l]
               [precept.util :as util]
-              [precept.rules :refer [fire-rules] :as rules]
-      #?(:clj
-              [clara.rules.compiler :as com])
-      #?(:clj
-              [cljs.env :as env])
-      #?(:clj
-              [cljs.analyzer.api :as ana-api])
-      #?(:clj
-              [cljs.analyzer :as ana])
-      #?(:clj
-              [cljs.build.api :as build-api])
-      #?(:clj
-              [clara.macros :as cm]))
+              ;; Avoiding circular dependency on precept.rules. Will become an issue if our fire
+              ;; rules becomes different
+              [clara.rules :refer [fire-rules]]
+      #?(:clj [clara.rules.compiler :as com])
+      #?(:clj [cljs.env :as env])
+      #?(:clj [cljs.analyzer.api :as ana-api])
+      #?(:clj [cljs.analyzer :as ana])
+      #?(:clj [cljs.build.api :as build-api])
+      #?(:clj [clara.macros :as cm]))
   #?(:cljs (:require-macros [precept.repl])))
 
 #?(:clj
@@ -34,6 +30,7 @@
             max-fact-id (apply max (map :t unconditional-insert-history))]
         (do (reset! state/fact-index {})
             (reset! state/fact-id max-fact-id)
+            (reset! state/unconditional-inserts #{})
             {:session-before (var-get session-var)
              :session-after (-> (var-get session-var)
                               (l/replace-listener)
@@ -58,9 +55,13 @@
     (defn reload-session!
       [sess]
       "REPL utility function to reload a session.
+
+      `sess`        Session var
+
       Clears all interned rules from nses and loads files containing those namespaces to ensure
       rules are in sync. Redefines the session with the arguments it was created with.
-      Synchronizes session state by re-inserting all unconditional inserts and firing rules."
+      Synchronizes session state by re-inserting all unconditional inserts and firing rules.
+      Should not be evaluated inside a file being reloaded. This will cause a loop."
       (do
         (unmap-all-rules! sess)
         (doseq [filename @state/rule-files]
@@ -70,28 +71,19 @@
         (recreate-session-state! sess))))
 
 ;; CLJS
-;; We're trying to do most of the work at compile time, so even
-;; though the reader conditionals are CLJ, the underlying functionality
-;; is for CLJS
+;; We're doing a lot at compile time; even though the reader conditionals are CLJ,
+;; the following is for CLJS exclusively
 
 #?(:clj
    (defn all-compiled-rules [cenv]
      (get @cenv :clara.macros/productions)))
-
-#?(:clj
-    (defn clear-compiled-rules! [compiler-env]
-      (swap! compiler-env dissoc :clara.macros/productions)))
-
-#?(:clj
-    (defn compiled-rule-names [compiled-rules]
-      (keys (first (vals compiled-rules)))))
 
 (defn impl-namespace? [m]
   (cond
     (not (contains? m :ns-name)) false ;; until cr queries have ns name
     (= (:ns-name m) '(quote precept.impl.rules)) true))
 
-(defn without-impl-rules
+(defn without-impl-ns-rules
   [compiled-rules]
   (reduce
     (fn [acc [rule-ns m]]
@@ -111,53 +103,42 @@
      (swap! cenv util/dissoc-in [:clara.macros/productions rule-ns rule-name])))
 
 #?(:clj
-   (defn remove-stale-productions! [cenv stale-productions]
+   (defn remove-stale-productions!
+     [cenv stale-productions]
+     "Takes a set of stale-productions - rule definitions determined to exist in cljs
+     .env/*compiler* but not as an intern in the namespace. Removes these from the path in cljs
+     .env/*compiler* where Clara obtains rule sources from when building a session in cljs"
      (doseq [[rule-ns rule-name] stale-productions]
        (remove-production! cenv rule-ns rule-name))))
 
 #?(:clj
-    (defmacro remove-stale-runtime-rule-defs! [rule-defs stale-productions]
+    (defmacro remove-stale-runtime-rule-defs!
+      "Synchronizes runtime rule definitions in precept.state/rules with rules interned
+      in namespace. stale-productions are a set of rule names that were in the compiler env but
+      not interned in the namespace"
+      [stale-productions]
       (let [quoted-productions (mapv (fn [[l r]] (vector `'~l `'~r)) stale-productions)]
         `(doseq [[rule-ns# rule-name#] ~quoted-productions]
            (swap! precept.state/rules precept.util/dissoc-in [rule-name#])))))
 
-(defn ns-name-intern-pairs [rule-ns]
+(defn ns-name-intern-pairs
+  "Returns [[ns-name ns-intern]...] for ease of diffing productions in compiler env and productions
+  interned in rule-ns. Obtains ns-interns from cljs.analyzer"
+  [rule-ns]
   (let [syms (keys (ana-api/ns-interns rule-ns))]
     (->> syms
       (interleave (repeat (count syms) rule-ns))
       (partition 2)
       (map vec))))
 
-;; TODO. - [ ] Programmatically force reload of session's namespace https://github.com/bhauman/lein-figwheel/issues/341
-;; TODO. - [x] Reset state/fact-id to max-fact-id
-;; TODO. - [x] Sync runtime rule defs
-;; TODO. - [x] Unmap old session ~~or silence Google Closure :duplicate-vars warning~~ so Figwheel
-;; can compile when session is deffed in file and macro is invoked
-;; https://clojurescript.org/reference/compiler-options#warnings
-;; Note: Added ns-unmap in CLJS for session, warning still generated sometimes. Verify unmap
-;; is actually occurring in these instances
-;; TODO. - [x] Remove non-interned productions from compiler env
-;; TODO. - [x] Get body from session def, pass as map arg to session for redef
-;; TODO. - [x] Insert uncond inserts (cur. set up for compile time, but may be possible
-;; at macroexpand/runtime)
-;; TODO. - [x] Clear uncond inserts after inserted into redeffed session
-;; TODO. - [x] Clear fact-index
-;; TODO. - [x] Find rule nses
-;; TODO. - [x] precept.impl.rules not showing up as NS or rule defs
-;; TODO. - [x] Return session def to calling namespace
-;; TODO. - [x] Research mount/defstate
-;; TODO. - [x] Insert facts after RT redeffed session var to CLJS ns
-;; TODO. - [x] Get uncond inserts from runtime
-;; TODO. - [x] Clear productions from compiler env
-;; TODO. - [x] Clear state/rules, let reregister on recompile
-;; TODO. - [x] Determine whether session registry CLJS should be accessible at compile time
-;; instead of runtime only so that we can pass the same arguments to (session)
 #?(:clj
    (defmacro reload-session-cljs!
      [sess]
-     "Reloads session's rules and facts in CLJS."
+     "Reloads session's rules and facts in CLJS.
+
+     `sess`        Name of session to reload as a quoted symbol"
      (let [compiled-rules (all-compiled-rules env/*compiler*)
-           non-impl-rules (without-impl-rules compiled-rules)
+           non-impl-rules (without-impl-ns-rules compiled-rules)
            rule-nses (vec (set (map first non-impl-rules)))
            interns (mapcat #(ns-name-intern-pairs %) rule-nses)
            stale-productions (clojure.set/difference (set non-impl-rules) (set interns))
@@ -165,19 +146,29 @@
            session-defs (get @env/*compiler* :precept.macros/session-defs)
            session-def (first (filter #(= session-name (:name %)) session-defs))]
        (remove-stale-productions! env/*compiler* stale-productions)
-       (build-api/mark-cljs-ns-for-recompile! (:ns-name session-def))
-       `(let [uncond-inserts# (vec @precept.state/unconditional-inserts)
+       ;(build-api/mark-cljs-ns-for-recompile! (:ns-name session-def))
+       `(let [uncond-inserts# (sort-by :t
+                                (vec (remove #(= (:e %) :transient)
+                                       @precept.state/unconditional-inserts)))
               max-fact-id# (if (empty? uncond-inserts#) -1 (apply max (map :t uncond-inserts#)))
+              session-ns# '~(:ns-name session-def)
               session-name# '~(:name session-def)]
          (do
-           (cljs.core/ns-unmap '~(:name session-def) '~(:ns-name session-def))
-           (remove-stale-runtime-rule-defs! ~'precept.state/rules ~stale-productions)
+           (cljs.core/ns-unmap '~(:ns-name session-def) '~(:name session-def))
+           (remove-stale-runtime-rule-defs! ~stale-productions)
            (reset! precept.state/unconditional-inserts #{})
            (reset! precept.state/fact-index {})
            (reset! precept.state/fact-id max-fact-id#)
-           (precept.macros/session ~session-def)
-           (def session-name#
-             (-> ~session-name
-               (precept.listeners/replace-listener)
-               (precept.util/insert uncond-inserts#)
-               (precept.rules/fire-rules))))))))
+           (precept.macros/session* ~session-def)
+           (precept.core/resume! {:session ~session-name :facts uncond-inserts#}))))))
+
+#?(:clj
+   (defmacro redef-session-cljs!
+     [sess]
+     "`sess`        Quoted symbol (name of session)
+
+     Reloads session's rules and facts and returns a def that points to the recreated session.
+     Mainly used as implementation of `:reload true` session option in CLJS.
+     "
+     (let [[quot session-name] sess]
+       `(def ~session-name (reload-session-cljs! ~sess)))))

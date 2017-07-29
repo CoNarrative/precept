@@ -1,8 +1,10 @@
 (ns precept.app-ns
   (:require [precept.rules :refer [rule define session q defquery fire-rules]]
             [precept.util :as util]
-            [precept.repl :as repl :refer-macros [reload-session-cljs!]]
+            [precept.repl :as repl :refer-macros [reload-session-cljs!
+                                                  redef-session-cljs!]]
             [precept.accumulators :as acc]
+            [precept.core :as core]
             [precept.state :as state]))
 
 
@@ -21,11 +23,11 @@
 ;  (.log js/console "3 ---------- " ?fact)
 ;  (util/insert! [1 :xyz 1]))
 
-;(rule report-facts-at-start
-;  {:group :action}
-;  [?fact <- [_ :all]]
-;  =>
-;  (println "<<<<<<<<<<<<<Fact at start>>>>>>>>>>>>>>>>" ?fact))
+(rule report-facts-at-start
+  {:group :action}
+  [?fact <- [_ :all]]
+  =>
+  (println "<<<<<<<<<<<<<Fact at start>>>>>>>>>>>>>>>>" ?fact))
 
 (rule report-facts-at-end
   {:group :report}
@@ -38,25 +40,22 @@
 
 (define [?e :fact 3] :- [[?e :foo]])
 
-(session my-session 'precept.app-ns)
-(reload-session-cljs! 'my-session)
-
-;@precept.state/session-defs
-@state/fact-id
-@state/fact-index
+(session my-session 'precept.app-ns :reload true)
+;(reload-session-cljs! 'my-session)
+;(redef-session-cljs! 'my-session)
+;@state/fact-index
+;@state/session-defs
 @precept.state/rules
 @precept.state/unconditional-inserts
-(ns-interns 'precept.app-ns)
+;(ns-interns 'precept.app-ns)
+;(redef-session-cljs! 'my-session)
+;(ns-unmap 'precept-app-ns 'session-name__56486__auto__)
 ;(q everything my-session)
+;(core/start! {:session my-session
+;              :facts [[:transient :foo "bar"]])
 
 (defn main []
-  (enable-console-print!)
-  (let [x (-> my-session
-            (util/insert [:transient :foo "bar"])
-            (fire-rules)
-            (q everything))]
-    (println "res" x)
-    (println @state/rules)))
+  (enable-console-print!))
 
 ;(main)
 

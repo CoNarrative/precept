@@ -16,7 +16,7 @@
                  [org.clojure/core.async "0.3.442"]
                  [org.clojure/tools.cli "0.3.5"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [precept "0.3.2-alpha"]
+                 [precept "0.4.0-alpha"]
                  [reagent "0.6.0"]
                  [reagent-utils "0.2.0"]
                  [ring-middleware-format "0.7.2"]
@@ -64,10 +64,10 @@
                                  [com.cemerick/piggieback "0.2.2-SNAPSHOT"]
                                  [doo "0.1.7"]
                                  [org.clojure/test.check "0.9.0"]
-                                 [figwheel-sidecar "0.5.10-SNAPSHOT"]]
+                                 [figwheel-sidecar "0.5.11"]]
                   :plugins      [[com.jakemccrary/lein-test-refresh "0.18.1"]
                                  [lein-doo "0.1.7"]
-                                 [lein-figwheel "0.5.10-SNAPSHOT"]
+                                 [lein-figwheel "0.5.11"]
                                  [org.clojure/clojurescript "1.9.671"]]
                   :cljsbuild
                                {:builds
