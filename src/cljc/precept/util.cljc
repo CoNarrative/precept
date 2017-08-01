@@ -43,6 +43,7 @@
   (mapv (fn [[k v]] (vector (:db/id m) k v))
     (dissoc m :db/id)))
 
+
 (defn entity-Tuples->entity-maps
   [coll]
   (mapv
@@ -89,6 +90,9 @@
             (record->vec v-pos)
             v-pos)]
     (vector (:e r) (:a r) v)))
+
+(defn record->map [x]
+  (clojure.walk/postwalk #(if (record? %) (into {} %) %) x))
 
 (defn vec->record [vec]
   (->Tuple (first vec)
@@ -466,12 +470,15 @@
         (fn [[id sub]] (= name (:name sub)))
         (:subscriptions @state/state)))))
 
-(def impl-facts #{(namespace ::rulegen/for-macro)})
+(def impl-fact-nses #{"precept.spec.rulegen"})
 
-(defn impl-fact?
-  "Returns true if vector tuple attribute is one that should not be in view model"
-  [[e a v]]
-  (contains? impl-facts (namespace a)))
+(defn impl-fact? [a]
+  (or
+    (contains? impl-fact-nses (namespace a))
+    (s/valid? ::rulegen/request a)))
+
+(defn remove-impl-attrs [xs]
+  (remove #(some-> (:a %) (impl-fact?)) xs))
 
 (defn rules-in-ns
   [ns-sym]

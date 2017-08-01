@@ -6,8 +6,8 @@
               [precept.spec.core :refer [validate]]
               [precept.spec.sub :as sub]
               [precept.spec.lang :as lang]
-      #?(:clj [clojure.core.async :refer [<! >! put! take! chan go go-loop]])
-      #?(:cljs [cljs.core.async :refer [put! take! chan <! >!]])
+      #?(:clj [clojure.core.async :refer [<! >! put! take! chan go go-loop] :as async])
+      #?(:cljs [cljs.core.async :refer [put! take! chan <! >!] :as async])
       #?(:cljs [reagent.core :as r]))
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
@@ -106,8 +106,7 @@
 (defn transactor []
   (go-loop []
    (let [action (<! action-ch)]
-        (do (trace " ---> Kicking off!" (hash action))
-            (>! session->store action)
+        (do (>! session->store action)
             (<! done-ch)
             (recur)))))
 
@@ -123,14 +122,14 @@
 
 (defn read-changes-from-session
   "Reads changes from session channel, fires rules, and puts resultant changes
-  on changes channel. Updates session state atom with new session."
+  on changes channel. Updates session state atom with new session. Changes are returned
+  keyed by :added, :removed as Tuple records."
   [in]
   (let [out (chan)]
     (go-loop []
       (let [session (<! in)
-            ops (l/vec-ops session)
-            next-session (l/replace-listener session)
-            _ (trace "Ops!" ops)]
+            ops (-> (l/ops session) (l/diff-ops))
+            next-session (l/replace-listener session)]
         (swap-session! next-session)
         (>! out ops)
         (recur)))
@@ -181,9 +180,8 @@
   [in]
   (let [out (chan)]
     (go-loop []
-      (let [ops (<! in)
-            _ (trace "Removals" (:removed ops))]
-       (apply-removals-to-view-model! (remove util/impl-fact? (:removed ops)))
+      (let [ops (<! in)]
+       (apply-removals-to-view-model! (mapv util/record->vec (:removed ops)))
        (>! out ops)
        (recur)))
    out))
@@ -192,17 +190,52 @@
   "Reads ops from channel and applies additions to store"
   [in]
   (go-loop []
-    (let [ops (<! in)
-          _ (trace "Additions" (:added ops))]
-      (apply-additions-to-view-model! (remove util/impl-fact? (:added ops)))
+    (let [ops (<! in)]
+      (apply-additions-to-view-model! (mapv util/record->vec (:added ops)))
       (>! done-ch :done)
       (recur)))
   nil)
 
+;; Create session/store update pipeline
 (transactor)
+
 (def realized-session (apply-changes-to-session session->store))
+
 (def changes-out (read-changes-from-session realized-session))
-(def removals-out (apply-removals-to-store changes-out))
+
+(def changes-mult (async/mult changes-out))
+
+(defn changes-xf [f]
+  (fn [rf]
+    (fn
+      ([] (rf))
+      ([result] (rf result))
+      ([result input]
+       (let [ret {:added (f (:added input))
+                  :removed (f (:removed input))}]
+         (rf result ret))))))
+
+(defn create-change-report-ch
+  "Returns core.async channel with operational changes from session.
+  Removes Precept implementation facts when called with no arguments.
+  May be called with a function that will be applied to all :added and :removed facts.
+
+  Usage:
+  ```clj
+  (def nil-values-ch
+    (create-changes-report-ch
+      (filter (fn [{:keys [e a v t]} record] (nil? v))
+              %)))
+  (go-loop []
+    (let [changes (<! nil-values-ch)]
+      (println \"Facts with nil values added / removed:\" changes)))
+  => Facts with nil values added / removed: {:added () :removed ()}
+  ```"
+  ([] (create-change-report-ch util/remove-impl-attrs))
+  ([f] (async/tap changes-mult (chan 1 (changes-xf f)))))
+
+(def removals-out (apply-removals-to-store (create-change-report-ch)))
+
 (apply-additions-to-store removals-out)
 
 ;; TODO. Find equivalent in CLJ
@@ -259,7 +292,9 @@
       (swap! s/state assoc :started? true))))
 
 (defn resume!
-  "Used to reload session."
+  "Resets session with provided facts if `start!` has been called, otherwise returns the session
+  received as an argument unmodified. Avoids duplicate session creation on page refresh in
+  development when there is stale session metadata in the compiler."
   [{:keys [session facts] :as options}]
   (let [opts (or options (hash-map))]
     (if (:started? @s/state)
@@ -267,5 +302,3 @@
         (l/replace-listener (:session opts))
         #(dispatch! (fn [session] (util/insert session (:facts opts)))))
       session)))
-
-
