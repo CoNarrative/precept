@@ -4,7 +4,14 @@
 
 (s/def ::generators #{'entities})
 
-(s/def ::request (keyword #(s/conform ::generators %)))
+(s/def ::request
+  (s/and
+    keyword?
+    (s/or
+      :generator-ns
+      #(s/valid? ::generators (symbol (or (namespace %) "default")))
+      :generator-keyword
+      #(s/valid? ::generators (symbol (name %))))))
 
 (s/def ::response any?)
 
