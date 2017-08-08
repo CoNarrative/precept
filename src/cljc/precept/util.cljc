@@ -1,6 +1,7 @@
 (ns precept.util
    (:require [clara.rules :as cr]
              [clojure.spec.alpha :as s]
+             [precept.schema :as schema]
              [precept.state :as state]
              [precept.spec.fact :as fact]
              [precept.spec.rulegen :as rulegen]
@@ -56,25 +57,25 @@
 
 (defrecord Tuple [e a v t])
 
-(defn print-format-Tuple [rec]
-  (let [vec (mapv
-              (fn [[k v]]
-                (if (= Tuple (type v))
-                  (symbol (print-format-Tuple v))
-                  v))
-              rec)]
-   (str "Tuple" vec "\n")))
-
-
-#?(:clj
-    (defmethod print-method Tuple [v ^java.io.Writer w]
-        (.write w (print-format-Tuple v))))
-
-#?(:cljs
-    (extend-protocol IPrintWithWriter
-      precept.util/Tuple
-      (-pr-writer [{:keys [e a v t]} writer _]
-        (write-all writer "\n[" (subs (str e) 0 6) " " a " " v " " t "]\n"))))
+;(defn print-format-Tuple [rec]
+;  (let [vec (mapv
+;              (fn [[k v]]
+;                (if (= Tuple (type v))
+;                  (symbol (print-format-Tuple v))
+;                  v))
+;              rec)]
+;   (str "Tuple" vec "\n")))
+;
+;
+;#?(:clj
+;    (defmethod print-method Tuple [v ^java.io.Writer w]
+;        (.write w (print-format-Tuple v))))
+;
+;#?(:cljs
+;    (extend-protocol IPrintWithWriter
+;      precept.util/Tuple
+;      (-pr-writer [{:keys [e a v t]} writer _]
+;        (write-all writer "\n[" (subs (str e) 0 6) " " a " " v " " t "]\n"))))
 
 (defn third [xs]
   #?(:cljs (nth xs 2)
@@ -112,7 +113,16 @@
     (vector? (first x)) x
     :else (vector x)))
 
-;; TODO. one-to-many attrs should have own Tuple
+(defn map-of-refs?
+  "Returns true if every k is db.type/ref according to a schema"
+  [schemas x]
+  (and (every? map? x)
+       (every?
+         (comp first
+               #(schema/ref? schemas %))
+        x)))
+
+;; TODO. Parent should have vec of refs for one-to-many
 (defn entity-map->Tuples
   "Transforms entity map to Tuple record
   {a1 v1 a2 v2 :db/id eid} -> [(Tuple eid a1 v1 t)...]"
@@ -129,6 +139,21 @@
           (conj acc (->Tuple (:db/id m) k v (next-fact-id!))))))
     []
     (dissoc m :db/id)))
+;; TODO. Issue #83
+;"Transforms entity map to Tuple record. Accepts attributes with values that are collections
+;  and generates their eids as uuids.
+;  Throws error if an attribute with a value that is a collection is not `:one-to-many` according to
+;  a provided schema.
+;  {:db/id 123 :a [{:nested 1 :entity 2}...] ->
+;    [(Tuple 123 :a <uuid-ref>) (Tuple <uuid-ref> :nested 1) (Tuple <uuid-ref> :entity 2)]
+;  {:db/id eid :a1 v1 :a2 v2 } -> [(Tuple eid a1 v1 t)...]"
+        ;(cond
+        ;  (and one-to-many? (map-of-refs? (vals @state/schemas) v))
+        ;  (let [fact-vec (mapv #(->Tuple (guid) k % (next-fact-id!)) v)
+        ;        x (->Tuple (:db/id m) k (mapv :e fact-vec) (next-fact-id!))]
+        ;    (concat acc (conj fact-vec x)#_(mapv #(->Tuple (guid) k % (next-fact-id!)) v)))
+        ;  :default
+        ;  (conj acc (->Tuple (:db/id m) k v (next-fact-id!))))))
 
 (defn insertable
   "Arguments can be any mixture of vectors and records

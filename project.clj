@@ -7,7 +7,10 @@
                  [org.clojure/spec.alpha "0.1.109"]
                  [org.clojure/clojurescript "1.9.562"]
                  [org.clojure/core.async "0.3.442"]
-                 [com.cerner/clara-rules "0.15.1"]
+                 [com.cerner/clara-rules "0.16.0-SNAPSHOT"]
+                 [com.cognitect/transit-clj "0.8.300"]
+                 [com.cognitect/transit-cljs "0.8.239"]
+                 [com.taoensso/sente "1.11.0"]
                  [reagent "0.6.0"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]

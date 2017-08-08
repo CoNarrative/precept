@@ -6,6 +6,8 @@
   (s/and some? symbol?
     #(clojure.string/starts-with? (name %) "?")))
 
+(s/def ::ops #{'and 'or 'not 'exists :and :or :not :exists})
+
 (s/def ::s-expr list?)
 
 (s/def ::test-expr #{:test})
