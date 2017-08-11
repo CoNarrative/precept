@@ -109,6 +109,15 @@
                     :state-id state-id
                     :encoding encoding})
 
+       ;; TODO. May not be getting node, token from :retract-facts
+       (and (= nil node token))
+       (action-dto {:type event
+                    :action true
+                    :facts (util/record->map facts)
+                    :event-number event-number
+                    :state-number state-number
+                    :state-id state-id
+                    :encoding encoding})
        :default
        (let [rule (:production node)
              {:keys [ns-name lhs rhs props name]} rule

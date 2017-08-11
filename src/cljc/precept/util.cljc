@@ -407,19 +407,21 @@
               (reduce (fn [m tup] (assoc m (:?a tup) (:?v tup)))
                 {} ent))))))
 
-(defn Tuples->maps [xs]
-  (letfn [(recur-or-val [ys] (if (any-Tuple? ys) (Tuples->maps ys) ys))]
-    (if (record? (ffirst xs))
-      (into [] (mapcat Tuples->maps xs))
-      (if (= Tuple (type xs))
-        {:db/id (:e xs) (:a xs) (recur-or-val (:v xs))}
-        (let [keyed (reduce
-                      (fn [m {:keys [e a v]}]
-                        (if ((@state/ancestors-fn a) :one-to-many)
-                          (update-in m [e a] conj (recur-or-val v))
-                          (assoc-in m [e a] (recur-or-val v))))
-                      {} xs)]
-          (mapv (fn [[eid m]] (assoc m :db/id eid)) keyed))))))
+(defn Tuples->maps
+  ([xs] (Tuples->maps xs @state/ancestors-fn))
+  ([xs ancestry]
+   (letfn [(recur-or-val [ys] (if (any-Tuple? ys) (Tuples->maps ys) ys))]
+     (if (record? (ffirst xs))
+       (into [] (mapcat Tuples->maps xs))
+       (if (= Tuple (type xs))
+         {:db/id (:e xs) (:a xs) (recur-or-val (:v xs))}
+         (let [keyed (reduce
+                       (fn [m {:keys [e a v]}]
+                         (if (contains? (ancestry a) :one-to-many)
+                           (update-in m [e a] conj (recur-or-val v))
+                           (assoc-in m [e a] (recur-or-val v))))
+                       {} xs)]
+           (mapv (fn [[eid m]] (assoc m :db/id eid)) keyed)))))))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn tuple-entity->hash-map-entity
@@ -464,7 +466,7 @@
           :else false)))))
 
 (defn make-ancestors-fn
-  "To be used when defining a session. Stored in atom for auto truth maintenance
+  "Returns a set. To be used when defining a session. Stored in atom for auto truth maintenance
   and schema enforcement."
   ([]
    (let [cr-ancestors-fn (fn [_] #{:all :one-to-one})]

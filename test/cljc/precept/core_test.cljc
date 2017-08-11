@@ -3,6 +3,7 @@
             [precept.state :as state]
             [precept.util :refer [->Tuple] :as util]
             [precept.listeners :as l]
+            [precept.orm :as orm]
             [precept.spec.lang :as lang]
             [precept.spec.sub :as sub]
             [precept.spec.test :as test]
@@ -47,8 +48,7 @@
            (into #{} (map second added)))
         "Session change parser should have returned at least one of every test attribute")
     ;; Apply additions and removals!
-    (do (core/apply-additions-to-view-model! added)
-        (core/apply-removals-to-view-model! removed))
+    (orm/update-tree! state/store @state/ancestors-fn {:add added :remove removed})
     (is (= (set (remove #(= % ::test/unique-identity) (keys (get @state/store (first eids)))))
            #{::test/one-to-many ::test/one-to-one})
         "Expected eid to have association with every supported except unique")
@@ -90,7 +90,7 @@
             #(s/valid? ::lang/tuple-3 %)
             (schema/persistent-facts))))
     ; Remove everything that was added!)
-    (core/apply-removals-to-view-model! added)
+    (orm/update-tree! state/store @state/ancestors-fn {:remove added})
     (is (= {} @state/store))))
 
 (run-tests)

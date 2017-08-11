@@ -4,16 +4,15 @@
             [fullstack.rules :refer [app-session]]
             [fullstack.views :as views]
             [fullstack.ws :as ws]
-            [precept.core :refer [start!]]
-            [precept-devtools.core :as devtools]))
+            [precept.core :refer [start!]]))
 
 
 (defn mount-components []
-  (r/render #'views/app (.getElementById js/document "app"))
-  (devtools/render! {:rules precept.state/rules :store precept.state/store}))
+  (r/render #'views/app (.getElementById js/document "app")))
 
 (defn init! []
   (mount/start)
-  (start! {:session app-session :facts [[:transient :start true]]})
-  (devtools/render! {:rules precept.state/rules :store precept.state/store})
+  (start! {:session app-session
+           :facts [[:transient :start true]]
+           :devtools true})
   (mount-components))

@@ -4,6 +4,7 @@
               [precept.state :refer [fact-id rules store state] :as s]
               [clara.rules :refer [fire-rules]]
               [precept.serialize.facts :as serialize]
+              [precept.orm :as orm]
               [precept.spec.core :refer [validate]]
               [precept.spec.sub :as sub]
               [precept.spec.lang :as lang]
@@ -17,6 +18,11 @@
 
 (defn trace [& args]
   (comment (println args)))
+
+(def action-ch (chan 1))
+(def session->store (chan 1))
+(def done-ch (chan 1))
+(def init-session-ch (chan 1))
 
 (def groups [:action :calc :report :cleanup])
 (def default-group :calc)
@@ -81,11 +87,6 @@
   (let [sub-id (:id (util/find-sub-by-name sub-name))]
     (swap! store update-in [sub-id ::sub/response] update-fn)))
 
-(def action-ch (chan 1))
-(def session->store (chan 1))
-(def done-ch (chan 1))
-(def init-session-ch (chan 1))
-
 (defn update-session-history
   "First history entry is most recent"
   [session]
@@ -148,9 +149,10 @@
             ops (-> (l/ops session) (l/diff-ops))
             next-session (if (:connected? @s/*devtools)
                            (do
-                             (>! (:event-sink @s/*devtools)
-                               {:fire-rules-complete true
-                                :total-events (dec (:event-number @s/*event-coords))})
+                             (let [total-events (dec (:event-number @s/*event-coords))]
+                               (>! (:event-sink @s/*devtools)
+                                 {:fire-rules-complete true
+                                  :total-events total-events}))
                              (swap! s/*event-coords update :state-number inc)
                              (swap! s/*event-coords assoc :state-id (util/guid)
                                                           :event-number 0)
@@ -166,53 +168,13 @@
         (recur)))
     out))
 
-(defmulti apply-op-to-view-model!
-  (fn [op a _ _]
-    [op (first (clojure.set/intersection
-                 #{:one-to-many :one-to-one}
-                 (@s/ancestors-fn a)))]))
-
-(defmethod apply-op-to-view-model! [:add :one-to-one] [_ _ ks v]
-  (swap! s/store assoc-in ks v))
-
-(defmethod apply-op-to-view-model! [:add :one-to-many] [_ _ ks v]
-  (swap! s/store update-in ks conj v))
-
-(defmethod apply-op-to-view-model! [:remove :one-to-one] [_ _ ks _]
-  (swap! s/store util/dissoc-in ks))
-
-(defmethod apply-op-to-view-model! [:remove :one-to-many] [_ _ ks v]
-  (let [prop (get-in @s/store ks)
-        applied (remove #(= v %) prop)]
-    (if (empty? applied)
-      (swap! s/store util/dissoc-in ks)
-      (swap! s/store assoc-in ks applied))))
-
-(defn apply-additions-to-view-model! [tuples]
-  (doseq [[e a v] tuples]
-    (if (not= a ::sub/response)
-      (apply-op-to-view-model! :add a [e a] v)
-      (doseq [[sub-a sub-v] v]
-        (if (util/any-Tuple? sub-v)
-          (apply-op-to-view-model! :add sub-a [e a sub-a] (util/Tuples->maps sub-v))
-          (apply-op-to-view-model! :add sub-a [e a sub-a] sub-v))))))
-
-(defn apply-removals-to-view-model! [tuples]
-  (doseq [[e a v] tuples]
-    (if (not= a ::sub/response)
-      (apply-op-to-view-model! :remove a [e a] v)
-      (doseq [[sub-a sub-v] v]
-        (if (util/any-Tuple? sub-v)
-          (apply-op-to-view-model! :remove sub-a [e a sub-a] (util/Tuples->maps sub-v))
-          (apply-op-to-view-model! :remove sub-a [e a sub-a] sub-v))))))
-
 (defn apply-removals-to-store
   "Reads ops from in channel and applies removals to store"
   [in]
   (let [out (chan)]
     (go-loop []
       (let [ops (<! in)]
-       (apply-removals-to-view-model! (mapv util/record->vec (:removed ops)))
+       (orm/update-tree! s/store @s/ancestors-fn {:remove (mapv util/record->vec (:removed ops))})
        (>! out ops)
        (recur)))
    out))
@@ -222,7 +184,7 @@
   [in]
   (go-loop []
     (let [ops (<! in)]
-      (apply-additions-to-view-model! (mapv util/record->vec (:added ops)))
+      (orm/update-tree! s/store @s/ancestors-fn {:add (mapv util/record->vec (:added ops))})
       (>! done-ch :done)
       (recur)))
   nil)
@@ -246,14 +208,18 @@
   [event batch]
   (let [max-event-number-recd (max (:event-number event)
                                    (apply max (map :event-number batch)))
-        fire-rules-complete-event
-                              (or (first (filter :fire-rules-complete batch))
-                                  (when (some-> :fire-rules-complete event)
+        fire-rules-complete-event (or (first (filter :fire-rules-complete batch))
+                                      (when (some-> :fire-rules-complete event)
                                         event))
         total-events (:total-events fire-rules-complete-event)]
     (and (integer? total-events)
          (integer? max-event-number-recd)
          (= total-events max-event-number-recd))))
+
+(defn empty-batch?
+  [event batch]
+  (and (= event {:fire-rules-complete true :total-events -1})
+       (empty? batch)))
 
 (defn create-dto>socket-router
   "Returns a go-loop that takes from a channel with events emitted by
@@ -262,12 +228,19 @@
   [in send!]
   (go-loop [batch []]
     (let [event (<! in)]
-      (if (batch-complete? event batch)
-        (do
-          (send! [:devtools/update (serialize/serialize batch)])
-          (recur []))
-        (recur (conj batch event))))))
+      (cond
+        ;; A state might only be comprised of events that were ignored.
+        ;; When this is the case the batch should be empty. We recur
+        ;; without conjing the :fire-rules-complete-event and avoid emitting the batch
+        (empty-batch? event batch)
+        (recur [])
 
+        (batch-complete? event batch)
+        (do (send! [:devtools/update (serialize/serialize batch)])
+            (recur []))
+
+        :default
+        (recur (conj batch event))))))
 
 (def changes-out (read-changes-from-session (create-fired-session-ch)))
 
