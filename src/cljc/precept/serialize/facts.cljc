@@ -23,8 +23,8 @@
       (stringRep [this v])))
 
 #?(:cljs
-   (defn serialize [x]
-     (let [writer (t/writer :json-verbose
+   (defn serialize [encoding x]
+     (let [writer (t/writer encoding
                     {:handlers {js/Function (FunctionHandler.)}})]
        (t/write writer x))))
 
@@ -49,10 +49,10 @@
        (fn [v]))))
 
 #?(:clj
-   (defn serialize [x]
+   (defn serialize [encoding x]
      (let [out (ByteArrayOutputStream. 4096)
            writer (t/writer
                     out
-                    :json-verbose
+                    encoding
                     {:handlers {clojure.lang.IFn (function-handler)}})]
        (t/write writer x))))

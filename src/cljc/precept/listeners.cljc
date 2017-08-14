@@ -85,6 +85,7 @@
 (defmethod action-dto :default [m]
   (dissoc m :encoding))
 
+;; TODO. Allow configure encoding for "JSON" vs. "EDN" (string keys vs. keyword keys)
 (defn event-dto
   "Data transfer object.
   - `event` - keyword. One of `#{:add-facts :add-facts-logical :retract-facts

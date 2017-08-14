@@ -9,9 +9,11 @@
               [precept.spec.sub :as sub]
               [precept.spec.lang :as lang]
               [taoensso.sente :as sente]
-      #?(:clj [clojure.core.async :refer [<! >! put! take! chan go go-loop] :as async])
+      #?(:clj
+              [clojure.core.async :refer [<! >! put! take! chan go go-loop] :as async])
       #?(:cljs [cljs.core.async :refer [put! take! chan <! >!] :as async])
-      #?(:cljs [reagent.core :as r]))
+      #?(:cljs [reagent.core :as r])
+        [precept.state :as state])
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
 #?(:cljs (enable-console-print!))
@@ -163,6 +165,7 @@
                                  s/*event-coords
                                  [])))
                            (l/replace-listener session))]
+        (println "Diff ops: " ops)
         (swap-session! next-session)
         (>! out ops)
         (recur)))
@@ -225,7 +228,7 @@
   "Returns a go-loop that takes from a channel with events emitted by
   `precept.listeners/PersistentSessionEventMessager and calls the provided send function,
   intended for use with a precept-devtools socket. Batches events per call to `fire-rules`."
-  [in send!]
+  [in send! encoding]
   (go-loop [batch []]
     (let [event (<! in)]
       (cond
@@ -236,7 +239,9 @@
         (recur [])
 
         (batch-complete? event batch)
-        (do (send! [:devtools/update (serialize/serialize batch)])
+        (do (send! [:devtools/update
+                    {:encoding encoding
+                     :payload (serialize/serialize encoding batch)}])
             (recur []))
 
         :default
@@ -315,27 +320,30 @@
   (dispatch! (fn [session] (util/insert session facts))))
 
 (def default-devtools-host "0.0.0.0:3232")
+(def default-devtools-options
+  {:host "0.0.0.0:3232"
+   :path "/chsk"
+   :encoding :json-verbose})
 
 (defn connect-devtools-socket!
   [options init-cb]
-  (let [options (if (map? options) options {})
-        host (or (:host options) default-devtools-host)
-        path (or (:path options) "/chsk")
-        {:keys [chsk ch-recv send-fn state]} (sente/make-channel-socket!
-                                               path
-                                               {:host host
+  (let [{:keys [chsk ch-recv send-fn state]} (sente/make-channel-socket!
+                                               (:path options)
+                                               {:host (:host options)
                                                 :type :auto})]
     (def chsk       chsk)
     (def ch-chsk    ch-recv)
     (def chsk-send! send-fn)
     (def chsk-state state)
     (def devtools-socket-ch (chan 5000))
-    (def devtools-socket-router (create-dto>socket-router devtools-socket-ch send-fn))
+    (def devtools-socket-router (create-dto>socket-router
+                                  devtools-socket-ch send-fn (:encoding options)))
 
     (swap! s/*devtools assoc
       :event-sink devtools-socket-ch
-      :host host
-      :path path)
+      :host (:host options)
+      :path (:path options)
+      :encoding (:encoding options))
 
     (defmulti handle-message first)
     (defmethod handle-message :chsk/ws-ping [_])
@@ -352,7 +360,7 @@
           (do (println (str "[precept-devtools] Connected to  "
                             (:host @s/*devtools) (:path @s/*devtools) "."))
               (swap! s/*devtools assoc :connected? true)
-              (init-cb (:event-sink @s/*devtools))))))
+              (init-cb (:event-sink @s/*devtools) send-fn)))))
 
     (defmethod handle-event :chsk/recv [{:keys [?data]}]
       (handle-message ?data))
@@ -361,33 +369,47 @@
 
 (defn start-with-devtools!
   [{:keys [session facts devtools] :as options}]
-  (connect-devtools-socket! devtools
-    (fn [ch]
-      (do
-        (swap-session-sync!
-          (l/replace-listener
-            (:session options)
-            (l/create-devtools-listeners ch s/*event-coords []))
-          #(dispatch! (fn [session] (util/insert session (:facts options)))))
-        (swap! s/state assoc :started? true)))))
+  (let [devtools-options (if (boolean? devtools)
+                           default-devtools-options
+                           (merge default-devtools-options devtools))]
+    (connect-devtools-socket! devtools-options
+      (fn [ch send-fn]
+        (let [schemas (into {} (filter (comp some? second) @state/schemas))]
+          (println "sending schemas" schemas)
+          (when (not-empty schemas)
+            (send-fn [:devtools/schemas
+                      {:encoding (:encoding devtools-options)
+                       :payload (serialize/serialize
+                                 (:encoding devtools-options)
+                                 schemas)}])))
+        (do
+          (swap-session-sync!
+            (l/replace-listener
+              (:session options)
+              (l/create-devtools-listeners ch s/*event-coords []))
+            #(dispatch! (fn [session] (util/insert session (:facts options)))))
+          (swap! s/state assoc :started? true))))))
 
+;; TODO. Allow custom encoding fn for devtools/socket
+;; TODO. Allow keywordize keys option (default true)
 (defn start!
   "Initializes session with facts.
 
-  - :session - the `session` from which changes will be tracked
-  - :facts - initial facts
-  - :devtools (optional) - Either a boolean or a map of options for connecting to a
-                           running instance of a Precept devtools server. Default: `nil`.
+  - `:session` - Instance of clara.rules.engine.LocalSession created by `precept.rules/session`
+  - `:id` - Value that uniquely identifies the session.
+  - `:facts` - Vector. Initial facts to be inserted into the session
+  - `:devtools` (optional) - Boolean or map of options for connecting to a
+                             running instance of a Precept devtools server. Default: `nil`.
     Supported devtools options:
     - `:host` - String with host and port separated by `:`.
                 Defaults to default Devtools server address and port `0.0.0.0:3232`.
     - `:path` - String of path for server socket.
                 Defaults to default Devtools server path `/chsk`.
-
-  Once initialized, facts are synced to a reagent ratom (`state/store`) and accessed via
-  subscriptions.
+    - `:encoding` - Keyword of encoding for devtools socket.
+                    One of transit enc-types: `:json`, `:json-verbose` . Defaults to
+                    `:json-verbose`.
   "
-  [{:keys [session facts devtools] :as options}]
+  [{:keys [id session facts devtools] :as options}]
   (if devtools
     (start-with-devtools! options)
     (do
