@@ -31,7 +31,7 @@
 (rule add-item-to-cart-when-not-in-cart-on-command
   {:group :action}
   [[_ :add-to-cart ?product-id]]
-  [:not [_ :cart-item/product-id ?product-id]]
+  [:not [[_ :cart-item/product-id ?product-id]]]
   =>
  (api/add-to-cart {:db/id (random-uuid)
                    :cart-item/product-id ?product-id
@@ -70,7 +70,7 @@
 
 ; item subtotal when no per-item discount
 (define [?e :cart-item/subtotal ?undiscounted-subtotal]
-  :- [:not [?e :cart-item/dollars-off]]
+  :- [:not [[?e :cart-item/dollars-off]]]
      [[?e :cart-item/undiscounted-subtotal ?undiscounted-subtotal]])
 
 ; item subtotal when per-item discount
@@ -99,7 +99,7 @@
 (define [:app :summed-subtotals ?sum] :- [?sum <- (acc/sum :v) :from [_ :cart-item/subtotal]])
 
 ; cart total when no percent total discount
-(define [:app :cart/total ?total] :- [:not [_ :active-discount]]
+(define [:app :cart/total ?total] :- [:not [[_ :active-discount]]]
   [[_ :summed-subtotals ?total]])
 
 ; cart total when percent total discount
@@ -111,15 +111,23 @@
 
 ;; Filtering
 
+;; TODO. Rewriting the following using :or should prevent
+;; products from being retracted then inserted...or not?
+;; Clara still seems to handle :or case same as 2 rules mutex with
+;; insert L
+
 ; product visible when no filter
-(define [:app :visible-product/id ?e] :- [:not [_ :product-filter/range]]
-                                         [[?e :product/name]])
+;(define [:app :visible-product/id ?e] :- [:not [_ :product-filter/range]]
+;                                         [[?e :product/name]]]])
 
 ; product visible when filter active and price in range
 (define [:app :visible-product/id ?e]
-  :- [[_ :product-filter/range ?range]]
-     [[?e :product/price ?price]]
-     [:test (<= (first ?range) ?price (second ?range))])
+  :- [:or
+      [:and [:not [[_ :product-filter/range]]]
+            [[?e :product/name]]]
+      [:and [[_ :product-filter/range ?range]]
+            [[?e :product/price ?price]]
+            [:test (<= (first ?range) ?price (second ?range))]]])
 
 
 ;; Sorting
@@ -128,8 +136,8 @@
 
 (define [?e :sort-comparator >] :- [[?e :sort-by :desc]])
 
-(define [:app :sort-fn identity] :- [:not [_ :sort-by]]
-                                    [:not [_ :order-by]])
+(define [:app :sort-fn identity] :- [:not [[_ :sort-by]]]
+                                    [:not [[_ :order-by]]])
 
 (define [:app :sort-fn #(sort-by ?order-by ?sort-by %)] :- [[_ :sort-comparator ?sort-by]]
                                                            [[_ :order-by ?order-by]])

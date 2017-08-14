@@ -70,22 +70,40 @@
         '[?x <- (acc/all) :from [:all (= ?a (:a this))]])))
 
 (deftest parse-with-op-test
-  (is (= (macros/parse-with-op '[:or [?e :attr ?v]
-                                     [?e :attr-2 ?v]])
+  (is (= (macros/parse-with-op '[:or [[?e :attr ?v]]
+                                     [[?e :attr-2 ?v]]])
         '[:or
            [:attr (= ?e (:e this)) (= ?v (:v this))]
            [:attr-2 (= ?e (:e this)) (= ?v (:v this))]]))
 
-  (is (= (macros/parse-with-op '[:or [?e :attr-1 ?v]
-                                 [:and [?e :attr-2 ?v] [?e :attr-3 ?v]]
-                                 [:and [?e :attr-4 ?v] [?e :attr-5 ?v]]])
+  (is (= (macros/parse-with-op '[:or [[?e :attr-1 ?v]]
+                                 [:and [[?e :attr-2 ?v]]
+                                       [[?e :attr-3 ?v]]]
+                                 [:and [[?e :attr-4 ?v]]
+                                       [[?e :attr-5 ?v]]]])
         '[:or [:attr-1 (= ?e (:e this)) (= ?v (:v this))]
            [:and
             [:attr-2 (= ?e (:e this)) (= ?v (:v this))]
             [:attr-3 (= ?e (:e this)) (= ?v (:v this))]]
            [:and
             [:attr-4 (= ?e (:e this)) (= ?v (:v this))]
-            [:attr-5 (= ?e (:e this)) (= ?v (:v this))]]])))
+            [:attr-5 (= ?e (:e this)) (= ?v (:v this))]]]))
+
+  (is (= (macros/parse-with-op '[:or
+                                 [:and
+                                  [:not [[?e :attr-2 ?v]]]
+                                  [[?e :attr-3 ?v]]]
+                                 [:and [[?e :attr-4 ?v]]
+                                       [[?e :attr-5 ?v]]
+                                       [:test (> ?v 42)]]])
+        '[:or
+          [:and
+           [:not [:attr-2 (= ?e (:e this)) (= ?v (:v this))]]
+           [:attr-3 (= ?e (:e this)) (= ?v (:v this))]]
+          [:and
+           [:attr-4 (= ?e (:e this)) (= ?v (:v this))]
+           [:attr-5 (= ?e (:e this)) (= ?v (:v this))]
+           [:test (> ?v 42)]]])))
 
 (deftest parse-sexpr-test
   (testing "Correct order (no cached variables)"
@@ -128,7 +146,7 @@
     ;(is (vector? (first (rewrite-lhs '[[?toggle <- [:ui/toggle-complete]]]))))
     ;(is (vector? (first (rewrite-lhs '[[?toggle <- [_ :ui/toggle-complete]]]))))
     (is (= '[[:not [:ns/foo (= 3 (:v this))]]]
-           (rewrite-lhs '[[:not [_ :ns/foo 3]]]))))
+           (rewrite-lhs '[[:not [[_ :ns/foo 3]]]]))))
   (testing "S-expr in value slot"
     (is (= '[[:attr (> 42 (:v this)) (= ?v (:v this))]]
            (rewrite-lhs '[[[_ :attr (> 42 ?v)]]])))))
@@ -175,7 +193,7 @@
   (testing "With op that contains tuple expression"
     (is (= (macroexpand
             '(rule my-rule
-              [:not [?e :todo/done]]
+              [:not [[?e :todo/done]]]
               =>
               (insert! "RHS")))
           `(do

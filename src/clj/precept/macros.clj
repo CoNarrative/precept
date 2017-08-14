@@ -19,6 +19,8 @@
 (defn trace [& args]
   (comment (apply prn args)))
 
+(declare rewrite-expr)
+
 (defn store-session-def-in-compiler!
   "Stores session definition in cljs.env/*compiler*. May be accessed to recreate a session with
   identical name, arguments."
@@ -290,7 +292,7 @@
            (fn [x]
              (if (contains? cr-dsl/ops (first x))
                (parse-with-op x cache)
-               (parse-as-tuple (vector x) cache)))
+               (rewrite-expr x cache)))
            (rest expr)))))))
 
 (defn rewrite-expr
