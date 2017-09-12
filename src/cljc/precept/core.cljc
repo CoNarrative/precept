@@ -165,7 +165,6 @@
                                  s/*event-coords
                                  [])))
                            (l/replace-listener session))]
-        (println "Diff ops: " ops)
         (swap-session! next-session)
         (>! out ops)
         (recur)))
