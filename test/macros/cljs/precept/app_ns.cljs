@@ -1,10 +1,10 @@
 (ns precept.app-ns
   (:require [precept.rules :refer [rule define session q defquery fire-rules]]
             [precept.util :as util]
-            [precept.repl :as repl :refer-macros [reload-session-cljs!
-                                                  redef-session-cljs!]]
+            [reagent.core :as reagent]
             [precept.accumulators :as acc]
             [precept.core :as core]
+            [precept.cljs-test-schema :refer [test-schema]]
             [precept.state :as state]))
 
 
@@ -38,38 +38,36 @@
 (defquery everything []
   [?facts <- (acc/all) :from [_ :all]])
 
-(define [?e :fact 3] :- [[?e :foo]])
+(define [?e :fact "falsee"] :- [[?e :foo]])
 
-(session my-session 'precept.app-ns :reload true)
-;(reload-session-cljs! 'my-session)
-;(redef-session-cljs! 'my-session)
+(session my-session
+  'precept.app-ns
+  :reload true
+  :db-schema test-schema)
+
+;(precept.rules/q (:session @precept.state/state) everything)
+
 ;@state/fact-index
-;@state/session-defs
-@precept.state/rules
-@precept.state/unconditional-inserts
-;(ns-interns 'precept.app-ns)
-;(redef-session-cljs! 'my-session)
-;(ns-unmap 'precept-app-ns 'session-name__56486__auto__)
-;(q everything my-session)
-;(core/start! {:session my-session
-;              :facts [[:transient :foo "bar"]])
+;(println "Sessions")
+;(cljs.pprint/pprint @state/session-defs)
+;(println "Rules")
+;(cljs.pprint/pprint @precept.state/rules)
+;@precept.state/unconditional-inserts
+;(cljs.pprint/pprint @precept.state/store)
+;(vary-meta my-session assoc :hey "there")
+
+(precept.core/start! {:session my-session
+                      :facts [[:transient :foo "bar"]]
+                      :devtools true})
+
+;@precept.state/session-defs
+;test-schema
+
+(defn view []
+  [:div "Hello world"
+   [:button {:on-click #(precept.core/then [:global :foo (rand-int 1000)])}
+    "Insert fact"]])
 
 (defn main []
-  (enable-console-print!))
-
-;(main)
-
-;; Successful result combo of
-;; uninterning rule in ns
-;; dissocing all ::productions
-;; combo of evaluating ns-unmap and "some macro" (which does dissoc)
-
-;; 1. comment out rule
-;; 2. ns-unmap rule
-;; 3. evaluate "some-macro" with namespace name (ns name arg not used --
-;; dissoces all productions)
-
-;; second approach
-;; Just have some-macro below (session) (not sure why this is)
-;; change code (remove/add rule)
-;; save file
+  (enable-console-print!)
+  (reagent.core/render #'view (.getElementById js/document "app")))
