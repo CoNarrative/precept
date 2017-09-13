@@ -96,7 +96,6 @@
     (swap! h derive :one-to-many :all)
     (swap! h derive :unique-value :one-to-one)
     (swap! h derive :unique-identity :one-to-one)
-    (reset! state/session-hierarchy h)
     @h))
 
 (defn init!
