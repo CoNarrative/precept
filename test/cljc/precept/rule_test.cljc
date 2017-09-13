@@ -85,7 +85,19 @@
             [:attr-3 (= ?e (:e this)) (= ?v (:v this))]]
            [:and
             [:attr-4 (= ?e (:e this)) (= ?v (:v this))]
-            [:attr-5 (= ?e (:e this)) (= ?v (:v this))]]])))
+            [:attr-5 (= ?e (:e this)) (= ?v (:v this))]]]))
+
+  (is (= (macros/parse-with-op '[:not
+                                 [:and [?e :attr-2 ?v]
+                                       [?e :attr-3 ?v]
+                                       [?e :attr-4 ?v]
+                                       [?e :attr-5 ?v]]])
+        '[:not
+          [:and
+           [:attr-2 (= ?e (:e this)) (= ?v (:v this))]
+           [:attr-3 (= ?e (:e this)) (= ?v (:v this))]
+           [:attr-4 (= ?e (:e this)) (= ?v (:v this))]
+           [:attr-5 (= ?e (:e this)) (= ?v (:v this))]]])))
 
 (deftest parse-sexpr-test
   (testing "Correct order (no cached variables)"
