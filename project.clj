@@ -5,7 +5,7 @@
                  :url "https://github.com/CoNarrative/precept/blob/master/LICENSE"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha17"]
                  [org.clojure/spec.alpha "0.1.109"]
-                 [org.clojure/clojurescript "1.9.562"]
+                 [org.clojure/clojurescript "1.9.854"]
                  [org.clojure/core.async "0.3.442"]
                  [com.cerner/clara-rules "0.16.0-SNAPSHOT"]
                  [com.cognitect/transit-clj "0.8.300"]
