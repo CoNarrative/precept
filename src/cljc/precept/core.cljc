@@ -318,7 +318,6 @@
   [facts]
   (dispatch! (fn [session] (util/insert session facts))))
 
-(def default-devtools-host "0.0.0.0:3232")
 (def default-devtools-options
   {:host "0.0.0.0:3232"
    :path "/chsk"

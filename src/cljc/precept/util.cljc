@@ -1,6 +1,7 @@
 (ns precept.util
    (:require [clara.rules :as cr]
              [clojure.spec.alpha :as s]
+             [clojure.core.async :as async]
              [precept.schema :as schema]
              [precept.state :as state]
              [precept.spec.fact :as fact]
@@ -196,12 +197,20 @@
       (ancestry :one-to-many) :one-to-many
       :default (unknown-ancestry-error fact ancestry))))
 
+(defn schema-enforcement-dto [inserted retracted index-path]
+  {:type :schema-enforcement
+   :inserted (into {} inserted)
+   :retracted (into {} retracted)
+   :index-path index-path})
+
 ;;TODO. index-cardinality! or add to cardinality
 (defn upsert-fact-index!
   "Writes value to path in ks. Returns existing fact to retract if overwriting."
   [fact ks]
   (if-let [existing (get-in @state/fact-index ks)]
     (do
+      (when (:connected? @state/*devtools)
+        (async/put! (:event-sink @state/*devtools) (schema-enforcement-dto fact existing ks)))
       (swap! state/fact-index assoc-in ks fact)
       {:insert fact :retract existing})
     (do
