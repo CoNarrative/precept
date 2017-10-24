@@ -69,11 +69,11 @@
      :db.type/any
      :db/unique :db.unique/identity)
 
-   (attribute :entities/eid
+   (attribute :precept.spec.rulegen.entities/eid
      :db.type/any
      :db/cardinality :db.cardinality/many)
 
-   (attribute :entities/entity
+   (attribute :precept.spec.rulegen.entities/entity
      :db.type/any
      :db/cardinality :db.cardinality/many)])
 

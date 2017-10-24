@@ -5,7 +5,7 @@ resources/public/js
 /.lein-repl-history
 /.nrepl-port
 /classes/
-/precept.iml
+/precept.iml-bak
 /.lein-failures
 /node_modules/
 .DS_Store

@@ -232,10 +232,12 @@
     (let [event (<! in)]
       (cond
         ;; A state might only be comprised of events that were ignored.
-        ;; When this is the case the batch should be empty. We recur
-        ;; without conjing the :fire-rules-complete-event and avoid emitting the batch
+        ;; However, we still want to send it to ensure orm-state numbers line up.
         (empty-batch? event batch)
-        (recur [])
+        (do (send! [:devtools/update
+                    {:encoding encoding
+                     :payload (serialize/serialize encoding batch)}])
+            (recur []))
 
         (batch-complete? event batch)
         (do (send! [:devtools/update
@@ -276,7 +278,7 @@
       (println \"Facts with nil values added / removed:\" changes)))
   => Facts with nil values added / removed: {:added () :removed ()}
   ```"
-  ([] (create-change-report-ch util/remove-impl-attrs))
+  ([] (create-change-report-ch util/remove-rulegen-facts))
   ([f] (async/tap changes-mult (chan 1 (changes-xf f)))))
 
 (def removals-out (apply-removals-to-store (create-change-report-ch)))

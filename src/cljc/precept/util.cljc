@@ -506,15 +506,12 @@
         (fn [[id sub]] (= name (:name sub)))
         (:subscriptions @state/state)))))
 
-(def impl-fact-nses #{"precept.spec.rulegen"})
+(def rulegen-fact-nses #{"precept.spec.rulegen" "precept.spec.rulegen.entities"})
 
-(defn impl-fact? [a]
-  (or
-    (contains? impl-fact-nses (namespace a))
-    (s/valid? ::rulegen/request a)))
+(defn rulegen-fact? [a] (contains? rulegen-fact-nses (namespace a)))
 
-(defn remove-impl-attrs [xs]
-  (remove #(some-> (:a %) (impl-fact?)) xs))
+(defn remove-rulegen-facts [xs]
+  (remove #(some-> (:a %) (rulegen-fact?)) xs))
 
 (defn rules-in-ns
   [ns-sym]

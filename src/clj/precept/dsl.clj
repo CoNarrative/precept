@@ -8,7 +8,7 @@
 (defmacro entities
   "Generates rules and facts as indicated by *"
   [es]
-  {:name :entities
+  {:name :precept.spec.rulegen/entities
    :gen {:name-suffix "___impl_split-0"
          :join `'~es}})
 

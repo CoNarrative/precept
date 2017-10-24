@@ -11,6 +11,7 @@
   (and (= 'precept.impl.rules ns-name)
     (not= name "clean-transients___impl")))
 
+
 (defn define-name? [name lhs]
   ;;TODO. This isn't good enough--user-generated rule names could include "define-".
   ;; Attempted to recreate the name from the LHS arg, but the encoding is different
@@ -71,13 +72,19 @@
                                  :retract-facts-logical}`
   - node - hash-map (nilable).
   - token - hash-map (nilable).
-  - facts - vector (nilable)."
+  - facts - vector (nilable).
+  - *event-coords - atom. Contains current state number, event number.
+  - encoding - keyword. Any valid transit encoding."
   ([event node token facts *event-coords]
    (event-dto event node token facts *event-coords :edn))
   ([event node token facts *event-coords encoding]
-   (let [{:keys [event-number state-number state-id]} @*event-coords]
+   (let [{:keys [event-number state-number state-id]} @*event-coords
+         non-rulegen-facts (util/remove-rulegen-facts facts)]
      (cond
        (sub-registration? facts)
+       {:impl? true}
+
+       (= 0 (count non-rulegen-facts))
        {:impl? true}
 
        (and (= nil node token) (= event-number 0))
