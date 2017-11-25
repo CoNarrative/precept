@@ -14,6 +14,7 @@
                  [reagent "0.6.0"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
+            [lein-cloverage "1.0.10"]
             [lein-codox "0.10.3"]]
 
   :codox {:namespaces [precept.accumulators precept.core precept.dsl precept.listeners
