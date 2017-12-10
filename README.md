@@ -1,24 +1,51 @@
-![Precept](https://github.com/CoNarrative/precept/blob/master/precept-logo%401x.png)
+<p align="center">
+  <img src="https://github.com/CoNarrative/precept/blob/master/precept-logo%401x.png" 
+       alt="Precept"/></p>
 
-A declarative programming framework
+<p align="center">A declarative programming framework</p>
 
-[![Clojars Project](https://img.shields.io/clojars/v/precept.svg)](https://clojars.org/precept)
-[![CircleCI](https://circleci.com/gh/CoNarrative/precept.svg?style=shield&circle-token=b23498670888edf670832326d50f9d8fab60b2e3)](https://circleci.com/gh/CoNarrative/precept)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/CoNarrative/precept/blob/master/LICENSE)
-[![discord](https://img.shields.io/badge/discord-%23precept%20%40%20clojurians-7bb6b9.svg)](https://discord.gg/5GXQwrY)
+<p align="center">
+  <a href="https://clojars.org/precept">
+    <img src="https://img.shields.io/clojars/v/precept.svg" 
+         alt="Clojars Project"/></a>
+  
+  <a href="https://circleci.com/gh/CoNarrative/precept">
+    <img src="https://circleci.com/gh/CoNarrative/precept.svg?style=shield&circle-token=b23498670888edf670832326d50f9d8fab60b2e3" 
+         alt="Circle CI"/></a>
+  
+  <a href="https://github.com/CoNarrative/precept/blob/master/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg"
+         alt="License"/></a>
+  
+  <a href="https://discord.gg/5GXQwrY" >
+    <img src="https://img.shields.io/badge/discord-%23precept%20%40%20clojurians-7bb6b9.svg" 
+         alt="Discord"/></a></p>
+  
+<p align="center">
+  <!-- (interpose " | ") -->
+  <a href="https://conarrative.github.io/precept/">API Docs</a>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/CoNarrative/precept/wiki/Syntax">Syntax</a>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/CoNarrative/precept/tree/master/examples">Examples</a>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/CoNarrative/precept/wiki">Wiki</a>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/CoNarrative/precept/issues">Issues</a>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/CoNarrative/precept/blob/master/CONTRIBUTING.md">Contributing</a>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/CoNarrative/precept/projects/1">Roadmap</a></p>
 
-[API Docs](https://conarrative.github.io/precept/)
-| [Syntax](https://github.com/CoNarrative/precept/wiki/Syntax)
-| [Examples](https://github.com/CoNarrative/precept/tree/master/examples)
-| [Wiki](https://github.com/CoNarrative/precept/wiki)
-| [Issues](https://github.com/CoNarrative/precept/issues)
-| [Contributing](https://github.com/CoNarrative/precept/blob/master/CONTRIBUTING.md)
-| [Roadmap](https://github.com/CoNarrative/precept/projects/1)
+<p align="center">
+  <blockquote align="center">
+  <i style="color:#000;">"You need only specify what you require, not how it must be achieved."</i> 
+  <br>
+  — 
+  <a href="http://shaffner.us/cs/papers/tarpit.pdf"><i>Out of the Tar Pit</i></a>
+  </blockquote>
+</p>
 
-
-
-> "You need only specify what you require, not how it must
-be achieved." - [Out of the Tar Pit](http://shaffner.us/cs/papers/tarpit.pdf)
 
 ## Quick start
 From the command line:
