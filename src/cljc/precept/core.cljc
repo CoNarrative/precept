@@ -50,7 +50,7 @@
                "Existing name: " existing-name)
       {})))
 
-(defmethod register-rule "define" [{:keys [_ ns type lhs rhs]}]
+(defmethod register-rule "define" [{:keys [_ ns type lhs rhs source]}]
   (if-let [existing (first (matching-conditions-and-consequences lhs rhs @rules))]
     ;(do (identical-conditions-and-consequences-error
     ;      {:existing-name (:name existing)
@@ -65,13 +65,14 @@
           entry {:id id
                  :type type
                  :name name
+                 :source source
                  :ns ns
                  :lhs lhs
                  :rhs rhs}]
       (swap! rules assoc name entry)
       (symbol (:name entry)))))
 
-(defmethod register-rule :default [{:keys [name ns type lhs rhs]}]
+(defmethod register-rule :default [{:keys [name ns type lhs rhs source]}]
   (if-let [existing (get rules name)]
     ;(println (str "Found " type " with same conditions and consequences as existing definition: "
     (:name existing)
@@ -80,6 +81,7 @@
                  :type type
                  :name name
                  :ns ns
+                 :source source
                  :lhs lhs
                  :rhs rhs}]
       (swap! rules assoc name entry)
@@ -374,14 +376,20 @@
                            (merge default-devtools-options devtools))]
     (connect-devtools-socket! devtools-options
       (fn [ch send-fn]
-        (let [schemas (into {} (filter (comp some? second) @state/schemas))]
-          (println "sending schemas" schemas)
+        (let [schemas (into {} (filter (comp some? second) @state/schemas))
+              rules (into [] (vals @state/rules))]
           (when (not-empty schemas)
             (send-fn [:devtools/schemas
                       {:encoding (:encoding devtools-options)
                        :payload (serialize/serialize
                                  (:encoding devtools-options)
-                                 schemas)}])))
+                                 schemas)}]))
+          (when (not-empty rules)
+            (send-fn [:devtools/rule-definitions
+                      {:encoding (:encoding devtools-options)
+                       :payload (serialize/serialize
+                                  (:encoding devtools-options)
+                                  rules)}])))
         (do
           (swap-session-sync!
             (l/replace-listener

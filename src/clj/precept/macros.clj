@@ -400,6 +400,7 @@
               `(let [rule-data# {:name '~name
                                  :ns *ns*
                                  :type "rule"
+                                 :source (str (concat '(~'rule ~name) '~definition))
                                  :lhs '~lhs
                                  :rhs '~rhs}]
                 (do
@@ -440,6 +441,7 @@
     `(let [name# (core/register-rule
                      {:name nil
                       :type "define"
+                      :source (str (concat '(~'define) '~forms))
                       :ns nil
                       :lhs ''~lhs
                       :rhs '~rhs
@@ -463,6 +465,7 @@
                `(let [rule-data# {:name '~name
                                   :ns *ns*
                                   :type "subscription"
+                                  :source (str (concat '(~'defsub ~kw) '~definition))
                                   :lhs '~lhs
                                   :rhs '~rhs}]
                   (do
