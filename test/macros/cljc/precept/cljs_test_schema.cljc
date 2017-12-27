@@ -30,6 +30,10 @@
 
    (attribute :todo/tags
      :db.type/keyword
+     :db/cardinality :db.cardinality/many)
+
+   (attribute :entity>500
+     :db.type/entity
      :db/cardinality :db.cardinality/many)])
 
 (def test-schema (schema))
