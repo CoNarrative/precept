@@ -23,10 +23,26 @@
       (stringRep [this v])))
 
 #?(:cljs
+    (deftype TupleHandler []
+      Object
+      (tag [this v] "map")
+      (rep [this v] (into {} v))
+      (stringRep [this v])))
+
+#?(:cljs
    (defn serialize [encoding x]
      (let [writer (t/writer encoding
-                    {:handlers {js/Function (FunctionHandler.)}})]
-       (t/write writer x))))
+                    {:handlers {js/Function (FunctionHandler.)
+                                precept.util/Tuple (TupleHandler.)}})]
+       (try
+         (t/write writer x)
+         (catch js/Error e
+           (println "Error serializing!")
+           (cljs.pprint/pprint x)
+           (.log js/console
+             "Serialization error"
+             {:trying-to-serialize x
+              :error e}))))))
 
 ;; TODO. Extract better data from clojure.lang.IFns
 #?(:clj
