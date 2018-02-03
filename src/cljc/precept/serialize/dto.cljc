@@ -28,6 +28,12 @@
   (-> (without-namespace name)
     (name-or-lhs-str lhs)))
 
+;; TODO. This is a bit wacky...investigate how we're handling serialization encoding and
+;; see if it can be done in one place. These methods return EDN with either string keys
+;; or kw keys and that's it. Might actually be more efficient to do it this way because we're
+;; not converting kws to string keys in case of json encoding but it's a bit confusing
+;; and doesn't convert kw keys of the value fields (best done during serialization, if we want
+;; to do that at all)
 (defmulti rule-event-dto :encoding)
 
 (defmethod rule-event-dto :json
@@ -82,10 +88,19 @@
          non-rulegen-facts (util/remove-rulegen-facts facts)]
      (cond
        (sub-registration? facts)
-       {:impl? true}
+       {:state-number state-number
+        :event-number event-number
+        :state-id state-id
+        :encoding encoding
+        :impl? true}
 
        (= 0 (count non-rulegen-facts))
-       {:impl? true}
+       {:id (util/guid)
+        :state-number state-number
+        :event-number event-number
+        :state-id state-id
+        :encoding encoding
+        :impl? true}
 
        (and (= nil node token) (= event-number 0))
        (action-dto {:id (util/guid)
@@ -114,7 +129,8 @@
              {:keys [matches bindings]} token
              display-name (get-rule-display-name name lhs)]
          (if (untracked-impl-rule? ns-name display-name)
-           {:impl? true}
+           (let [{:keys [event-number state-number state-id]} @*event-coords]
+             {:impl? true})
            (let [{:keys [event-number state-number state-id]} @*event-coords]
              (rule-event-dto {:id (util/guid)
                               :type event
