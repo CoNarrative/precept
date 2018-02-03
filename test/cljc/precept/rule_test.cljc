@@ -97,7 +97,29 @@
            [:attr-2 (= ?e (:e this)) (= ?v (:v this))]
            [:attr-3 (= ?e (:e this)) (= ?v (:v this))]
            [:attr-4 (= ?e (:e this)) (= ?v (:v this))]
-           [:attr-5 (= ?e (:e this)) (= ?v (:v this))]]])))
+           [:attr-5 (= ?e (:e this)) (= ?v (:v this))]]]))
+  ;; TODO. Fails
+  (is (= (macros/parse-with-op '[:or [?foo <- [_ :bar]]
+                                     [?foo <- [_ :baz]]])
+        true))
+  (is (= (macros/parse-with-op '[:or [:and [?e :foo "bar"]
+                                      [:not [?e :baz.foo/quux]]]])
+        '[:or
+          [:and
+           [:foo (= ?e (:e this)) (= "bar" (:v this))]
+           [:not [:baz.foo/quux (= ?e (:e this))]]]]))
+
+  ;; This parses to what we'd expect to be valid Clara syntax.
+  ;; Currently Clara throws unbound variable within negation error
+  ;; if this syntax is used
+  (is (= (macros/parse-with-op '[:not
+                                 [:and [?e :foo "bar"]
+                                       [?e :baz.foo/quux]]])
+        '[:not
+          [:and
+           [:foo (= ?e (:e this)) (= "bar" (:v this))]
+           [:baz.foo/quux (= ?e (:e this))]]])))
+
 
 (deftest parse-sexpr-test
   (testing "Correct order (no cached variables)"
