@@ -223,7 +223,7 @@
   Returns `[bool...]` indicating successful removal from each indexed location."
   ([fact] (remove-fact-from-index! fact (fact-index-paths fact)))
   ([fact paths]
-   (if (= paths :one-to-many) ; Nothing to be done
+   (if (= paths :one-to-many)
      [true]
      (mapv
        (fn [ks]
@@ -519,5 +519,3 @@
                     (filter #(= (:ns %) ns-sym)
                       (vals @state/rules)))]
     (set rule-syms)))
-
-
