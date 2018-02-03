@@ -7,7 +7,7 @@
                  [org.clojure/spec.alpha "0.1.109"]
                  [org.clojure/clojurescript "1.9.854"]
                  [org.clojure/core.async "0.3.442"]
-                 [com.cerner/clara-rules "0.16.0-SNAPSHOT"]
+                 [com.cerner/clara-rules "0.17.0"]
                  [com.cognitect/transit-clj "0.8.300"]
                  [com.cognitect/transit-cljs "0.8.239"]
                  [com.taoensso/sente "1.11.0"]
