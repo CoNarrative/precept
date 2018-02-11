@@ -88,11 +88,13 @@
          non-rulegen-facts (util/remove-rulegen-facts facts)]
      (cond
        (sub-registration? facts)
-       {:state-number state-number
+       {:id (util/guid)
+        :type event
+        :facts (util/record->map facts)
+        :state-number state-number
         :event-number event-number
         :state-id state-id
-        :encoding encoding
-        :impl? true}
+        :encoding encoding}
 
        (= 0 (count non-rulegen-facts))
        {:id (util/guid)
