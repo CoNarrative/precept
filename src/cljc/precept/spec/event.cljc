@@ -1,7 +1,9 @@
 (ns precept.spec.event
   (:require [clojure.spec.alpha :as s]
-            [precept.util :as util]
-            [precept.spec.lang :as lang]))
+            [precept.spec.lang :as lang]
+            [precept.util]
+   #?(:cljs [precept.util :refer [Tuple]]))
+  #?(:clj (:import [precept.util Tuple])))
 
 (s/def ::type #{:add-facts :add-facts-logical :retract-facts :retract-facts-logical})
 
@@ -11,7 +13,7 @@
 
 (s/def ::event-number integer?)
 
-(s/def ::facts (s/every (s/or :Tuple-record #(= util/Tuple (type %))
+(s/def ::facts (s/every (s/or :Tuple-record #(= Tuple (type %))
                               :fact-map (s/every (comp #{:e :a :v :t} first)))))
 
 (s/def ::matches (s/and vector? (s/every vector?)))
