@@ -12,6 +12,9 @@
   <a href="https://circleci.com/gh/CoNarrative/precept">
     <img src="https://circleci.com/gh/CoNarrative/precept.svg?style=shield&circle-token=b23498670888edf670832326d50f9d8fab60b2e3" 
          alt="Circle CI"/></a>
+         
+  <a href="https://codecov.io/gh/CoNarrative/precept">
+    <img src="https://codecov.io/gh/CoNarrative/precept/branch/issue-19/graph/badge.svg" /></a>
   
   <a href="https://github.com/CoNarrative/precept/blob/master/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue.svg"
