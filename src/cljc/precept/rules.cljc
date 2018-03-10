@@ -9,6 +9,7 @@
                  [precept.util :as util]
                  [clara.rules :as cr]
                  [clara.macros :as cm]
+                 [precept.impl.rules]
                  [clara.rules.dsl :as dsl]
                  [clara.rules.compiler :as com]
                  [clojure.spec.alpha :as s]))
