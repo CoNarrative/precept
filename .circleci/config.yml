@@ -25,7 +25,7 @@ jobs:
           destination: uberjar
       - run:
           name: Code Coverage
-          command: lein trampoline cloverage --codecov
+          command: bin/lein trampoline cloverage --codecov
       - run:
           name: Upload Coverage
           command: bash <(curl -s https://codecov.io/bash) -f target/coverage/codecov.json
