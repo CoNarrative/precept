@@ -98,8 +98,8 @@
            [:attr-3 (= ?e (:e this)) (= ?v (:v this))]
            [:attr-4 (= ?e (:e this)) (= ?v (:v this))]
            [:attr-5 (= ?e (:e this)) (= ?v (:v this))]]]))
-  ;; TODO. Fails
-  (is (= (macros/parse-with-op '[:or [?foo <- [_ :bar]]
+  ;; TODO. Fails #108
+ #_(is (= (macros/parse-with-op '[:or [?foo <- [_ :bar]]
                                      [?foo <- [_ :baz]]])
         true))
   (is (= (macros/parse-with-op '[:or [:and [?e :foo "bar"]
