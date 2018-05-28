@@ -79,5 +79,5 @@
         :tuple-3 ::tuple-3
         :tuple-4 ::tuple-4))
 
-(s/def ::session #(= % (type clara.rules.engine/ISession)))
+;(s/def ::session #(= % (type clara.rules.engine/ISession)))
 
