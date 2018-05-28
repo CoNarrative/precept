@@ -17,14 +17,14 @@
   [?fact <- [_ :all]]
   =>
   (println "Fact at start>>>>>>>>>>>>>>>>"
-    (with-out-str (cljs.pprint/pprint ((juxt :e :a :v :t) ?fact)))))
+           (with-out-str (cljs.pprint/pprint ((juxt :e :a :v :t) ?fact)))))
 
 (rule report-facts-at-end
   {:group :report}
   [?facts <- (acc/all) :from [_ :all]]
   =>
   (println "<<<<<<<<<<<<<Facts at end"
-    (with-out-str (cljs.pprint/pprint (mapv (juxt :e :a :v :t) ?facts)))))
+           (with-out-str (cljs.pprint/pprint (mapv (juxt :e :a :v :t) ?facts)))))
 
 (rule global-greater-than-500
   [?my-fact <- [:global :random-number ?v]]
@@ -32,22 +32,10 @@
   =>
   (insert! [:report :global-greater-than-500 true]))
 
-
-;(defquery everything []
-;  [?facts <- (acc/all) :from [_ :all]])
-
-
 (rule less-than-500
-  ;[[?e :random-number (number? ?v)]]
-  ;[[?e :random-number (< ?v 500)]]
-  ;[:or [:not [?e :greater-than-500]]
-  ;     [:and [?e :random-number (number? ?v)]
-  ;           [?e :random-number (< ?v 500)]]]
-
-
   [:and [?e :random-number ?v]
-        [:not [?e :greater-than-500]]
-        [:not [:global :random-number ?v]]]
+   [:not [?e :greater-than-500]]
+   [:not [:global :random-number ?v]]]
 
   =>
   (insert! [?e :less-than-500 true]))
@@ -71,11 +59,22 @@
   =>
   (insert! [:report :entity>500 ?fact]))
 
+(rule entities<500
+  [?ids <- (acc/all :e) :from [_ :less-than-500]]
+  [(<- ?ents (entities ?ids))]
+  =>
+  (println "entities<500 results" ?ents)
+  (insert! [:global :entities<500 ?ents]))
 
 (defsub :entities>500
   [?entities <- (acc/all (juxt :a :v)) :from [_ :entity>500]]
   =>
   {:facts ?entities})
+
+(defsub :entities<500
+  [?ents <- (acc/all :v) :from [:global :entities<500]]
+  =>
+  {:res ?ents})
 
 
 (session my-session
@@ -90,12 +89,16 @@
 
 (defn view []
   (let [s @(precept.core/subscribe [:entities>500])
-        _ (println "sub is" s)]
+        s2 @(precept.core/subscribe [:entities<500])
+        _ (println "entities>500 sub" s)
+        _ (println "entities<500 sub" s2)]
     [:div "Hello!"
      [:button {:on-click #(precept.core/then [(util/guid) :random-number (rand-int 1000)])}
       "Insert random random number fact"]
      [:button {:on-click #(precept.core/then [:global :random-number (rand-int 1000)])}
-      "Insert `:global` random number fact"]]))
+      "Insert `:global` random number fact"]
+     [:button {:on-click #(precept.core/then [:transient :random-number (rand-int 1000)])}
+      "Insert `:transient` random number fact"]]))
 
 (defn main []
   (enable-console-print!)
