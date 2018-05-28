@@ -6,10 +6,7 @@
               [clara.rules :as cr]
               [clara.rules.accumulators :as acc]
               [precept.spec.sub :as sub]
-              [precept.rules :refer [session
-                                          define
-                                          rule
-                                          defquery]]
+              [precept.rules :refer [session define rule defquery]]
               [precept.listeners :as l]
               [precept.schema :as schema]
       #?(:clj [clara.tools.inspect :as inspect])
@@ -22,8 +19,7 @@
 ;; have for non-generated rule names, because when we delete a rule or rename it, it's still in
 ;; the REPL and requires a restart or manual ns-unmap to clear. We could expose a function
 ;; that takes all nses in which they are rules and unmaps everything in them.
-(define [?e :todo/visible :tag] :- [[_ :visibility-filter :all
-                                       [[?e :todo/title]]]])
+(define [?e :todo/visible :tag] :- [[_ :visibility-filter :all]] [[?e :todo/title]])
 
 (cr/defrule add-item-handler
   ;; Works with maps
@@ -95,7 +91,7 @@
 ;; depending on when/where listeners are added and removed. Might
 ;; be nice to file a bug with Clara so they're aware.
 
-(def session (atom (n-facts-session 100000)))
+(def test-session-atom (atom (n-facts-session 100000)))
 
 ;(t/get-trace @session)
 ;(get-in (inspect/inspect @session) [:rule-matches remove-older-one-to-one-facts])
@@ -109,8 +105,8 @@
   ;(time
     (dotimes [n iters]
       ;(time
-        (reset! session
-          (-> @session
+        (reset! test-session-atom
+          (-> @test-session-atom
             (l/replace-listener)
             ;(util/insert-action [(guid) :add-todo-action-2 {:todo/title "ho"}])
             ;(util/insert-action [(guid) :add-todo-action {:title "hey"}])
@@ -119,7 +115,7 @@
             (cr/fire-rules)))))
 
 (time (perf-loop 100))
-(l/vec-ops @session)
+(l/vec-ops @test-session-atom)
 (count (:one-to-one @state/fact-index))
 (:unique @state/fact-index)
 ;(inspect/inspect @session)

@@ -12,5 +12,7 @@
 
 (defn init! []
   (mount/start)
-  (start! {:session app-session :facts [[:transient :start true]]})
+  (start! {:session app-session
+           :facts [[:transient :start true]]
+           :devtools true})
   (mount-components))

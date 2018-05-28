@@ -6,6 +6,8 @@
   (s/and some? symbol?
     #(clojure.string/starts-with? (name %) "?")))
 
+(s/def ::ops #{'and 'or 'not 'exists :and :or :not :exists})
+
 (s/def ::s-expr list?)
 
 (s/def ::test-expr #{:test})
@@ -26,6 +28,9 @@
   (s/or :tuple-1-keyword (s/tuple keyword?)
         :keyword keyword?))
 
+;; FIXME. Does not appear to pass for a full accumulator condition, though
+;; will match the portion that uniquely identifies an accumulator. Create a spec for
+;; the full accumulator syntax to avoid confusion
 (s/def ::accum-expr
   (s/cat :accum-fn ::s-expr
          :from-symbol #{'from :from}
@@ -52,7 +57,8 @@
   (s/tuple
     (s/and some? #(not (s/valid? ::s-expr %)))
     any?))
-
+;;FIXME. sexprs are allowed in 3rd slot. A variable binding in :e passes when sexpr in :v,
+;; but the production is wrong when a keyword or value is in :e and sexpr in :v
 (s/def ::tuple-3
   (s/tuple
     (s/and some? #(not (s/valid? ::s-expr %)))
@@ -72,3 +78,6 @@
   (s/or :tuple-2 ::tuple-2
         :tuple-3 ::tuple-3
         :tuple-4 ::tuple-4))
+
+(s/def ::session #(= % (type clara.rules.engine/ISession)))
+

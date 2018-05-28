@@ -13,16 +13,17 @@
 
 (clara.rules/defrule entities___impl-a
   {:salience 1}
-  [::rulegen/for-macro (= ?req (:e this)) (= :entities (:v this))]
-  [:entities/eid (= ?req (:e this)) (= ?e (:v this))]
+  [::rulegen/for-macro (= ?req (:e this)) (= :precept.spec.rulegen/entities (:v this))]
+  [:precept.spec.rulegen.entities/eid (= ?req (:e this)) (= ?e (:v this))]
   [?entity <- (precept.accumulators/all) :from [:all (= ?e (:e this))]]
   =>
-  (precept.util/insert! [?req :entities/entity ?entity]))
+  (precept.util/insert! [?req :precept.spec.rulegen.entities/entity ?entity]))
 
 (clara.rules/defrule entities___impl-b
   {:salience 0}
-  [:entities/order (= ?req (:e this)) (= ?eids (:v this))]
-  [?ents <- (precept.accumulators/all :v) :from [:entities/entity (= ?req (:e this))]]
+  [:precept.spec.rulegen.entities/order (= ?req (:e this)) (= ?eids (:v this))]
+  [?ents <- (precept.accumulators/all :v) :from
+   [:precept.spec.rulegen.entities/entity (= ?req (:e this))]]
   =>
   (let [items (group-by :e (flatten ?ents))
         ordered (vals (select-keys items (into [] ?eids)))]

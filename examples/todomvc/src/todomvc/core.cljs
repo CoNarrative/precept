@@ -28,5 +28,5 @@
 (def facts [(todo "Hi") (todo "there!")])
 
 (defn ^:export main []
-  (start! {:session app-session :facts facts})
+  (start! {:session app-session :facts facts :devtools true})
   (mount-components))

@@ -1,7 +1,10 @@
 (ns precept.schema
     (:require [precept.spec.sub :as sub]
-              [precept.util :refer [guid]]
               [precept.state :as state]))
+
+(defn guid []
+  #?(:clj (java.util.UUID/randomUUID)
+     :cljs (random-uuid)))
 
 (defn by-ident [schema]
   (reduce (fn [acc [k v]] (assoc acc k (first v)))
@@ -27,8 +30,19 @@
               acc))
     [] tuples))
 
-;(defn unique-facts [session unique-attrs]
-;  (mapcat #(q/facts-where session %) unique-attrs))
+(defn ref-type-attrs
+  "Returns vector of keywords from a Datomic schema that are `:db.type/ref`."
+  [schema]
+  (->> schema
+    (filter #(= (:db/valueType %) :db.type/ref))
+    (mapv :db/ident)))
+
+;; TODO. Cache ref-type attrs per session def
+(defn ref?
+  [schemas a]
+  "- `schemas` - coll of persistent and/or client schema"
+  (let [ref-attrs (into #{} (map ref-type-attrs schemas))]
+    (contains? ref-attrs a)))
 
 (defn attribute
   "Creates a Datomic schema entry for an attribute. Cardinality defaults to
@@ -55,11 +69,11 @@
      :db.type/any
      :db/unique :db.unique/identity)
 
-   (attribute :entities/eid
+   (attribute :precept.spec.rulegen.entities/eid
      :db.type/any
      :db/cardinality :db.cardinality/many)
 
-   (attribute :entities/entity
+   (attribute :precept.spec.rulegen.entities/entity
      :db.type/any
      :db/cardinality :db.cardinality/many)])
 
@@ -82,7 +96,6 @@
     (swap! h derive :one-to-many :all)
     (swap! h derive :unique-value :one-to-one)
     (swap! h derive :unique-identity :one-to-one)
-    (reset! state/session-hierarchy h)
     @h))
 
 (defn init!

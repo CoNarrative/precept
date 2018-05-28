@@ -5,10 +5,10 @@
   #?(:clj (atom args)
      :cljs (r/atom args)))
 
-(def initial-state
+(defonce initial-state
   {:session nil
-   :session-history false ;; TODO. To enable/disable
-   ;:session-history '() ;; TODO. Own atom (public).
+   :session-history false
+   ;:session-history '()
    :subscriptions {}})
 
 (def fact-id (atom -1))
@@ -28,6 +28,14 @@
 (def session-defs (atom {}))
 
 (def unconditional-inserts (atom #{}))
+
+(def *devtools (atom {}))
+
+(def *event-coords
+  (atom {:event-number 0
+         :state-number 0
+         :state-id #?(:clj (java.util.UUID/randomUUID)
+                      :cljs (random-uuid))}))
 
 (def state (atom initial-state))
 

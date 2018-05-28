@@ -330,7 +330,6 @@
 
 ;; TODO.
 ;; - Generate rules with salience relative to subject
-;; - Use namespaced keywords for :entities so we only match on impl-level attrs
 ;; - Add test
 (defn generate-rules
   [expr idx lhs rhs props]
@@ -346,7 +345,7 @@
                                lhs))
         id (gensym "?")
         gen-conds (list [[id ::rulegen/for-rule original-name]]
-                        [[id ::rulegen/for-macro :entities]]
+                        [[id ::rulegen/for-macro :precept.spec.rulegen/entities]]
                         [[id ::rulegen/request-params var-binding]]
                         [[id ::rulegen/response fact-binding]])
         with-replaced-conditions (remove #{matching-expr} (replace-at-index idx gen-conds lhs))
@@ -358,11 +357,11 @@
       :rhs `(do
               (precept.util/insert!
                 [[~req-id ::rulegen/for-rule ~original-name]
-                 [~req-id ::rulegen/for-macro :entities]
+                 [~req-id ::rulegen/for-macro :precept.spec.rulegen/entities]
                  [~req-id ::rulegen/request-params ~var-binding]
-                 [~req-id :entities/order ~var-binding]])
+                 [~req-id :precept.spec.rulegen.entities/order ~var-binding]])
               (doseq [eid# ~var-binding]
-                (precept.util/insert! [~req-id :entities/eid eid#])))}
+                (precept.util/insert! [~req-id :precept.spec.rulegen.entities/eid eid#])))}
      {:name original-name
       :lhs rw-lhs
       :rhs rhs}]))
@@ -401,6 +400,7 @@
               `(let [rule-data# {:name '~name
                                  :ns *ns*
                                  :type "rule"
+                                 :source (str (concat '(~'rule ~name) '~definition))
                                  :lhs '~lhs
                                  :rhs '~rhs}]
                 (do
@@ -441,6 +441,7 @@
     `(let [name# (core/register-rule
                      {:name nil
                       :type "define"
+                      :source (str (concat '(~'define) '~forms))
                       :ns nil
                       :lhs ''~lhs
                       :rhs '~rhs
@@ -464,6 +465,7 @@
                `(let [rule-data# {:name '~name
                                   :ns *ns*
                                   :type "subscription"
+                                  :source (str (concat '(~'defsub ~kw) '~definition))
                                   :lhs '~lhs
                                   :rhs '~rhs}]
                   (do

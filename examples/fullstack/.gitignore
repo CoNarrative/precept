@@ -1,7 +1,7 @@
 /.idea/
 /.nrepl-port
 /target/
-/fullstack.iml
 /.lein-env
 /log/
 /figwheel_server.log
+/fullstack.iml

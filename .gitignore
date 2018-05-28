@@ -5,10 +5,14 @@ resources/public/js
 /.lein-repl-history
 /.nrepl-port
 /classes/
-/precept.iml
+/precept.iml-bak
 /.lein-failures
 /node_modules/
 .DS_Store
 doo-index.html
 /pom.xml.asc
 /pom.xml
+/devtools/figwheel_server.log
+/devtools/pom.xml
+/devtools/precept-devtools.iml
+/devtools/target/

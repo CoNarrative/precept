@@ -1,6 +1,8 @@
 (ns precept.util
    (:require [clara.rules :as cr]
              [clojure.spec.alpha :as s]
+             [clojure.core.async :as async]
+             [precept.schema :as schema]
              [precept.state :as state]
              [precept.spec.fact :as fact]
              [precept.spec.rulegen :as rulegen]
@@ -57,25 +59,25 @@
 
 (defrecord Tuple [e a v t])
 
-(defn print-format-Tuple [rec]
-  (let [vec (mapv
-              (fn [[k v]]
-                (if (= Tuple (type v))
-                  (symbol (print-format-Tuple v))
-                  v))
-              rec)]
-   (str "Tuple" vec "\n")))
-
-
-#?(:clj
-    (defmethod print-method Tuple [v ^java.io.Writer w]
-        (.write w (print-format-Tuple v))))
-
-#?(:cljs
-    (extend-protocol IPrintWithWriter
-      precept.util/Tuple
-      (-pr-writer [{:keys [e a v t]} writer _]
-        (write-all writer "\n[" (subs (str e) 0 6) " " a " " v " " t "]\n"))))
+;(defn print-format-Tuple [rec]
+;  (let [vec (mapv
+;              (fn [[k v]]
+;                (if (= Tuple (type v))
+;                  (symbol (print-format-Tuple v))
+;                  v))
+;              rec)]
+;   (str "Tuple" vec "\n")))
+;
+;
+;#?(:clj
+;    (defmethod print-method Tuple [v ^java.io.Writer w]
+;        (.write w (print-format-Tuple v))))
+;
+;#?(:cljs
+;    (extend-protocol IPrintWithWriter
+;      precept.util/Tuple
+;      (-pr-writer [{:keys [e a v t]} writer _]
+;        (write-all writer "\n[" (subs (str e) 0 6) " " a " " v " " t "]\n"))))
 
 (defn third [xs]
   #?(:cljs (nth xs 2)
@@ -116,7 +118,16 @@
     (vector? (first x)) x
     :else (vector x)))
 
-;; TODO. one-to-many attrs should have own Tuple
+(defn map-of-refs?
+  "Returns true if every k is db.type/ref according to a schema"
+  [schemas x]
+  (and (every? map? x)
+       (every?
+         (comp first
+               #(schema/ref? schemas %))
+        x)))
+
+;; TODO. Parent should have vec of refs for one-to-many
 (defn entity-map->Tuples
   "Transforms entity map to Tuple record
   {a1 v1 a2 v2 :db/id eid} -> [(Tuple eid a1 v1 t)...]"
@@ -133,6 +144,21 @@
           (conj acc (->Tuple (:db/id m) k v (next-fact-id!))))))
     []
     (dissoc m :db/id)))
+;; TODO. Issue #83
+;"Transforms entity map to Tuple record. Accepts attributes with values that are collections
+;  and generates their eids as uuids.
+;  Throws error if an attribute with a value that is a collection is not `:one-to-many` according to
+;  a provided schema.
+;  {:db/id 123 :a [{:nested 1 :entity 2}...] ->
+;    [(Tuple 123 :a <uuid-ref>) (Tuple <uuid-ref> :nested 1) (Tuple <uuid-ref> :entity 2)]
+;  {:db/id eid :a1 v1 :a2 v2 } -> [(Tuple eid a1 v1 t)...]"
+        ;(cond
+        ;  (and one-to-many? (map-of-refs? (vals @state/schemas) v))
+        ;  (let [fact-vec (mapv #(->Tuple (guid) k % (next-fact-id!)) v)
+        ;        x (->Tuple (:db/id m) k (mapv :e fact-vec) (next-fact-id!))]
+        ;    (concat acc (conj fact-vec x)#_(mapv #(->Tuple (guid) k % (next-fact-id!)) v)))
+        ;  :default
+        ;  (conj acc (->Tuple (:db/id m) k v (next-fact-id!))))))
 
 (defn insertable
   "Arguments can be any mixture of vectors and records
@@ -171,12 +197,20 @@
       (ancestry :one-to-many) :one-to-many
       :default (unknown-ancestry-error fact ancestry))))
 
+(defn schema-enforcement-dto [inserted retracted index-path]
+  {:type :schema-enforcement
+   :inserted (into {} inserted)
+   :retracted (into {} retracted)
+   :index-path index-path})
+
 ;;TODO. index-cardinality! or add to cardinality
 (defn upsert-fact-index!
   "Writes value to path in ks. Returns existing fact to retract if overwriting."
   [fact ks]
   (if-let [existing (get-in @state/fact-index ks)]
     (do
+      (when (:connected? @state/*devtools)
+        (async/put! (:event-sink @state/*devtools) (schema-enforcement-dto fact existing ks)))
       (swap! state/fact-index assoc-in ks fact)
       {:insert fact :retract existing})
     (do
@@ -189,7 +223,7 @@
   Returns `[bool...]` indicating successful removal from each indexed location."
   ([fact] (remove-fact-from-index! fact (fact-index-paths fact)))
   ([fact paths]
-   (if (= paths :one-to-many) ; Nothing to be done
+   (if (= paths :one-to-many)
      [true]
      (mapv
        (fn [ks]
@@ -382,19 +416,21 @@
               (reduce (fn [m tup] (assoc m (:?a tup) (:?v tup)))
                 {} ent))))))
 
-(defn Tuples->maps [xs]
-  (letfn [(recur-or-val [ys] (if (any-Tuple? ys) (Tuples->maps ys) ys))]
-    (if (record? (ffirst xs))
-      (into [] (mapcat Tuples->maps xs))
-      (if (= Tuple (type xs))
-        {:db/id (:e xs) (:a xs) (recur-or-val (:v xs))}
-        (let [keyed (reduce
-                      (fn [m {:keys [e a v]}]
-                        (if ((@state/ancestors-fn a) :one-to-many)
-                          (update-in m [e a] conj (recur-or-val v))
-                          (assoc-in m [e a] (recur-or-val v))))
-                      {} xs)]
-          (mapv (fn [[eid m]] (assoc m :db/id eid)) keyed))))))
+(defn Tuples->maps
+  ([xs] (Tuples->maps xs @state/ancestors-fn))
+  ([xs ancestry]
+   (letfn [(recur-or-val [ys] (if (any-Tuple? ys) (Tuples->maps ys) ys))]
+     (if (record? (ffirst xs))
+       (into [] (mapcat Tuples->maps xs))
+       (if (= Tuple (type xs))
+         {:db/id (:e xs) (:a xs) (recur-or-val (:v xs))}
+         (let [keyed (reduce
+                       (fn [m {:keys [e a v]}]
+                         (if (contains? (ancestry a) :one-to-many)
+                           (update-in m [e a] conj (recur-or-val v))
+                           (assoc-in m [e a] (recur-or-val v))))
+                       {} xs)]
+           (mapv (fn [[eid m]] (assoc m :db/id eid)) keyed)))))))
 
 ;TODO. Does not support one-to-many. Attributes will collide
 (defn tuple-entity->hash-map-entity
@@ -439,7 +475,7 @@
           :else false)))))
 
 (defn make-ancestors-fn
-  "To be used when defining a session. Stored in atom for auto truth maintenance
+  "Returns a set. To be used when defining a session. Stored in atom for auto truth maintenance
   and schema enforcement."
   ([]
    (let [cr-ancestors-fn (fn [_] #{:all :one-to-one})]
@@ -470,15 +506,12 @@
         (fn [[id sub]] (= name (:name sub)))
         (:subscriptions @state/state)))))
 
-(def impl-fact-nses #{"precept.spec.rulegen"})
+(def rulegen-fact-nses #{"precept.spec.rulegen" "precept.spec.rulegen.entities"})
 
-(defn impl-fact? [a]
-  (or
-    (contains? impl-fact-nses (namespace a))
-    (s/valid? ::rulegen/request a)))
+(defn rulegen-fact? [a] (contains? rulegen-fact-nses (namespace a)))
 
-(defn remove-impl-attrs [xs]
-  (remove #(some-> (:a %) (impl-fact?)) xs))
+(defn remove-rulegen-facts [xs]
+  (remove #(some-> (:a %) (rulegen-fact?)) xs))
 
 (defn rules-in-ns
   [ns-sym]
@@ -486,5 +519,3 @@
                     (filter #(= (:ns %) ns-sym)
                       (vals @state/rules)))]
     (set rule-syms)))
-
-

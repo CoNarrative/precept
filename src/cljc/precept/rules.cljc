@@ -9,6 +9,7 @@
                  [precept.util :as util]
                  [clara.rules :as cr]
                  [clara.macros :as cm]
+                 [precept.impl.rules]
                  [clara.rules.dsl :as dsl]
                  [clara.rules.compiler :as com]
                  [clojure.spec.alpha :as s]))
@@ -16,8 +17,10 @@
                        [precept.schema :as schema]
                        [precept.core :as core]
                        [precept.accumulators]
+                       [precept.impl.rules]
                        [precept.state :as state]))
     #?(:cljs (:require-macros precept.rules precept.repl)))
+
 
 
 ;; This technique borrowed from Prismatic's schema library (via clara).
@@ -84,8 +87,8 @@
      `:activation-group-sort-fn` - `(util/make-activation-group-fn [:action :calc :report :cleanup])`
        Determines the scheme by which some rules are given priority over others. Rules in the
        `:action` group will be given the chance to fire before rules in the `:calc` group and so on.
-       When determining the priority of two rules are in the same group, the :salience property
-       serves as a tiebreaker, with higher salience rules winning over lower salience ones."
+       When determining the priority of two rules in the same group, the :salience property
+       serves as a tiebreaker, with higher salience rules receiving precedence over lower salience ones."
      [name & sources-and-options]
      (if (compiling-cljs?)
        `(precept.macros/session ~name ~@sources-and-options)
