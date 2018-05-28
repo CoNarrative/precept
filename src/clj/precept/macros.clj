@@ -367,15 +367,15 @@
       :rhs rhs}]))
 
 (defn find-gen-in-lhs [lhs]
-  (first
-    (->> lhs
-      (map-indexed
-         (fn [idx expr]
-           (let [form (s/conform ::lang/special-form (first expr))]
-             (if (s/valid? ::lang/contains-rule-generator form)
-               [idx (last form)]
-               []))))
-      (filter seq))))
+  (->> lhs
+    (map-indexed
+      (fn [idx expr]
+        (let [form (s/conform ::lang/special-form (first expr))]
+          (if (s/valid? ::lang/contains-rule-generator form)
+            [idx (last form)]
+            []))))
+    (filter seq)
+    (first)))
 
 (defn get-rule-defs [lhs rhs props]
   (let [[idx generative-expr] (find-gen-in-lhs lhs)]

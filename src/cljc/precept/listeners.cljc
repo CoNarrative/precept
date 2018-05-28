@@ -81,10 +81,9 @@
   [ch *event-coords type node token facts]
   (let [dto (dto/event-dto type node token facts *event-coords)
         pred #(not (:impl? %))]
-    (if (pred dto)
+    (when (pred dto)
       (do (async/put! ch dto)
-          (swap! *event-coords update :event-number inc))
-      (println "Ignored impl event: " dto))))
+          (swap! *event-coords update :event-number inc)))))
 
 (deftype TransientSessionEventMessenger [ch *event-coords]
   l/ITransientEventListener
