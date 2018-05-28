@@ -26,7 +26,7 @@
   
 <p align="center">
   <!-- (interpose " | ") -->
-  <a href="https://conarrative.github.io/precept/">API Docs</a>
+  <a href="https://cljdoc.xyz/d/precept/precept/0.5.0-alpha/">API Docs</a>
   &nbsp;|&nbsp;
   <a href="https://github.com/CoNarrative/precept/wiki/Syntax">Syntax</a>
   &nbsp;|&nbsp;
