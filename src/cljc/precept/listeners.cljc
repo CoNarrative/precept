@@ -115,7 +115,8 @@
   (add-activations! [listener node activations])
   (remove-activations! [listener node activations])
   (add-accum-reduced! [listener node join-bindings result fact-bindings])
-  (remove-accum-reduced! [listener node join-bindings fact-bindings]))
+  (remove-accum-reduced! [listener node join-bindings fact-bindings])
+  (fire-activation! [listener activation resulting-operations]))
 
 (deftype TransientFactListener [trace]
   l/ITransientEventListener
@@ -145,7 +146,8 @@
   (add-activations! [listener node activations])
   (remove-activations! [listener node activations])
   (add-accum-reduced! [listener node join-bindings result fact-bindings])
-  (remove-accum-reduced! [listener node join-bindings fact-bindings]))
+  (remove-accum-reduced! [listener node join-bindings fact-bindings])
+  (fire-activation! [listener activation resulting-operations]))
 
 (defn to-transient-session-event-messenger [listener]
   [listener]
