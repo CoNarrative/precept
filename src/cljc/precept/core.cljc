@@ -371,7 +371,7 @@
 
 (defn start-with-devtools!
   [{:keys [session facts devtools] :as options}]
-  (let [devtools-options (if (boolean? devtools)
+  (let [devtools-options (if (true? devtools)
                            default-devtools-options
                            (merge default-devtools-options devtools))]
     (connect-devtools-socket! devtools-options
