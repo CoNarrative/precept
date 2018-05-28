@@ -38,6 +38,13 @@
       m)
     (dissoc m k)))
 
+(defn key-by [f coll]
+  (reduce
+    (fn [acc m]
+      (assoc acc (f m) m))
+    {}
+    coll))
+
 (defn map->tuples
   "Transforms entity map to vector of tuples
   {a1 v1 a2 v2 :db/id eid} -> [[eid a1 v1]...]"

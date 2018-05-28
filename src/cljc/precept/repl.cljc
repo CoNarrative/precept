@@ -172,3 +172,24 @@
      "
      (let [[quot session-name] sess]
        `(def ~session-name (reload-session-cljs! ~sess)))))
+
+
+(defn get-sub [state-m k]
+  (let [sub-name->sub-map (->> (:subscriptions state-m)
+                               (vals)
+                               (util/key-by :name))]
+    (get-in sub-name->sub-map [k :lens])))
+
+(defn list-subs [state-m]
+  (->> (:subscriptions state-m)
+       (vals)
+       (map :name)))
+
+(defn get-attributes [store-m]
+  (->> store-m
+       (vals)
+       (into {})
+       (keys)))
+
+(defn get-entity [store-m eid]
+  (get store-m eid))
