@@ -9,6 +9,10 @@
     <img src="https://img.shields.io/clojars/v/precept.svg" 
          alt="Clojars Project"/></a>
   
+  <a href="https://cljdoc.xyz/jump/release/precept">
+    <img src="https://cljdoc.xyz/badge/precept" 
+         alt="cljdoc"/></a>
+  
   <a href="https://circleci.com/gh/CoNarrative/precept">
     <img src="https://circleci.com/gh/CoNarrative/precept.svg?style=shield&circle-token=b23498670888edf670832326d50f9d8fab60b2e3" 
          alt="Circle CI"/></a>
@@ -18,11 +22,7 @@
   
   <a href="https://github.com/CoNarrative/precept/blob/master/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue.svg"
-         alt="License"/></a>
-  
-  <a href="https://discord.gg/5GXQwrY" >
-    <img src="https://img.shields.io/badge/discord-%23precept%20%40%20clojurians-7bb6b9.svg" 
-         alt="Discord"/></a></p>
+         alt="License"/></a></p>
   
 <p align="center">
   <!-- (interpose " | ") -->
