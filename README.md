@@ -26,7 +26,7 @@
   
 <p align="center">
   <!-- (interpose " | ") -->
-  <a href="https://cljdoc.xyz/d/precept/precept/0.5.0-alpha/">API Docs</a>
+  <a href="https://cljdoc.xyz/jump/release/precept">API Docs</a>
   &nbsp;|&nbsp;
   <a href="doc/syntax.md">Syntax</a>
   &nbsp;|&nbsp;
