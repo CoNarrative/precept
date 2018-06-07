@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/CoNarrative/precept/blob/master/precept-logo%402x.png" 
+  <img src="precept-logo%402x.png"
        alt="Precept"/></p>
 
 <p align="center">A declarative programming framework</p>
@@ -26,13 +26,11 @@
   
 <p align="center">
   <!-- (interpose " | ") -->
-  <a href="https://cljdoc.xyz/d/precept/precept/0.5.0-alpha/">API Docs</a>
+  <a href="https://cljdoc.xyz/jump/release/precept">API Docs</a>
   &nbsp;|&nbsp;
-  <a href="https://github.com/CoNarrative/precept/wiki/Syntax">Syntax</a>
+  <a href="doc/syntax.md">Syntax</a>
   &nbsp;|&nbsp;
   <a href="https://github.com/CoNarrative/precept/tree/master/examples">Examples</a>
-  &nbsp;|&nbsp;
-  <a href="https://github.com/CoNarrative/precept/wiki">Wiki</a>
   &nbsp;|&nbsp;
   <a href="https://github.com/CoNarrative/precept/issues">Issues</a>
   &nbsp;|&nbsp;
