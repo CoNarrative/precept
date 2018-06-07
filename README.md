@@ -231,6 +231,9 @@ Because Clara's sessions are immutable, we can store each one and cycle through 
 
 In addition, changes to Precept's view model can visualized and tracked just like [Redux DevTools](https://github.com/gaearon/redux-devtools).
 
+**Update 6/7/18**
+You can check out the devtools alpha preview [here](https://github.com/CoNarrative/precept-devtools).
+
 #### General purpose algorithms
 
 Precept aims to enable teams to build increasingly game-like UIs. This sometimes requires algorithms for path-finding, tweening, collision detection, and distance calculation. We want to write applications where talking about these things is trivial. That means never having to fall back to imperative programming, while at the same time having the performance it provides. We're working to support declarative statements like `(<- ?my-trip (distance ?paris ?london))` that allow us to focus on what, not how, by calling performant, general-purpose algorithms under the covers.
