@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/CoNarrative/precept/blob/master/precept-logo%402x.png" 
+  <img src="precept-logo%402x.png"
        alt="Precept"/></p>
 
 <p align="center">A declarative programming framework</p>
