@@ -28,11 +28,9 @@
   <!-- (interpose " | ") -->
   <a href="https://cljdoc.xyz/d/precept/precept/0.5.0-alpha/">API Docs</a>
   &nbsp;|&nbsp;
-  <a href="https://github.com/CoNarrative/precept/wiki/Syntax">Syntax</a>
+  <a href="doc/syntax.md">Syntax</a>
   &nbsp;|&nbsp;
   <a href="https://github.com/CoNarrative/precept/tree/master/examples">Examples</a>
-  &nbsp;|&nbsp;
-  <a href="https://github.com/CoNarrative/precept/wiki">Wiki</a>
   &nbsp;|&nbsp;
   <a href="https://github.com/CoNarrative/precept/issues">Issues</a>
   &nbsp;|&nbsp;
