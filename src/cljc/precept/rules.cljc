@@ -57,7 +57,7 @@
        uniqueness similarly to Datomic. All facts are treated as non-unique and one-to-one
        cardinality by default.
 
-     :client-schema - Datomic-format schema for non-perstent facts. Precept enforces cardinality
+     :client-schema - Datomic-format schema for non-persistent facts. Precept enforces cardinality
        and uniqueness for attributes in this schema the same way it does for :db-schema. It
        serves two main purposes. 1. To define client-side facts as one-to-many or unique. 2. To
        allow Precept's API to filter out facts that should not be persisted when writing to a
@@ -115,6 +115,31 @@
              (def ~name session-obj#)))))))
 
 #?(:clj
+   (defmacro mk-session
+     "Clara's `mk-session` with Precept options.
+
+     Returns the session."
+     [& sources-and-options]
+     (let [sources (take-while (complement keyword?) sources-and-options)
+           options-in (apply hash-map (drop-while (complement keyword?) sources-and-options))
+           impl-sources `['precept.impl.rules]
+           hierarchy `(schema/init! (select-keys ~options-in [:db-schema :client-schema]))
+           ancestors-fn `(util/make-ancestors-fn ~hierarchy)
+           defaults {:fact-type-fn             :a
+                     :ancestors-fn             ancestors-fn
+                     :activation-group-fn      `(util/make-activation-group-fn ~core/default-group)
+                     :activation-group-sort-fn `(util/make-activation-group-sort-fn
+                                                  ~core/groups ~core/default-group)}
+           options (mapcat identity (merge defaults (dissoc options-in :db-schema :client-schema)))
+           body (into options (concat sources impl-sources)) ]
+       `(let [body# `~[~@body]]
+          (com/mk-session body#)))))
+
+(defn reconstruct-body [properties lhs rhs]
+  (let [body (concat lhs ['=>] (rest rhs))]
+    (if properties (cons properties body) body)))
+
+#?(:clj
    (defmacro rule
      [name & body]
      "Defines a rule.
@@ -145,10 +170,9 @@
          (when-not rhs (throw (ex-info (str "Invalid rule " name ". No RHS (missing =>?).") {})))
          `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
                   `(def ~(vary-meta name assoc :rule true :doc doc)
-                     (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
-                       ~name (assoc :name ~(str (clojure.core/name source-ns-name) "/"
-                                                (clojure.core/name name)))
-                       ~doc (assoc :doc ~doc)))))))))
+                     ~(dsl/build-rule name
+                                      (reconstruct-body properties lhs rhs)
+                                      (meta &form)) )))))))
 
 #?(:clj
    (defmacro defquery
@@ -168,10 +192,7 @@
              rw-lhs (reverse (into '() (macros/rewrite-lhs definition)))]
          (core/register-rule {:name name :ns *ns* :type "query" :lhs definition :rhs nil})
          `(def ~(vary-meta name assoc :query true :doc doc)
-            (cond-> ~(dsl/parse-query* binding rw-lhs {} (meta &form))
-              ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/"
-                                       (clojure.core/name name)))
-              ~doc (assoc :doc ~doc)))))))
+            ~(dsl/build-query name (concat [binding] rw-lhs)))))))
 
 #?(:clj
    (defmacro define
@@ -199,10 +220,8 @@
                      :rhs rhs
                      :consequent-facts head})]
          `(def ~(vary-meta name assoc :rule true :doc doc)
-            (cond-> ~(dsl/parse-rule* lhs rhs properties {} (meta &form))
-              ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/"
-                                       (clojure.core/name name)))
-              ~doc (assoc :doc ~doc)))))))
+            ~(dsl/build-rule name (reconstruct-body properties lhs rhs)
+                             (meta &form)))))))
 
 #?(:clj
    (defmacro defsub
@@ -238,10 +257,9 @@
                                       :rhs rhs}))]
          `(do ~@(for [{:keys [name lhs rhs]} rule-defs]
                   `(def ~(vary-meta name assoc :rule true :doc doc)
-                     (cond-> ~(dsl/parse-rule* lhs rhs {:group :report} {} (meta &form))
-                       ~name (assoc :name ~(str (clojure.core/name (ns-name *ns*)) "/"
-                                                (clojure.core/name name)))
-                       ~doc (assoc :doc ~doc)))))))))
+                     ~(dsl/build-rule name
+                                      (reconstruct-body {:group :report} lhs rhs)
+                                      (meta &form)))))))))
 
 (def fire-rules clara.rules/fire-rules)
 
