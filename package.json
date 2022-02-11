@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "karma": "^1.6.0",
+    "karma": "^6.3.14",
     "karma-chrome-launcher": "^2.0.0",
     "karma-cljs-test": "^0.1.0",
     "karma-phantomjs-launcher": "^1.0.4"
